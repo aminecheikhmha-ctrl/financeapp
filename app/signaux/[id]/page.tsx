@@ -13,6 +13,7 @@ export default function SignalDetail() {
   const [plan, setPlan] = useState("free")
   const [contenu, setContenu] = useState("")
   const [loading, setLoading] = useState(false)
+  const [generating, setGenerating] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -26,13 +27,40 @@ export default function SignalDetail() {
       setPlan(profile?.plan ?? "free")
     })
 
-    supabase.from("signaux").select("*").eq("id", id).single()
-      .then(({ data }) => { if (data) setSignal(data) })
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id as string)
+    const query = isUUID
+      ? supabase.from("signaux").select("*").eq("id", id).single()
+      : supabase.from("signaux").select("*").eq("ticker", id).order("created_at", { ascending: false }).limit(1).single()
+    query.then(({ data }) => { if (data) setSignal(data) })
 
     supabase.from("signaux_commentaires").select("*")
       .eq("signal_id", id).order("created_at", { ascending: true })
       .then(({ data }) => { if (data) setCommentaires(data) })
   }, [])
+
+  // Auto-generate analysis if missing
+  useEffect(() => {
+    if (!signal) return
+    if (!signal.raisonnement || signal.raisonnement.length < 100) {
+      handleGenerate()
+    }
+  }, [signal?.id])
+
+  async function handleGenerate() {
+    setGenerating(true)
+    try {
+      const res = await fetch("/api/signals/analyse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticker: signal.ticker, signal_id: signal.id }),
+      })
+      const data = await res.json()
+      if (data.raisonnement) {
+        setSignal((prev: any) => ({ ...prev, raisonnement: data.raisonnement }))
+      }
+    } catch {}
+    setGenerating(false)
+  }
 
   async function handleComment() {
     if (!contenu) return
@@ -181,13 +209,58 @@ export default function SignalDetail() {
           <p className="text-gray-500 text-xs mt-4">{formatDate(signal.created_at)}</p>
         </div>
 
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 mb-6">
-          <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-            🤖 Raisonnement algorithmique
-          </h2>
-          <div className="text-sm leading-relaxed">
-            {renderMarkdown(signal.raisonnement)}
+        {/* Confluence */}
+        {signal.indicateurs?.confirmed_by?.length > 0 && (
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold">📊 Confluence — {signal.indicateurs?.confluence_count}/{signal.indicateurs?.total_indicators} indicateurs</h2>
+              <span className="text-white font-black text-xl">{signal.indicateurs?.confluence_score?.toFixed(0)}%</span>
+            </div>
+            <div className="w-full bg-white/5 rounded-full h-2 mb-4">
+              <div
+                className={`h-2 rounded-full ${signal.direction === "LONG" ? "bg-gradient-to-r from-green-600 to-emerald-400" : "bg-gradient-to-r from-red-600 to-rose-400"}`}
+                style={{ width: `${signal.indicateurs?.confluence_score}%` }}
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {signal.indicateurs.confirmed_by.map((label: string) => (
+                <span key={label} className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
+                  signal.direction === "LONG"
+                    ? "bg-green-500/10 text-green-400 border-green-500/20"
+                    : "bg-red-500/10 text-red-400 border-red-500/20"
+                }`}>{label}</span>
+              ))}
+            </div>
           </div>
+        )}
+
+        {/* Analyse */}
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 mb-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold">🤖 Analyse algorithmique</h2>
+            <button
+              onClick={handleGenerate}
+              disabled={generating}
+              className="flex items-center gap-2 bg-white/5 hover:bg-white/10 disabled:opacity-40 text-gray-300 hover:text-white border border-white/10 px-3 py-1.5 rounded-lg text-sm font-semibold transition"
+            >
+              {generating ? <><span className="animate-spin inline-block">⟳</span> Génération...</> : "↺ Régénérer"}
+            </button>
+          </div>
+          {generating && !signal.raisonnement ? (
+            <div className="space-y-3 animate-pulse">
+              <div className="h-4 bg-white/5 rounded w-3/4" />
+              <div className="h-4 bg-white/5 rounded w-full" />
+              <div className="h-4 bg-white/5 rounded w-5/6" />
+              <div className="h-4 bg-white/5 rounded w-2/3" />
+              <div className="h-4 bg-white/5 rounded w-full" />
+            </div>
+          ) : signal.raisonnement ? (
+            <div className="text-sm leading-relaxed">
+              {renderMarkdown(signal.raisonnement)}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-sm">Génération de l'analyse en cours…</p>
+          )}
         </div>
 
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8">

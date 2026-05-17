@@ -3,6 +3,8 @@ import { createClient } from "@supabase/supabase-js"
 import Groq from "groq-sdk"
 import { analyserIndicateurs } from "@/lib/indicateurs"
 
+export const maxDuration = 60
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_KEY!
@@ -17,135 +19,139 @@ const WATCHLIST = [
 
 async function fetchDonnees(ticker: string) {
   const res = await fetch(
-    `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1y`,
-    { headers: { "User-Agent": "Mozilla/5.0" } }
+    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1y`,
+    { headers: { "User-Agent": "Mozilla/5.0" }, cache: "no-store" }
   )
+  if (!res.ok) return null
   const json = await res.json()
   const result = json?.chart?.result?.[0]
   if (!result) return null
 
   const meta = result.meta
-  const closes: number[] = result.indicators.quote[0].close.filter(Boolean)
-  const volumes: number[] = result.indicators.quote[0].volume.filter(Boolean)
-  const highs: number[] = result.indicators.quote[0].high.filter(Boolean)
-  const lows: number[] = result.indicators.quote[0].low.filter(Boolean)
+  const q = result.indicators?.quote?.[0] ?? {}
+  const closes: number[]  = (q.close  ?? []).filter(Boolean)
+  const volumes: number[] = (q.volume ?? []).filter(Boolean)
+  const highs: number[]   = (q.high   ?? []).filter(Boolean)
+  const lows: number[]    = (q.low    ?? []).filter(Boolean)
 
   return {
-    prix: meta.regularMarketPrice,
-    previousClose: meta.previousClose,
-    high52: meta.fiftyTwoWeekHigh,
-    low52: meta.fiftyTwoWeekLow,
-    volume: meta.regularMarketVolume,
-    closes,
-    volumes,
-    highs,
-    lows,
+    prix: meta.regularMarketPrice as number,
+    high52: meta.fiftyTwoWeekHigh as number,
+    low52:  meta.fiftyTwoWeekLow  as number,
+    closes, volumes, highs, lows,
   }
 }
 
-export async function POST(req: NextRequest) {
-// Auth désactivé temporairement pour test
+async function traiterTicker(ticker: string) {
+  try {
+    const data = await fetchDonnees(ticker)
+    if (!data || data.closes.length < 50) return null
 
-  const signaux_generes = []
+    const ind = analyserIndicateurs(data.closes, data.volumes, data.prix, data.highs, data.lows)
 
-  for (const ticker of WATCHLIST) {
+    if (ind.score < 50) return null
+
+    // Si neutre, on tranche selon la tendance dominante (bullish par défaut)
+    const direction = ind.trend === "bearish" ? "SHORT" : "LONG"
+    const atr = data.highs.slice(-14).map((h, i) => h - data.lows.slice(-14)[i])
+      .reduce((a, b) => a + b, 0) / 14
+
+    const prix_entree = data.prix
+    let tp1, tp2, tp3, stop_loss
+
+    if (direction === "LONG") {
+      tp1 = parseFloat((prix_entree + atr * 1.5).toFixed(2))
+      tp2 = parseFloat((prix_entree + atr * 3).toFixed(2))
+      tp3 = parseFloat((prix_entree + atr * 5).toFixed(2))
+      stop_loss = parseFloat((prix_entree - atr * 1.5).toFixed(2))
+    } else {
+      tp1 = parseFloat((prix_entree - atr * 1.5).toFixed(2))
+      tp2 = parseFloat((prix_entree - atr * 3).toFixed(2))
+      tp3 = parseFloat((prix_entree - atr * 5).toFixed(2))
+      stop_loss = parseFloat((prix_entree + atr * 1.5).toFixed(2))
+    }
+
+    const timeframe = atr / prix_entree > 0.03 ? "swing" : atr / prix_entree > 0.01 ? "scalp" : "position"
+
+    // Génère raisonnement IA — fallback vide si Groq indisponible
+    let quote = ""
+    let raisonnement = ""
     try {
-      const data = await fetchDonnees(ticker)
-      if (!data || data.closes.length < 50) continue
-
-      const ind = analyserIndicateurs(data.closes, data.volumes, data.prix)
-
-      // Génère un signal seulement si score >= 65 et tendance claire
-      if (ind.score < 65 || ind.trend === "neutral") continue
-
-      // Calcule les niveaux
-      const direction = ind.trend === "bullish" ? "LONG" : "SHORT"
-      const atr = data.highs.slice(-14).map((h, i) => h - data.lows.slice(-14)[i])
-        .reduce((a, b) => a + b, 0) / 14
-
-      const prix_entree = data.prix
-      let tp1, tp2, tp3, stop_loss
-
-      if (direction === "LONG") {
-        tp1 = parseFloat((prix_entree + atr * 1.5).toFixed(2))
-        tp2 = parseFloat((prix_entree + atr * 3).toFixed(2))
-        tp3 = parseFloat((prix_entree + atr * 5).toFixed(2))
-        stop_loss = parseFloat((prix_entree - atr * 1.5).toFixed(2))
-      } else {
-        tp1 = parseFloat((prix_entree - atr * 1.5).toFixed(2))
-        tp2 = parseFloat((prix_entree - atr * 3).toFixed(2))
-        tp3 = parseFloat((prix_entree - atr * 5).toFixed(2))
-        stop_loss = parseFloat((prix_entree + atr * 1.5).toFixed(2))
-      }
-
-      const timeframe = atr / prix_entree > 0.03 ? "swing" : atr / prix_entree > 0.01 ? "scalp" : "position"
-
-      // Génère le raisonnement avec Groq
-      const prompt = `Tu es un trader algorithmique expert. Génère un raisonnement détaillé et professionnel pour ce signal de trading.
+      const prompt = `Tu es un trader algorithmique expert. Génère un raisonnement détaillé pour ce signal.
 
 Signal : ${direction} sur ${ticker}
-Prix d'entrée : $${prix_entree}
-Take Profit 1 : $${tp1} | TP2 : $${tp2} | TP3 : $${tp3}
-Stop Loss : $${stop_loss}
-Timeframe : ${timeframe}
-Score de confiance : ${ind.score}%
+Prix : $${prix_entree} | TP1: $${tp1} | TP2: $${tp2} | TP3: $${tp3} | SL: $${stop_loss}
+Score : ${ind.score}% | Confluence : ${ind.confluence_count}/${ind.confluence_total}
+RSI: ${ind.rsi.toFixed(1)} | Stoch K: ${ind.stoch_k.toFixed(1)} | Williams %R: ${ind.williams_r.toFixed(1)}
+MACD hist: ${ind.macd.histogram.toFixed(3)} | BB pos: ${ind.bb.position.toFixed(1)}%
+OBV: ${ind.obv_trend} | Volume ratio: ${ind.volume_ratio.toFixed(2)}x
 
-Indicateurs déclencheurs :
-${ind.signals.map(s => `- ${s}`).join("\n")}
-
-Données techniques :
-- RSI(14) : ${ind.rsi.toFixed(1)}
-- MACD : ${ind.macd.value.toFixed(3)} / Signal : ${ind.macd.signal.toFixed(3)} / Histogramme : ${ind.macd.histogram.toFixed(3)}
-- Bollinger Position : ${ind.bb.position.toFixed(1)}%
-- MA7 : $${ind.ma7.toFixed(2)} | MA21 : $${ind.ma21.toFixed(2)} | MA50 : $${ind.ma50.toFixed(2)} | MA200 : $${ind.ma200.toFixed(2)}
-- Ratio Volume : ${ind.volume_ratio.toFixed(2)}x
-- Plus haut 52s : $${data.high52} | Plus bas 52s : $${data.low52}
-
-Rédige en français un raisonnement structuré avec :
-1. Contexte de marché
-2. Pourquoi ce signal maintenant
-3. Gestion du risque et du capital
-4. Scénarios alternatifs (si le signal échoue)
-5. Catalyseurs potentiels à surveiller`
+IMPORTANT: Commence par : QUOTE: [phrase percutante 12-18 mots]
+Ensuite rédige en français : contexte marché, pourquoi ce signal, gestion du risque, scénarios alternatifs.`
 
       const completion = await groq.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
         model: "llama-3.3-70b-versatile",
-        max_tokens: 1500,
+        max_tokens: 1000,
       })
 
-      const raisonnement = completion.choices[0]?.message?.content ?? ""
-
-      const { data: signal } = await supabase.from("signaux").insert({
-        ticker,
-        direction,
-        prix_entree,
-        take_profit_1: tp1,
-        take_profit_2: tp2,
-        take_profit_3: tp3,
-        stop_loss,
-        timeframe,
-        score_confiance: ind.score,
-        raisonnement,
-        indicateurs: {
-          rsi: ind.rsi,
-          macd: ind.macd,
-          bb: ind.bb,
-          ma7: ind.ma7,
-          ma21: ind.ma21,
-          ma50: ind.ma50,
-          ma200: ind.ma200,
-          volume_ratio: ind.volume_ratio,
-          signals: ind.signals,
-        },
-      }).select().single()
-
-      if (signal) signaux_generes.push(signal)
-
-    } catch (e) {
-      console.error(`Erreur pour ${ticker}:`, e)
+      const raw = completion.choices[0]?.message?.content ?? ""
+      const m = raw.match(/QUOTE:\s*(.+)/)
+      quote = m?.[1]?.trim() ?? ""
+      raisonnement = raw.replace(/QUOTE:\s*.+\n?/, "").trim()
+    } catch (groqErr) {
+      console.error(`Groq error for ${ticker}:`, groqErr)
     }
+
+    const { data: signal, error: insertError } = await supabase.from("signaux").insert({
+      ticker,
+      direction,
+      prix_entree,
+      take_profit_1: tp1,
+      take_profit_2: tp2,
+      take_profit_3: tp3,
+      stop_loss,
+      timeframe,
+      score_confiance: ind.score,
+      raisonnement,
+      indicateurs: {
+        rsi: ind.rsi,
+        stoch_k: ind.stoch_k,
+        williams_r: ind.williams_r,
+        macd: ind.macd,
+        bb: ind.bb,
+        ma7: ind.ma7,
+        ma21: ind.ma21,
+        ma50: ind.ma50,
+        ma200: ind.ma200,
+        ema9: ind.ema9,
+        ema21: ind.ema21,
+        ema_cross: ind.ema_cross,
+        obv_trend: ind.obv_trend,
+        volume_ratio: ind.volume_ratio,
+        signals: ind.signals,
+        confluence_count: ind.confluence_count,
+        confluence_total: ind.confluence_total,
+        confirmed_by: ind.confirmed_by,
+      },
+    }).select().single()
+
+    if (insertError) console.error(`Supabase insert error for ${ticker}:`, insertError.message)
+    return signal ?? null
+  } catch (e) {
+    console.error(`Erreur pour ${ticker}:`, e)
+    return null
   }
+}
+
+export async function POST(_req: NextRequest) {
+  const results = await Promise.allSettled(WATCHLIST.map(traiterTicker))
+
+  const signaux_generes = results
+    .filter((r): r is PromiseFulfilledResult<NonNullable<Awaited<ReturnType<typeof traiterTicker>>>> =>
+      r.status === "fulfilled" && r.value !== null
+    )
+    .map(r => r.value)
 
   return NextResponse.json({
     message: `${signaux_generes.length} signal(s) généré(s)`,
@@ -153,7 +159,6 @@ Rédige en français un raisonnement structuré avec :
   })
 }
 
-// Pour le cron Vercel
 export async function GET(req: NextRequest) {
   return POST(req)
 }

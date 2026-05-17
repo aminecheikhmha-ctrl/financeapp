@@ -1,0 +1,20 @@
+{
+  "name": "FinanceApp",
+  "short_name": "FinanceApp",
+  "description": "Trading intelligent avec l'IA — Signaux en temps réel, analyses IA et académie de trading",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#080808",
+  "theme_color": "#4ade80",
+  "orientation": "portrait-primary",
+  "categories": ["finance", "business", "education"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Dashboard", "url": "/dashboard", "description": "Tableau de bord" },
+    { "name": "Signaux", "url": "/signaux", "description": "Signaux IA en temps réel" },
+    { "name": "Portfolio", "url": "/portfolio", "description": "Mon portfolio" }
+  ]
+}

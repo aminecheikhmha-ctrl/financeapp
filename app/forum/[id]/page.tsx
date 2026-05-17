@@ -4,165 +4,432 @@ import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useParams, useRouter } from "next/navigation"
 
-export default function Post() {
-  const { id } = useParams()
-  const router = useRouter()
-  const [post, setPost] = useState<any>(null)
-  const [commentaires, setCommentaires] = useState<any[]>([])
-  const [user, setUser] = useState<any>(null)
-  const [contenu, setContenu] = useState("")
-  const [loading, setLoading] = useState(false)
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface Post {
+  id: string
+  user_id: string
+  username: string
+  avatar_color: string
+  title: string
+  content: string
+  category: string
+  symbol: string | null
+  likes: number
+  views: number
+  replies_count: number
+  pinned: boolean
+  created_at: string
+}
+
+interface Reply {
+  id: string
+  user_id: string
+  username: string
+  avatar_color: string
+  content: string
+  likes: number
+  is_best: boolean
+  created_at: string
+}
+
+// ─── Utils ────────────────────────────────────────────────────────────────────
+
+function timeAgo(date: string) {
+  const diff = Date.now() - new Date(date).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 2) return "à l'instant"
+  if (mins < 60) return `il y a ${mins}m`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `il y a ${hours}h`
+  return `il y a ${Math.floor(hours / 24)}j`
+}
+
+function formatDate(date: string) {
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "numeric", month: "long", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  }).format(new Date(date))
+}
+
+function Avatar({ username, color, size = 9 }: { username: string; color: string; size?: number }) {
+  return (
+    <div
+      className={`w-${size} h-${size} rounded-full flex items-center justify-center flex-shrink-0 font-bold text-black`}
+      style={{ background: color, width: size * 4, height: size * 4, fontSize: size * 1.8 + "px" }}
+    >
+      {username?.[0]?.toUpperCase() ?? "?"}
+    </div>
+  )
+}
+
+// Minimal markdown renderer: bold, italic, headers, bullets
+function Markdown({ text }: { text: string }) {
+  const lines = text.split("\n")
+  return (
+    <div className="space-y-1.5 text-gray-300 leading-relaxed text-sm">
+      {lines.map((line, i) => {
+        if (line.startsWith("## ")) return <h2 key={i} className="text-base font-bold text-white mt-3">{line.slice(3)}</h2>
+        if (line.startsWith("### ")) return <h3 key={i} className="text-sm font-bold text-white mt-2">{line.slice(4)}</h3>
+        if (line.startsWith("- ") || line.startsWith("• ")) return (
+          <p key={i} className="flex items-start gap-2">
+            <span className="text-green-400 mt-0.5 flex-shrink-0">•</span>
+            <span>{renderInline(line.slice(2))}</span>
+          </p>
+        )
+        if (!line.trim()) return <div key={i} className="h-2" />
+        return <p key={i}>{renderInline(line)}</p>
+      })}
+    </div>
+  )
+}
+
+function renderInline(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g)
+  return parts.map((p, i) => {
+    if (p.startsWith("**") && p.endsWith("**")) return <strong key={i} className="text-white font-semibold">{p.slice(2, -2)}</strong>
+    if (p.startsWith("*") && p.endsWith("*")) return <em key={i} className="italic">{p.slice(1, -1)}</em>
+    return p
+  })
+}
+
+// ─── Quote Price Card ─────────────────────────────────────────────────────────
+
+function SymbolCard({ symbol }: { symbol: string }) {
+  const [quote, setQuote] = useState<any>(null)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user))
+    fetch(`/api/quote?symbol=${symbol}`)
+      .then(r => r.json())
+      .then(d => { if (d.price) setQuote(d) })
+      .catch(() => {})
+  }, [symbol])
+
+  if (!quote) return (
+    <div className="animate-pulse h-16 bg-white/5 rounded-xl" />
+  )
+
+  const change = quote.change ?? 0
+  const positive = change >= 0
+
+  return (
+    <div className="flex items-center gap-4 p-4 bg-white/5 border border-white/8 rounded-xl">
+      <div>
+        <p className="text-xs text-gray-500 font-semibold">{symbol}</p>
+        <p className="text-lg font-black text-white">${Number(quote.price).toFixed(2)}</p>
+      </div>
+      <div className={`text-sm font-bold ${positive ? "text-green-400" : "text-red-400"}`}>
+        {positive ? "+" : ""}{change.toFixed(2)} ({positive ? "+" : ""}{(quote.changePercent ?? 0).toFixed(2)}%)
+      </div>
+      <div className="ml-auto text-xs text-gray-600">{quote.name ?? ""}</div>
+    </div>
+  )
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
+export default function PostDetail() {
+  const { id } = useParams<{ id: string }>()
+  const router = useRouter()
+  const [post, setPost] = useState<Post | null>(null)
+  const [replies, setReplies] = useState<Reply[]>([])
+  const [user, setUser] = useState<any>(null)
+  const [session, setSession] = useState<any>(null)
+  const [replyText, setReplyText] = useState("")
+  const [username, setUsername] = useState("")
+  const [avatarColor, setAvatarColor] = useState("#4ade80")
+  const [replyLoading, setReplyLoading] = useState(false)
+  const [likedPost, setLikedPost] = useState(false)
+  const [likedReplies, setLikedReplies] = useState<Set<string>>(new Set())
+  const [aiAnalysis, setAiAnalysis] = useState("")
+  const [aiLoading, setAiLoading] = useState(false)
+  const [pageLoading, setPageLoading] = useState(true)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session)
+      setUser(data.session?.user ?? null)
+      if (data.session?.user) {
+        setUsername(data.session.user.email?.split("@")[0] ?? "")
+      }
+    })
     fetchPost()
-    fetchCommentaires()
-  }, [])
+  }, [id])
 
   async function fetchPost() {
-    const { data } = await supabase.from("posts").select("*").eq("id", id).single()
-    if (data) setPost(data)
+    setPageLoading(true)
+    const res = await fetch(`/api/forum/posts/${id}`)
+    const json = await res.json()
+    if (json.post) setPost(json.post)
+    if (json.replies) setReplies(json.replies)
+    setPageLoading(false)
   }
 
-  async function fetchCommentaires() {
-    const { data } = await supabase
-      .from("commentaires")
-      .select("*")
-      .eq("post_id", id)
-      .order("created_at", { ascending: true })
-    if (data) setCommentaires(data)
-  }
-
-  async function handleComment() {
-    if (!contenu) return
-    setLoading(true)
-    await supabase.from("commentaires").insert({
-      post_id: id,
-      contenu,
-      user_email: user.email,
+  async function handleLikePost() {
+    if (!session) return
+    const res = await fetch(`/api/forum/posts/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ action: "like" }),
     })
-    setContenu("")
-    fetchCommentaires()
-    setLoading(false)
+    const json = await res.json()
+    setLikedPost(json.liked)
+    setPost(p => p ? { ...p, likes: p.likes + (json.liked ? 1 : -1) } : p)
   }
 
-  async function supprimerCommentaire(commentId: string) {
-    if (!confirm("Supprimer ce commentaire ?")) return
-    await supabase.from("commentaires").delete().eq("id", commentId)
-    fetchCommentaires()
+  async function handleLikeReply(replyId: string) {
+    if (!session) return
+    const res = await fetch(`/api/forum/replies/${replyId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({}),
+    })
+    const json = await res.json()
+    setLikedReplies(prev => {
+      const next = new Set(prev)
+      json.liked ? next.add(replyId) : next.delete(replyId)
+      return next
+    })
+    setReplies(rs => rs.map(r => r.id === replyId ? { ...r, likes: r.likes + (json.liked ? 1 : -1) } : r))
   }
 
-  async function supprimerPost() {
-    if (!confirm("Supprimer ce post et tous ses commentaires ?")) return
-    await supabase.from("posts").delete().eq("id", id)
-    router.push("/forum")
+  async function handleReply() {
+    if (!session || !replyText.trim()) return
+    setReplyLoading(true)
+    const res = await fetch("/api/forum/replies", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ post_id: id, content: replyText, username, avatar_color: avatarColor }),
+    })
+    const json = await res.json()
+    if (json.reply) {
+      setReplies(prev => [...prev, json.reply])
+      setReplyText("")
+      setPost(p => p ? { ...p, replies_count: p.replies_count + 1 } : p)
+    }
+    setReplyLoading(false)
   }
 
-  function timeAgo(date: string) {
-    const diff = Date.now() - new Date(date + "Z").getTime()
-    const mins = Math.floor(diff / 60000)
-    if (mins < 2) return "à l'instant"
-    if (mins < 60) return `il y a ${mins} min`
-    const hours = Math.floor(mins / 60)
-    if (hours < 24) return `il y a ${hours}h`
-    return `il y a ${Math.floor(hours / 24)}j`
+  async function handleAiAnalysis() {
+    setAiLoading(true)
+    setAiAnalysis("")
+    const res = await fetch(`/api/forum/posts/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "ai_analysis" }),
+    })
+    const json = await res.json()
+    setAiAnalysis(json.analysis ?? json.error ?? "Erreur lors de l'analyse")
+    setAiLoading(false)
   }
 
-  function formatDate(date: string) {
-    return new Intl.DateTimeFormat("fr-FR", {
-      day: "numeric", month: "short", year: "numeric",
-      hour: "2-digit", minute: "2-digit",
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    }).format(new Date(date + "Z"))
-  }
-
-  if (!post) return (
+  if (pageLoading) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
-      <p className="text-gray-400">Chargement...</p>
+      <div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
-  return (
-    <div className="min-h-screen bg-black text-white p-8">
-      <div className="max-w-4xl mx-auto">
+  if (!post) return (
+    <div className="min-h-screen bg-black flex items-center justify-center text-gray-400">
+      Post introuvable
+    </div>
+  )
 
+  const AVATAR_COLORS = ["#4ade80", "#60a5fa", "#f472b6", "#a78bfa", "#fb923c", "#34d399", "#facc15"]
+
+  return (
+    <div className="min-h-screen bg-black text-white">
+      <div className="max-w-3xl mx-auto px-6 py-8">
+
+        {/* Back */}
         <button
           onClick={() => router.push("/forum")}
-          className="text-gray-400 hover:text-white transition mb-6 flex items-center gap-2"
+          className="flex items-center gap-2 text-gray-500 hover:text-white transition mb-6 text-sm"
         >
           ← Retour au forum
         </button>
 
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 mb-8">
-          {post.image_url && (
-            <img src={post.image_url} alt="post" className="w-full rounded-lg mb-6" />
-          )}
-          <h1 className="text-3xl font-bold mb-4">{post.titre}</h1>
-          <p className="text-gray-300 leading-relaxed mb-6">{post.contenu}</p>
-          <div className="flex items-center justify-between text-sm text-gray-500">
-            <div className="flex items-center gap-4">
-              <span>{post.user_email}</span>
-              <span>{formatDate(post.created_at)}</span>
+        {/* Post */}
+        <div className="bg-[#111] border border-white/8 rounded-2xl p-6 mb-6">
+          {/* Meta */}
+          <div className="flex items-center gap-3 mb-4">
+            <Avatar username={post.username} color={post.avatar_color} size={10} />
+            <div>
+              <p className="text-sm font-semibold text-white">{post.username}</p>
+              <p className="text-xs text-gray-500">{formatDate(post.created_at)}</p>
             </div>
-            {(user?.email === post.user_email || user?.email === 'amine_cm@icloud.com') && (
-              <button
-                onClick={supprimerPost}
-                className="text-red-400 hover:text-red-300 transition text-xs px-3 py-1 border border-red-400/30 rounded-lg"
+            <div className="ml-auto flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-white/5 text-gray-400">
+                {post.category}
+              </span>
+              {post.symbol && (
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                  ${post.symbol}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <h1 className="text-xl font-black text-white mb-4 leading-snug">{post.title}</h1>
+
+          {/* Symbol price card */}
+          {post.symbol && (
+            <div className="mb-4">
+              <SymbolCard symbol={post.symbol} />
+            </div>
+          )}
+
+          <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap mb-6">
+            {post.content}
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-4 pt-4 border-t border-white/5">
+            <button
+              onClick={handleLikePost}
+              disabled={!session}
+              className={`flex items-center gap-1.5 text-sm font-semibold transition ${
+                likedPost ? "text-red-400" : "text-gray-500 hover:text-red-400"
+              } disabled:opacity-40`}
+            >
+              <span>{likedPost ? "❤️" : "🤍"}</span>
+              <span>{post.likes}</span>
+            </button>
+            <span className="flex items-center gap-1.5 text-sm text-gray-600">
+              <span>💬</span> {post.replies_count}
+            </span>
+            <span className="flex items-center gap-1.5 text-sm text-gray-600">
+              <span>👁</span> {post.views}
+            </span>
+            <button
+              onClick={handleAiAnalysis}
+              disabled={aiLoading}
+              className="ml-auto flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20 transition disabled:opacity-50"
+            >
+              {aiLoading ? (
+                <>
+                  <div className="w-3 h-3 border border-purple-400 border-t-transparent rounded-full animate-spin" />
+                  Analyse en cours...
+                </>
+              ) : (
+                <><span>🤖</span> Analyse IA</>
+              )}
+            </button>
+          </div>
+
+          {/* AI Analysis result */}
+          {aiAnalysis && (
+            <div className="mt-4 p-4 rounded-xl bg-purple-500/5 border border-purple-500/15">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-base">🤖</span>
+                <span className="text-xs font-bold text-purple-400 uppercase tracking-wide">Analyse IA</span>
+              </div>
+              <Markdown text={aiAnalysis} />
+            </div>
+          )}
+        </div>
+
+        {/* Replies */}
+        <div className="mb-6">
+          <h2 className="text-base font-bold text-white mb-4">
+            {replies.length} réponse{replies.length !== 1 ? "s" : ""}
+          </h2>
+          <div className="space-y-3">
+            {replies.map(reply => (
+              <div
+                key={reply.id}
+                className={`bg-[#111] border rounded-2xl p-5 transition ${
+                  reply.is_best
+                    ? "border-green-500/30 bg-green-500/3"
+                    : "border-white/5"
+                }`}
               >
-                Supprimer le post
-              </button>
+                {reply.is_best && (
+                  <div className="flex items-center gap-1 text-[10px] font-bold text-green-400 uppercase tracking-wide mb-2">
+                    ✅ Meilleure réponse
+                  </div>
+                )}
+                <div className="flex items-start gap-3">
+                  <Avatar username={reply.username} color={reply.avatar_color} size={8} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-semibold text-white">{reply.username}</span>
+                      <span className="text-xs text-gray-600">{timeAgo(reply.created_at)}</span>
+                    </div>
+                    <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">{reply.content}</p>
+                    <div className="flex items-center gap-3 mt-3">
+                      <button
+                        onClick={() => handleLikeReply(reply.id)}
+                        disabled={!session}
+                        className={`flex items-center gap-1 text-xs font-semibold transition ${
+                          likedReplies.has(reply.id) ? "text-red-400" : "text-gray-600 hover:text-red-400"
+                        } disabled:opacity-40`}
+                      >
+                        <span>{likedReplies.has(reply.id) ? "❤️" : "🤍"}</span>
+                        <span>{reply.likes}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {replies.length === 0 && (
+              <div className="text-center py-10 text-gray-600">
+                <p className="text-2xl mb-2">💬</p>
+                <p className="text-sm">Sois le premier à répondre</p>
+              </div>
             )}
           </div>
         </div>
 
-        <h2 className="text-xl font-semibold mb-4">
-          {commentaires.length} commentaire{commentaires.length > 1 ? "s" : ""}
-        </h2>
+        {/* Reply form */}
+        {user ? (
+          <div className="bg-[#111] border border-white/8 rounded-2xl p-5">
+            <h3 className="text-sm font-bold text-white mb-4">Répondre</h3>
 
-        <div className="flex flex-col gap-4 mb-8">
-          {commentaires.map((c) => (
-            <div key={c.id} className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-              <p className="text-gray-300 mb-3">{c.contenu}</p>
-              <div className="flex items-center justify-between text-sm text-gray-500">
-                <div className="flex items-center gap-4">
-                  <span>{c.user_email}</span>
-                  <span>{timeAgo(c.created_at)}</span>
-                </div>
-                {(user?.email === c.user_email || user?.email === 'amine_cm@icloud.com') && (
+            {/* Author row */}
+            <div className="flex items-center gap-3 mb-4 p-3 rounded-xl bg-white/3 border border-white/5">
+              <Avatar username={username} color={avatarColor} size={8} />
+              <input
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                placeholder="Ton pseudo"
+                className="flex-1 bg-transparent text-sm font-semibold text-white placeholder-gray-600 outline-none"
+              />
+              <div className="flex gap-1.5">
+                {AVATAR_COLORS.map(c => (
                   <button
-                    onClick={() => supprimerCommentaire(c.id)}
-                    className="text-red-400 hover:text-red-300 transition text-xs px-3 py-1 border border-red-400/30 rounded-lg"
-                  >
-                    Supprimer
-                  </button>
-                )}
+                    key={c}
+                    onClick={() => setAvatarColor(c)}
+                    className={`w-4 h-4 rounded-full transition-transform ${avatarColor === c ? "scale-125 ring-2 ring-white/40" : ""}`}
+                    style={{ background: c }}
+                  />
+                ))}
               </div>
             </div>
-          ))}
-        </div>
 
-        {user ? (
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-            <h3 className="text-lg font-semibold mb-4">Ajouter un commentaire</h3>
             <textarea
-              value={contenu}
-              onChange={(e) => setContenu(e.target.value)}
-              placeholder="Écris ton commentaire..."
-              rows={3}
-              className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-green-500 mb-4"
+              value={replyText}
+              onChange={e => setReplyText(e.target.value)}
+              placeholder="Écris ta réponse..."
+              rows={4}
+              className="w-full bg-white/5 border border-white/8 text-white px-4 py-3 rounded-xl text-sm placeholder-gray-600 outline-none focus:border-green-500/40 transition resize-none mb-4"
             />
-            <button
-              onClick={handleComment}
-              disabled={loading}
-              className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white px-6 py-3 rounded-lg font-semibold transition"
-            >
-              {loading ? "Envoi..." : "Commenter"}
-            </button>
+            <div className="flex justify-end">
+              <button
+                onClick={handleReply}
+                disabled={replyLoading || !replyText.trim()}
+                className="px-6 py-2.5 bg-green-500 hover:bg-green-400 text-black text-sm font-bold rounded-xl transition disabled:opacity-50"
+              >
+                {replyLoading ? "Envoi..." : "Répondre"}
+              </button>
+            </div>
           </div>
         ) : (
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 text-center">
-            <p className="text-gray-400 mb-4">Connecte-toi pour commenter</p>
-            <a href="/login" className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-semibold transition">
+          <div className="bg-[#111] border border-white/8 rounded-2xl p-6 text-center">
+            <p className="text-gray-500 mb-3 text-sm">Connecte-toi pour répondre</p>
+            <a href="/login" className="px-6 py-2.5 bg-green-500 hover:bg-green-400 text-black text-sm font-bold rounded-xl transition inline-block">
               Se connecter
             </a>
           </div>
