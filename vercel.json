@@ -1,18 +1,4 @@
 {
-  "crons": [
-    {
-      "path": "/api/cron/signals",
-      "schedule": "*/15 * * * *"
-    },
-    {
-      "path": "/api/cron/alerts",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/cron/market-summary",
-      "schedule": "0 8 * * 1-5"
-    }
-  ],
   "headers": [
     {
       "source": "/api/(.*)",
