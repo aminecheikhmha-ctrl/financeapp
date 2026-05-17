@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import { useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { useToast } from "@/app/components/Toast"
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
 import dynamic from "next/dynamic"
 const TradingChart = dynamic(() => import("@/app/components/TradingChart"), { ssr: false })
@@ -41,6 +42,7 @@ function fmt(n: number | null, prefix = "$") {
 
 export default function Dashboard() {
   const searchParams = useSearchParams()
+  const toast = useToast()
 
   const [ticker, setTicker] = useState(searchParams.get("symbol") ?? "AAPL")
   const [search, setSearch] = useState("")
@@ -223,6 +225,7 @@ export default function Dashboard() {
       const data = await res.json()
       if (data.success) {
         setOrderMsg(`✅ ${side === "buy" ? "Acheté" : "Vendu"} à $${data.price.toFixed(2)}`)
+        toast.success(`Ordre exécuté ✓ — ${side === "buy" ? "Acheté" : "Vendu"} à $${data.price.toFixed(2)}`)
         // Save TP/SL immediately on buy
         if (side === "buy" && (orderTp || orderSl)) {
           await fetch("/api/trading/positions", {
@@ -237,10 +240,13 @@ export default function Dashboard() {
         }
         setTimeout(() => { setOrderModal(null); setOrderMsg(""); loadPosition(); loadOrders(); loadAccount() }, 1500)
       } else {
-        setOrderMsg(`❌ ${data.error ?? "Erreur"}`)
+        const errMsg = data.error ?? "Erreur"
+        setOrderMsg(`❌ ${errMsg}`)
+        toast.error(`Erreur : ${errMsg}`)
       }
     } catch {
       setOrderMsg("❌ Erreur réseau")
+      toast.error("Erreur réseau")
     }
     setOrderLoading(false)
   }
@@ -257,6 +263,7 @@ export default function Dashboard() {
         stop_loss: slValue ? parseFloat(slValue) : null,
       })
     })
+    toast.success("Alerte créée ✓")
     setTpSlModal(false)
     loadPosition()
   }
@@ -973,9 +980,12 @@ export default function Dashboard() {
                 <button onClick={() => { setOrderModal(null); setOrderMsg("") }}
                   className="px-4 py-2.5 rounded-xl border border-white/10 text-gray-500 hover:text-white transition text-sm">Annuler</button>
                 <button onClick={() => placeOrder(orderModal)} disabled={orderLoading}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-black transition disabled:opacity-50 ${
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-black transition disabled:opacity-50 flex items-center justify-center gap-2 ${
                     orderModal === "buy" ? "bg-green-500 hover:bg-green-400 text-white" : "bg-red-500 hover:bg-red-400 text-white"
                   }`}>
+                  {orderLoading && (
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  )}
                   {orderLoading ? "En cours..." : orderModal === "buy" ? "Confirmer l'achat" : "Confirmer la vente"}
                 </button>
               </div>
@@ -1024,7 +1034,7 @@ export default function Dashboard() {
             <div className="flex gap-2">
               <button onClick={() => setTpSlModal(false)}
                 className="px-4 py-2.5 rounded-xl border border-white/10 text-gray-500 hover:text-white transition text-sm">Annuler</button>
-              <button onClick={saveTpSl} className="flex-1 py-2.5 rounded-xl bg-white text-black text-sm font-black hover:bg-gray-100 transition">Sauvegarder</button>
+              <button onClick={saveTpSl} className="flex-1 py-2.5 rounded-xl bg-white text-black text-sm font-black hover:bg-gray-100 transition flex items-center justify-center gap-2">Sauvegarder</button>
             </div>
           </div>
         </div>

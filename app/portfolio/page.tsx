@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { useToast } from "@/app/components/Toast"
 
 type Account = { cash: number }
 type Position = {
@@ -26,6 +27,7 @@ type Order = {
 
 export default function PortfolioPage() {
   const router = useRouter()
+  const toast = useToast()
   const [account, setAccount] = useState<Account | null>(null)
   const [positions, setPositions] = useState<Position[]>([])
   const [orders, setOrders] = useState<Order[]>([])
@@ -95,12 +97,16 @@ export default function PortfolioPage() {
       const data = await res.json()
       if (data.success) {
         setOrderMsg(`✅ Ordre exécuté à $${data.price.toFixed(2)}`)
+        toast.success(`${orderModal.side === "buy" ? "Achat" : "Vente"} exécuté à $${data.price.toFixed(2)}`)
         setTimeout(() => { setOrderModal(null); setOrderMsg(""); loadData() }, 1500)
       } else {
-        setOrderMsg(`❌ ${data.error ?? "Erreur"}`)
+        const errMsg = data.error ?? "Erreur"
+        setOrderMsg(`❌ ${errMsg}`)
+        toast.error(`Erreur : ${errMsg}`)
       }
     } catch {
       setOrderMsg("❌ Erreur réseau")
+      toast.error("Erreur réseau")
     }
     setOrderLoading(false)
   }
@@ -280,7 +286,11 @@ export default function PortfolioPage() {
                                 +
                               </button>
                               <button
-                                onClick={() => { setOrderModal({ symbol: p.symbol, name: p.name, side: "sell" }); setOrderQty(String(p.qty)) }}
+                                onClick={() => {
+                                  if (!window.confirm("Vendre toute la position ?")) return
+                                  setOrderModal({ symbol: p.symbol, name: p.name, side: "sell" })
+                                  setOrderQty(String(p.qty))
+                                }}
                                 className="text-xs px-2.5 py-1 rounded-lg bg-red-500/15 text-red-400 border border-red-500/20 hover:bg-red-500/25 transition">
                                 −
                               </button>
@@ -373,11 +383,14 @@ export default function PortfolioPage() {
                   Annuler
                 </button>
                 <button onClick={placeOrder} disabled={orderLoading}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition disabled:opacity-50 ${
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition disabled:opacity-50 flex items-center justify-center gap-2 ${
                     orderModal.side === "buy"
                       ? "bg-green-500 hover:bg-green-400 text-white"
                       : "bg-red-500 hover:bg-red-400 text-white"
                   }`}>
+                  {orderLoading && (
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  )}
                   {orderLoading ? "En cours..." : orderModal.side === "buy" ? "Acheter" : "Vendre"}
                 </button>
               </div>

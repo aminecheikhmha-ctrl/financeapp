@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { supabase } from "@/lib/supabase"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 
-export default function Login() {
+function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
@@ -26,11 +27,12 @@ export default function Login() {
       .select("onboarding_completed")
       .eq("id", data.user.id)
       .single()
+    const redirect = searchParams.get("redirect")
     if (!profile?.onboarding_completed) {
       router.push("/onboarding")
     } else {
       document.cookie = "onboarding_done=1; path=/; max-age=31536000"
-      router.push("/dashboard")
+      router.push(redirect || "/dashboard")
     }
     setLoading(false)
   }
@@ -139,5 +141,13 @@ export default function Login() {
       </div>
 
     </div>
+  )
+}
+
+export default function Login() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }

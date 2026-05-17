@@ -113,7 +113,7 @@ Sois précis, professionnel et concis. Réponds en français.`
     })
 
   } catch (e: any) {
-    console.error("Analyse error:", e)
+    process.stderr.write(`[analyse] error: ${e}\n`)
     return NextResponse.json({ error: "Erreur lors de l'analyse : " + e.message }, { status: 500 })
   }
 }

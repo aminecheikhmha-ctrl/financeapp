@@ -35,3 +35,10 @@ body {
     margin-left: 224px;
   }
 }
+
+@media (max-width: 767px) {
+  .sidebar-main {
+    margin-left: 0 !important;
+    padding-bottom: 64px;
+  }
+}

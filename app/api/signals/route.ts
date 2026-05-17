@@ -774,7 +774,7 @@ export async function GET() {
         )
       }
     } catch (e) {
-      console.error("Supabase store error:", e)
+      process.stderr.write(`[signals] Supabase store error: ${e}\n`)
     }
   }
 

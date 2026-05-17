@@ -23,7 +23,7 @@ Tes règles :
       { role: "user", content: message }
     ]
 
-    const completion = await groq.chat.completions.create({
+    const groqPromise = groq.chat.completions.create({
       messages: [
         { role: "system", content: systemPrompt },
         ...messages
@@ -32,11 +32,25 @@ Tes règles :
       max_tokens: 512,
     })
 
+    let completion
+    try {
+      completion = await Promise.race([
+        groqPromise,
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Groq timeout")), 10000)
+        ),
+      ])
+    } catch {
+      return NextResponse.json({
+        response: "Désolé, le service de tutorat est temporairement indisponible. Veuillez réessayer dans quelques instants.",
+      })
+    }
+
     const response = completion.choices[0]?.message?.content ?? ""
 
     return NextResponse.json({ response })
   } catch (e: any) {
-    console.error("Tutoring error:", e)
+    process.stderr.write(`[tutoring] error: ${e}\n`)
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
 }

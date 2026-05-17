@@ -93,7 +93,8 @@ export default function Sidebar() {
   if (!user || pathname === "/onboarding") return null
 
   return (
-    <aside className={`fixed left-0 top-0 h-screen bg-[#0a0a0a] border-r border-white/5 flex flex-col transition-all duration-300 z-50 ${
+    <>
+    <aside className={`hidden md:flex fixed left-0 top-0 h-screen bg-[#0a0a0a] border-r border-white/5 flex-col transition-all duration-300 z-50 ${
       collapsed ? "w-16" : "w-56"
     }`}>
 
@@ -261,5 +262,31 @@ export default function Sidebar() {
       </div>
 
     </aside>
+
+    {/* Mobile bottom navigation */}
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 h-16 bg-[#0a0a0a] border-t border-white/5 flex items-center justify-around px-2">
+      {[
+        { href: "/dashboard", icon: "📊", label: "Dashboard" },
+        { href: "/portfolio", icon: "💼", label: "Portfolio" },
+        { href: "/signaux", icon: "📡", label: "Signaux" },
+        { href: "/analyses", icon: "🧠", label: "Analyses" },
+        { href: "/forum", icon: "💬", label: "Forum" },
+        { href: "/profil", icon: "👤", label: "Profil" },
+      ].map((item) => (
+        <a
+          key={item.href}
+          href={item.href}
+          className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-all ${
+            pathname === item.href || pathname.startsWith(item.href + "/")
+              ? "text-green-400"
+              : "text-gray-600 hover:text-gray-400"
+          }`}
+        >
+          <span className="text-lg leading-none">{item.icon}</span>
+          <span className="text-[10px] font-semibold leading-none">{item.label}</span>
+        </a>
+      ))}
+    </nav>
+    </>
   )
 }

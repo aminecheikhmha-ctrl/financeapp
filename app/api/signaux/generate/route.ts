@@ -100,7 +100,7 @@ Ensuite rédige en français : contexte marché, pourquoi ce signal, gestion du 
       quote = m?.[1]?.trim() ?? ""
       raisonnement = raw.replace(/QUOTE:\s*.+\n?/, "").trim()
     } catch (groqErr) {
-      console.error(`Groq error for ${ticker}:`, groqErr)
+      process.stderr.write(`[signaux/generate] Groq error for ${ticker}: ${groqErr}\n`)
     }
 
     const { data: signal, error: insertError } = await supabase.from("signaux").insert({
@@ -136,10 +136,10 @@ Ensuite rédige en français : contexte marché, pourquoi ce signal, gestion du 
       },
     }).select().single()
 
-    if (insertError) console.error(`Supabase insert error for ${ticker}:`, insertError.message)
+    if (insertError) process.stderr.write(`[signaux/generate] Supabase insert error for ${ticker}: ${insertError.message}\n`)
     return signal ?? null
   } catch (e) {
-    console.error(`Erreur pour ${ticker}:`, e)
+    process.stderr.write(`[signaux/generate] Erreur pour ${ticker}: ${e}\n`)
     return null
   }
 }

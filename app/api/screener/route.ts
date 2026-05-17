@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { CORS_HEADERS } from "@/app/lib/api"
 
 type Category = "stock" | "crypto" | "etf"
 type Asset = { symbol: string; name: string; category: Category }
@@ -107,9 +108,9 @@ async function fetchAsset(asset: Asset) {
   try {
     const res = await fetch(
       `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(asset.symbol)}?interval=1d&range=3mo`,
-      { headers: { "User-Agent": "Mozilla/5.0" }, next: { revalidate: 900 } }
+      { headers: { "User-Agent": "Mozilla/5.0" }, next: { revalidate: 900 }, signal: AbortSignal.timeout(5000) }
     )
-    if (!res.ok) return null
+    if (!res.ok) return { ...asset, price: null }
     const json   = await res.json()
     const result = json?.chart?.result?.[0]
     if (!result) return null
@@ -150,21 +151,29 @@ async function fetchAsset(asset: Asset) {
       signal,
     }
   } catch {
-    return null
+    return { ...asset, price: null }
   }
+}
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS_HEADERS })
 }
 
 // ── Route ─────────────────────────────────────────────────────────────────────
 export async function GET() {
   const results = await Promise.all(ASSETS.map(fetchAsset))
   const assets  = (results.filter(Boolean) as NonNullable<Awaited<ReturnType<typeof fetchAsset>>>[])
-    .sort((a, b) => b.score - a.score)
+    .filter(a => (a as any).score != null)
+    .sort((a, b) => (b as any).score - (a as any).score)
 
-  return NextResponse.json({
-    assets,
-    top_buys:  assets.filter(a => a.signal === "ACHETER"),
-    top_sells: assets.filter(a => a.signal === "ÉVITER"),
-    neutral:   assets.filter(a => a.signal === "ATTENDRE"),
-    updated_at: new Date().toISOString(),
-  })
+  return NextResponse.json(
+    {
+      assets,
+      top_buys:  assets.filter((a: any) => a.signal === "ACHETER"),
+      top_sells: assets.filter((a: any) => a.signal === "ÉVITER"),
+      neutral:   assets.filter((a: any) => a.signal === "ATTENDRE"),
+      updated_at: new Date().toISOString(),
+    },
+    { headers: CORS_HEADERS }
+  )
 }

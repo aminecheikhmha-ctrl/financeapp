@@ -4,6 +4,7 @@ import "./globals.css"
 import Navbar from "./components/Navbar"
 import Sidebar from "./components/Sidebar"
 import ServiceWorker from "./components/ServiceWorker"
+import { ToastProvider } from "./components/Toast"
 import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 
@@ -58,14 +59,16 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body className={`${inter.variable} font-sans bg-[#080808] text-white`}>
-        <ServiceWorker />
-        <Navbar />
-        <Sidebar />
-        <main className="pt-16 sidebar-main">
-          {children}
-        </main>
-        <Analytics />
-        <SpeedInsights />
+        <ToastProvider>
+          <ServiceWorker />
+          <Navbar />
+          <Sidebar />
+          <main className="pt-16 sidebar-main">
+            {children}
+          </main>
+          <Analytics />
+          <SpeedInsights />
+        </ToastProvider>
       </body>
     </html>
   )
