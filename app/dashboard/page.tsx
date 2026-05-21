@@ -1,13 +1,18 @@
 "use client"
 
 import { useEffect, useRef, useState, useCallback } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/app/components/Toast"
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
 import dynamic from "next/dynamic"
 const TradingChart = dynamic(() => import("@/app/components/TradingChart"), { ssr: false })
 import AlertsPanel from "@/app/components/AlertsPanel"
+import OnboardingChecklist from "@/app/components/OnboardingChecklist"
+import Tour from "@/app/components/Tour"
+import TooltipHint from "@/app/components/Tooltip"
+import { cn } from "@/lib/utils"
+import { Search, Plus, TrendingUp, TrendingDown, ChevronRight, Settings, ArrowUpRight } from "lucide-react"
 
 type TickerData = {
   symbol: string
@@ -42,9 +47,11 @@ function fmt(n: number | null, prefix = "$") {
 
 export default function Dashboard() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const toast = useToast()
 
   const [ticker, setTicker] = useState(searchParams.get("symbol") ?? "AAPL")
+  const lessonParam = searchParams.get("lesson")
   const [search, setSearch] = useState("")
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [showSearch, setShowSearch] = useState(false)
@@ -55,7 +62,9 @@ export default function Dashboard() {
   const [loadingActive, setLoadingActive] = useState(false)
   const [aiAnalysis, setAiAnalysis] = useState("")
   const [loadingAi, setLoadingAi] = useState(false)
-  const [activeTab, setActiveTab] = useState<"chart" | "technique" | "ia">("chart")
+  const [activeTab, setActiveTab] = useState<"chart" | "technique" | "ia" | "news">("chart")
+  const [newsData, setNewsData] = useState<{ articles: any[]; sentiment: any; reddit: any } | null>(null)
+  const [loadingNews, setLoadingNews] = useState(false)
   const [chartData, setChartData] = useState<any>(null)
   const [prediction, setPrediction] = useState<any>(null)
   const [loadingPrediction, setLoadingPrediction] = useState(false)
@@ -77,6 +86,13 @@ export default function Dashboard() {
   const [token, setToken] = useState<string | null>(null)
   const [userProfile, setUserProfile] = useState<any>(null)
   const [bannerDismissed, setBannerDismissed] = useState(false)
+  const [showChecklist, setShowChecklist] = useState(true)
+  const [marketRegime, setMarketRegime] = useState<any>(null)
+  const [challenges, setChallenges] = useState<any[]>([])
+  const [showTour, setShowTour] = useState(false)
+  const [analyticsOpen, setAnalyticsOpen] = useState(false)
+  const [perfSnapshots, setPerfSnapshots] = useState<{ date: string; daily_pnl: number; daily_pnl_pct: number; portfolio_value: number }[]>([])
+  const [perfAlerts, setPerfAlerts] = useState<string[]>([])
 
   const searchTimeout = useRef<any>(null)
 
@@ -101,10 +117,48 @@ export default function Dashboard() {
       if (tok) {
         fetch("/api/user-profile", { headers: { Authorization: `Bearer ${tok}` } })
           .then(r => r.json())
-          .then(j => { if (j.profile) setUserProfile(j.profile) })
+          .then(j => {
+            if (j.profile) setUserProfile(j.profile)
+            if (j.profile?.level === "débutant") setActiveTab("ia")
+            if (j.profile?.level === "avancé") setActiveTab("technique")
+            // Auto-switch tab based on lesson context
+            if (lessonParam) {
+              if (["rsi_calculation","spot_rsi","macd_explained","bollinger_bands","identify_support","support_resistance"].includes(lessonParam)) setActiveTab("technique")
+              else if (lessonParam === "news" || lessonParam === "news_calculation") setActiveTab("news")
+            }
+            // Show tour for beginners who haven't completed it
+            if (j.profile?.level === "débutant" && localStorage.getItem("tour_completed") !== "1") {
+              setShowTour(true)
+            }
+          })
           .catch(() => {})
+        fetch("/api/challenges", { headers: { Authorization: `Bearer ${tok}` } })
+          .then(r => r.json())
+          .then(d => setChallenges(Array.isArray(d) ? d : []))
+          .catch(() => {})
+        // Performance snapshots for analytics widget
+        supabase.auth.getUser().then(async ({ data: uData }) => {
+          if (!uData.user) return
+          const { data: snaps } = await supabase
+            .from("performance_snapshots")
+            .select("date, daily_pnl, daily_pnl_pct, portfolio_value")
+            .eq("user_id", uData.user.id)
+            .order("date", { ascending: false })
+            .limit(30)
+          const sorted = [...(snaps ?? [])].reverse()
+          setPerfSnapshots(sorted as { date: string; daily_pnl: number; daily_pnl_pct: number; portfolio_value: number }[])
+          // Performance alerts
+          const alerts: string[] = []
+          if (sorted.length > 0) {
+            const latest = sorted[sorted.length - 1]
+            const drawdown = ((100000 - (latest.portfolio_value ?? 100000)) / 100000) * 100
+            if (drawdown > 10) alerts.push(`⚠️ Ton portfolio a baissé de ${drawdown.toFixed(1)}% — revois ta stratégie`)
+          }
+          setPerfAlerts(alerts)
+        }).catch(() => {})
       }
     })
+    fetch("/api/ai/market-regime").then(r => r.json()).then(setMarketRegime).catch(() => {})
   }, [])
 
   // Watchlist cards
@@ -140,6 +194,7 @@ export default function Dashboard() {
     setPrediction(null)
     setChartData(null)
     setOrderHistory([])
+    setNewsData(null)
     fetch(`/api/quote?symbol=${ticker}`)
       .then(r => r.json())
       .then(d => { setActiveData(d); setLoadingActive(false) })
@@ -322,6 +377,30 @@ export default function Dashboard() {
     setLoadingPrediction(false)
   }
 
+  async function fetchNewsData() {
+    setLoadingNews(true)
+    try {
+      const [articlesRes, redditRes] = await Promise.all([
+        fetch(`/api/news?symbol=${ticker}&limit=10`),
+        fetch(`/api/news/reddit-buzz?symbol=${ticker}`),
+      ])
+      const articlesJson = articlesRes.ok ? await articlesRes.json() : null
+      const redditJson = redditRes.ok ? await redditRes.json() : null
+      if (articlesJson?.articles?.length) {
+        const sentRes = await fetch("/api/news/sentiment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ articles: articlesJson.articles, symbol: ticker }),
+        })
+        const sentiment = sentRes.ok ? await sentRes.json() : null
+        setNewsData({ articles: articlesJson.articles, sentiment, reddit: redditJson })
+      } else {
+        setNewsData({ articles: [], sentiment: null, reddit: redditJson })
+      }
+    } catch {}
+    setLoadingNews(false)
+  }
+
   function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
     const val = e.target.value
     setSearch(val)
@@ -380,7 +459,18 @@ export default function Dashboard() {
   )
 
   return (
-    <div className="min-h-screen text-white" style={{ background: "#080808" }}>
+    <div className="min-h-screen page-enter" style={{ background: "var(--bg-canvas)" }}>
+
+      {/* ── Personalized greeting ────────────────────────────────── */}
+      {userProfile && (
+        <div className="px-5 pt-4 pb-0">
+          <p className="text-[12px] text-white/30 font-medium">
+            {userProfile.level === "débutant" && "Tableau de bord simplifié · mode débutant"}
+            {userProfile.level === "intermédiaire" && "Tableau de bord · niveau intermédiaire"}
+            {userProfile.level === "avancé" && "Tableau de bord avancé"}
+          </p>
+        </div>
+      )}
 
       {/* ── Personalization banner ──────────────────────────────────────── */}
       {showBanner && (
@@ -412,38 +502,38 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── Top nav ─────────────────────────────────────────────────────── */}
-      <div className="border-b border-white/[0.06] px-5 py-3 flex items-center gap-4">
-        <span className="text-white font-black text-base tracking-tight mr-2">FinanceApp</span>
+      {/* ── Watchlist bar ───────────────────────────────────────────────── */}
+      <div className="border-b border-white/[0.06] px-3 md:px-4 py-2 flex items-center gap-2">
 
         {/* Watchlist pills */}
-        <div className="flex gap-1 overflow-x-auto flex-1 scrollbar-hide">
+        <div data-tour="watchlist" className="flex gap-1 overflow-x-auto flex-1 scrollbar-hide items-center">
           {effectiveWatchlist.map((sym) => {
             const item = tickersData[sym]
             const pos = (item?.change ?? 0) >= 0
             return (
               <div key={sym} onClick={() => setTicker(sym)}
-                className={`group relative flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
+                className={cn(
+                  "group relative flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer",
                   ticker === sym
-                    ? "bg-white/10 text-white"
-                    : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
-                }`}>
+                    ? "bg-white/8 text-white border border-white/10"
+                    : "text-white/40 hover:text-white/70 hover:bg-white/4 border border-transparent"
+                )}>
                 <button onClick={(e) => removeFromWatchlist(sym, e)}
-                  className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-gray-700 hover:bg-red-500 rounded-full text-[9px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition z-10">×</button>
-                <span className="font-bold">{sym.replace("-USD", "")}</span>
+                  className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-[#333] hover:bg-red-500 rounded-full text-[9px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition z-10">×</button>
+                <span className="font-semibold tracking-tight">{sym.replace("-USD", "")}</span>
                 {item ? (
                   <>
-                    <span className="text-gray-400 font-mono">${item.price.toFixed(2)}</span>
-                    <span className={`font-semibold ${pos ? "text-green-400" : "text-red-400"}`}>
+                    <span className="text-white/50 font-mono tabular-nums">${item.price < 1 ? item.price.toFixed(4) : item.price.toFixed(2)}</span>
+                    <span className={cn("font-semibold tabular-nums", pos ? "text-green-400" : "text-red-400")}>
                       {pos ? "+" : ""}{item.change.toFixed(2)}%
                     </span>
                     {item.history?.length > 0 && (
-                      <div className="w-12 h-5 opacity-70">
+                      <div className="w-10 h-4 opacity-60">
                         <ResponsiveContainer width="100%" height="100%">
                           <AreaChart data={item.history} margin={{ top: 1, right: 0, left: 0, bottom: 1 }}>
                             <defs>
                               <linearGradient id={`g-${sym}`} x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor={pos ? "#4ade80" : "#f87171"} stopOpacity={0.4} />
+                                <stop offset="0%" stopColor={pos ? "#4ade80" : "#f87171"} stopOpacity={0.3} />
                                 <stop offset="100%" stopColor={pos ? "#4ade80" : "#f87171"} stopOpacity={0} />
                               </linearGradient>
                             </defs>
@@ -453,90 +543,181 @@ export default function Dashboard() {
                       </div>
                     )}
                   </>
-                ) : <span className="text-gray-700 text-[10px]">...</span>}
+                ) : <span className="text-white/20 text-[10px]">···</span>}
               </div>
             )
           })}
-          <button onClick={() => document.querySelector<HTMLInputElement>("#search-input")?.focus()}
-            className="flex-shrink-0 px-3 py-1.5 rounded-lg text-gray-600 hover:text-gray-400 text-xs transition">+ Ajouter</button>
-        </div>
-
-        {/* Search */}
-        <div className="relative flex-shrink-0">
-          <input id="search-input" type="text" value={search} onChange={handleSearchChange}
-            onFocus={() => search && setShowSearch(true)}
-            onBlur={() => setTimeout(() => setShowSearch(false), 200)}
-            placeholder="Rechercher..."
-            className="bg-white/5 border border-white/10 text-white placeholder-gray-600 px-3 py-1.5 rounded-lg w-44 focus:outline-none focus:border-white/20 text-xs" />
-          {showSearch && (
-            <div className="absolute top-full mt-1 right-0 w-64 bg-[#111] border border-white/10 rounded-xl overflow-hidden z-50 shadow-2xl">
-              {searchResults.length === 0 ? (
-                <div className="px-4 py-3 text-xs text-gray-500 flex items-center gap-2">
-                  <div className="w-3 h-3 border border-gray-500 border-t-transparent rounded-full animate-spin" />Recherche...
-                </div>
-              ) : searchResults.map((r) => (
-                <button key={r.symbol} onClick={() => addToWatchlist(r.symbol)}
-                  className="w-full text-left px-4 py-2.5 hover:bg-white/[0.06] transition flex items-center justify-between border-b border-white/5 last:border-0">
-                  <div>
-                    <p className="text-white font-bold text-xs">{r.symbol}</p>
-                    <p className="text-gray-500 text-[10px] truncate max-w-[160px]">{r.name}</p>
+          {/* Add to watchlist inline search */}
+          <div className="relative flex-shrink-0">
+            <input id="search-input" type="text" value={search} onChange={handleSearchChange}
+              onFocus={() => search && setShowSearch(true)}
+              onBlur={() => setTimeout(() => setShowSearch(false), 200)}
+              placeholder="+ Ajouter"
+              className="w-24 px-3 py-1.5 rounded-lg bg-transparent border border-transparent hover:border-white/10 focus:border-white/20 focus:bg-white/4 text-white/40 focus:text-white placeholder-white/25 text-xs outline-none transition" />
+            {showSearch && (
+              <div className="absolute top-full mt-1 left-0 w-64 rounded-xl overflow-hidden z-50 shadow-2xl" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)" }}>
+                {searchResults.length === 0 ? (
+                  <div className="px-4 py-3 text-xs text-white/30 flex items-center gap-2">
+                    <div className="w-3 h-3 border border-white/20 border-t-white/60 rounded-full animate-spin" />Recherche...
                   </div>
-                  <span className="text-green-400 text-[10px] font-semibold">+ Add</span>
-                </button>
-              ))}
-            </div>
-          )}
+                ) : searchResults.map((r) => (
+                  <button key={r.symbol} onClick={() => addToWatchlist(r.symbol)}
+                    className="w-full text-left px-4 py-2.5 hover:bg-white/[0.05] transition flex items-center justify-between border-b border-white/[0.04] last:border-0">
+                    <div>
+                      <p className="text-white font-semibold text-xs">{r.symbol}</p>
+                      <p className="text-white/30 text-[10px] truncate max-w-[160px]">{r.name}</p>
+                    </div>
+                    <span className="text-green-400 text-[10px] font-semibold">+ Ajouter</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        <span className={`flex-shrink-0 text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wide ${
-          plan === "premium" ? "bg-yellow-500/15 text-yellow-400" :
-          plan === "pro" ? "bg-green-500/15 text-green-400" : "bg-white/5 text-gray-500"
-        }`}>{plan === "free" ? "Free" : plan === "pro" ? "Pro" : "Premium"}</span>
+        <span className={cn(
+          "hidden sm:inline flex-shrink-0 text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide",
+          plan === "premium" ? "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20" :
+          plan === "pro" ? "bg-green-500/10 text-green-400 border border-green-500/20" :
+          "bg-white/4 text-white/25 border border-white/8"
+        )}>{plan === "free" ? "Free" : plan === "pro" ? "Pro" : "Premium"}</span>
       </div>
 
       {/* ── Main layout: left chart | right sidebar ──────────────────────── */}
-      <div className="flex items-start">
+      <div className="flex flex-col md:flex-row items-start">
 
         {/* LEFT — chart + tabs */}
         <div className="flex-1 flex flex-col min-w-0">
 
+          {/* Onboarding checklist */}
+          {showChecklist && (
+            <div className="px-5 pt-4">
+              <OnboardingChecklist
+                positions={position ? [position] : []}
+                watchlist={watchlist}
+                onDismiss={() => setShowChecklist(false)}
+              />
+            </div>
+          )}
+
+          {/* ── AI Market Intelligence bandeau ─────────────────────── */}
+          {marketRegime && (
+            <div
+              className="mx-4 mt-4 rounded-xl px-4 py-3 flex items-center gap-3 flex-wrap text-sm cursor-pointer hover:opacity-80 transition"
+              style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}
+              onClick={() => router.push("/coach")}
+            >
+              {userProfile?.level === "débutant" ? (
+                <>
+                  <span className="text-base">🧠</span>
+                  <span className={`text-sm font-semibold ${
+                    marketRegime.regime === "risk_on" ? "text-green-400" :
+                    marketRegime.regime === "risk_off" ? "text-red-400" : "text-yellow-400"
+                  }`}>
+                    {marketRegime.regime === "risk_on"
+                      ? "Les marchés sont en bonne forme aujourd'hui 📈"
+                      : marketRegime.regime === "risk_off"
+                      ? "Les marchés sont en baisse aujourd'hui 📉"
+                      : "Les marchés sont indécis aujourd'hui ↔️"}
+                  </span>
+                  <span className="text-green-400 text-xs ml-auto">Voir l'analyse →</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-base">🧠</span>
+                  <span className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Intelligence du marché</span>
+                  <span className={`px-2 py-0.5 rounded-lg text-xs font-black ${
+                    marketRegime.regime === "risk_on" ? "bg-green-500/15 text-green-400 border border-green-500/25" :
+                    marketRegime.regime === "risk_off" ? "bg-red-500/15 text-red-400 border border-red-500/25" :
+                    "bg-yellow-500/15 text-yellow-400 border border-yellow-500/25"
+                  }`}>
+                    {marketRegime.regime === "risk_on" ? "🟢 Risk On" : marketRegime.regime === "risk_off" ? "🔴 Risk Off" : "🟡 Transition"}
+                  </span>
+                  <span className="text-gray-500 text-xs">VIX: <span className="text-white font-bold">{marketRegime.vix_level}</span></span>
+                  <span className="text-gray-600 text-xs hidden sm:block truncate flex-1">{marketRegime.commentary}</span>
+                  <span className="text-green-400 text-xs ml-auto hidden sm:block">Voir Coach →</span>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Lesson context banner — shown when arriving from academy */}
+          {lessonParam && (
+            <div className="mx-4 mt-4 px-4 py-3 rounded-xl flex items-center gap-3 flex-wrap"
+              style={{ background: "rgba(96,165,250,0.05)", border: "1px solid rgba(96,165,250,0.15)" }}>
+              <span>🎓</span>
+              <div className="flex-1">
+                <p className="text-xs font-bold text-blue-400">Mode apprentissage actif</p>
+                <p className="text-[11px] text-gray-500 mt-0.5">
+                  {lessonParam === "rsi_calculation" || lessonParam === "spot_rsi"
+                    ? `Le RSI de ${ticker.replace("-USD","")} est visible dans l'onglet Indicateurs ci-dessous.`
+                    : lessonParam === "macd_explained"
+                    ? `Observe le MACD de ${ticker.replace("-USD","")} dans l'onglet Indicateurs.`
+                    : lessonParam === "identify_support" || lessonParam === "support_resistance"
+                    ? `Le support/résistance de ${ticker.replace("-USD","")} est visible dans l'onglet Signaux.`
+                    : `Applique ce que tu viens d'apprendre sur ${ticker.replace("-USD","")}.`}
+                </p>
+              </div>
+              <a href="/apprendre" className="text-[10px] font-bold px-3 py-1.5 rounded-lg flex-shrink-0 transition"
+                style={{ background: "rgba(96,165,250,0.1)", color: "#60a5fa", border: "1px solid rgba(96,165,250,0.2)" }}>
+                ← Retour au cours
+              </a>
+            </div>
+          )}
+
           {/* Asset header */}
-          <div className="px-5 pt-4 pb-3 border-b border-white/[0.05] flex items-end gap-5 flex-wrap">
+          <div className="px-4 pt-5 pb-4 border-b border-white/[0.05]">
             {activeData ? (
               <>
-                <div>
-                  <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-0.5">{activeData.name}</p>
-                  <div className="flex items-baseline gap-3">
-                    <span className="text-3xl font-black text-white tabular-nums">${activeData.price.toFixed(2)}</span>
-                    <span className={`text-base font-bold ${up ? "text-green-400" : "text-red-400"}`}>
-                      {up ? "+" : ""}{activeData.change.toFixed(2)}%
-                    </span>
-                    <span className={`text-xs px-2 py-0.5 rounded font-semibold ${up ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"}`}>
-                      {up ? "▲" : "▼"} Aujourd'hui
-                    </span>
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div>
+                    <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-2 font-semibold">{activeData.name}</p>
+                    <div className="flex items-baseline gap-3 flex-wrap">
+                      <span className={`text-3xl md:text-4xl font-black tabular-nums animate-slide-up ${up ? "gradient-text-white" : "text-white"}`}>
+                        ${activeData.price.toFixed(2)}
+                      </span>
+                      <span className={`text-lg font-black tabular-nums ${up ? "text-green-400" : "text-red-400"}`}>
+                        {up ? "+" : ""}{activeData.change.toFixed(2)}%
+                      </span>
+                      <span className={`text-[11px] px-2.5 py-1 rounded-lg font-bold ${
+                        up
+                          ? "bg-green-500/12 text-green-400 border border-green-500/20"
+                          : "bg-red-500/12 text-red-400 border border-red-500/20"
+                      }`}>
+                        {up ? "▲" : "▼"} Aujourd'hui
+                      </span>
+                    </div>
                   </div>
+                  {(tpReached || slReached) && (
+                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold ${
+                      tpReached ? "bg-green-500/15 text-green-400 border border-green-500/30 glow-green" : "bg-red-500/15 text-red-400 border border-red-500/30 glow-red"
+                    }`}>
+                      {tpReached ? "🎯 Take Profit atteint !" : "⚠️ Stop Loss atteint !"}
+                    </div>
+                  )}
                 </div>
-                <div className="flex gap-5 pb-0.5">
-                  {[
-                    { l: "Haut", v: activeData.high ? `$${activeData.high.toFixed(2)}` : "—" },
-                    { l: "Bas", v: activeData.low ? `$${activeData.low.toFixed(2)}` : "—" },
-                    { l: "Préc.", v: activeData.previousClose ? `$${activeData.previousClose.toFixed(2)}` : "—" },
-                    { l: "Volume", v: fmt(activeData.volume, "") },
-                    { l: "Mkt Cap", v: fmt(activeData.marketCap) },
-                  ].map(k => (
-                    <div key={k.l}>
-                      <p className="text-[9px] text-gray-600 uppercase tracking-widest">{k.l}</p>
-                      <p className="text-xs font-semibold text-gray-300 mt-0.5">{k.v}</p>
+
+                {/* Stats mini-cards */}
+                <div className="flex gap-2 mt-4 flex-wrap">
+                  {(userProfile?.level === "débutant"
+                    ? [
+                        { l: "Plus haut", v: activeData.high ? `$${activeData.high.toFixed(2)}` : "—" },
+                        { l: "Plus bas", v: activeData.low ? `$${activeData.low.toFixed(2)}` : "—" },
+                      ]
+                    : [
+                        { l: "Haut", v: activeData.high ? `$${activeData.high.toFixed(2)}` : "—" },
+                        { l: "Bas", v: activeData.low ? `$${activeData.low.toFixed(2)}` : "—" },
+                        { l: "Préc.", v: activeData.previousClose ? `$${activeData.previousClose.toFixed(2)}` : "—" },
+                        { l: "Volume", v: fmt(activeData.volume, "") },
+                        { l: "Mkt Cap", v: fmt(activeData.marketCap) },
+                      ]
+                  ).map(k => (
+                    <div key={k.l} className="px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.05] hover:border-white/10 transition">
+                      <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-0.5">{k.l}</p>
+                      <p className="text-xs font-bold text-gray-200">{k.v}</p>
                     </div>
                   ))}
                 </div>
-                {(tpReached || slReached) && (
-                  <div className={`ml-auto flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold ${
-                    tpReached ? "bg-green-500/15 text-green-400 border border-green-500/30" : "bg-red-500/15 text-red-400 border border-red-500/30"
-                  }`}>
-                    {tpReached ? "🎯 Take Profit atteint !" : "⚠️ Stop Loss atteint !"}
-                  </div>
-                )}
               </>
             ) : (
               <div className="h-10 w-48 bg-white/5 rounded-lg animate-pulse" />
@@ -544,7 +725,13 @@ export default function Dashboard() {
           </div>
 
           {/* Chart */}
-          <div className="border border-white/[0.05]">
+          <div data-tour="chart" className="border border-white/[0.05]">
+            {userProfile?.level === "débutant" && (
+              <div className="mx-4 mt-3 px-3 py-2 rounded-lg bg-blue-500/5 border border-blue-500/10 text-xs text-blue-400 flex items-center gap-2">
+                <span>💡</span>
+                <span>Les barres <strong>vertes</strong> signifient que le prix a monté, les <strong>rouges</strong> qu'il a baissé.</span>
+              </div>
+            )}
             <TradingChart
               symbol={ticker}
               position={position}
@@ -554,17 +741,31 @@ export default function Dashboard() {
 
           {/* Analysis tabs */}
           <div className="border-t border-white/[0.05]">
-            <div className="flex border-b border-white/[0.05]">
-              {[
-                { key: "chart", label: "Signaux" },
-                { key: "technique", label: "Indicateurs" },
-                { key: "ia", label: "IA & Prédiction" },
-              ].map(tab => (
+            <div className="flex border-b border-white/[0.05] overflow-x-auto scrollbar-hide">
+              {(userProfile?.level === "débutant"
+                ? [
+                    { key: "ia", label: "Que dit l'IA ? 🤖" },
+                    { key: "chart", label: "Signaux" },
+                    { key: "news", label: "📰 News" },
+                  ]
+                : [
+                    { key: "chart", label: "Signaux" },
+                    { key: "technique", label: "Indicateurs" },
+                    { key: "ia", label: "Que dit l'IA ? 🤖" },
+                    { key: "news", label: "📰 News & Sentiment" },
+                  ]
+              ).map(tab => (
                 <button key={tab.key} onClick={() => setActiveTab(tab.key as any)}
-                  className={`px-5 py-2.5 text-xs font-semibold transition border-b-2 ${
+                  data-tour={tab.key === "ia" ? "ia-tab" : undefined}
+                  className={`flex-shrink-0 whitespace-nowrap px-4 py-2.5 text-xs font-semibold transition border-b-2 ${
                     activeTab === tab.key ? "text-white border-white" : "text-gray-600 border-transparent hover:text-gray-400"
                   }`}>{tab.label}</button>
               ))}
+              {userProfile?.level === "débutant" && (
+                <div className="flex items-center gap-1 px-3 py-2.5 text-[10px] text-gray-700 border-b-2 border-transparent">
+                  🔒 Indicateurs avancés <span className="text-[9px]">(niveau intermédiaire)</span>
+                </div>
+              )}
             </div>
             <div>
 
@@ -612,11 +813,323 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Indicateurs TradingView */}
-              {activeTab === "technique" && (
-                <iframe key={ticker}
-                  src={`https://s.tradingview.com/embed-widget/technical-analysis/?locale=fr#%7B%22interval%22%3A%221D%22%2C%22width%22%3A%22100%25%22%2C%22isTransparent%22%3Atrue%2C%22height%22%3A%22220%22%2C%22symbol%22%3A%22${ticker.replace("-", "")}%22%2C%22showIntervalTabs%22%3Atrue%2C%22colorTheme%22%3A%22dark%22%7D`}
-                  width="100%" height={220} frameBorder="0" />
+              {/* Indicateurs */}
+              {activeTab === "technique" && (() => {
+                const bars = chartData?.bars ?? []
+                const closes = bars.map((b: any) => b.close).filter(Boolean)
+                const highs  = bars.map((b: any) => b.high).filter(Boolean)
+                const lows   = bars.map((b: any) => b.low).filter(Boolean)
+                const n = closes.length
+
+                // RSI (déjà calculé dans bars)
+                const rsiVal = bars[n - 1]?.rsi ?? null
+
+                // EMA helper
+                const ema = (data: number[], period: number) => {
+                  const k = 2 / (period + 1)
+                  let val = data.slice(0, period).reduce((a: number, b: number) => a + b, 0) / period
+                  for (let i = period; i < data.length; i++) val = data[i] * k + val * (1 - k)
+                  return parseFloat(val.toFixed(2))
+                }
+                const ema9Val  = n >= 9  ? ema(closes, 9)  : null
+                const ema21Val = n >= 21 ? ema(closes, 21) : null
+                const ema50Val = n >= 50 ? ema(closes, 50) : null
+
+                // MACD (EMA12 - EMA26)
+                const ema12 = n >= 12 ? ema(closes, 12) : null
+                const ema26 = n >= 26 ? ema(closes, 26) : null
+                const macdVal = ema12 !== null && ema26 !== null ? parseFloat((ema12 - ema26).toFixed(2)) : null
+
+                // Bollinger Bands (20, ±2σ)
+                let bbUpper: number | null = null, bbLower: number | null = null, bbMid: number | null = null
+                if (n >= 20) {
+                  const slice = closes.slice(-20)
+                  const avg = slice.reduce((a: number, b: number) => a + b, 0) / 20
+                  const std = Math.sqrt(slice.reduce((a: number, b: number) => a + (b - avg) ** 2, 0) / 20)
+                  bbMid = parseFloat(avg.toFixed(2))
+                  bbUpper = parseFloat((avg + 2 * std).toFixed(2))
+                  bbLower = parseFloat((avg - 2 * std).toFixed(2))
+                }
+
+                // Stochastic %K (14)
+                let stochK: number | null = null
+                if (n >= 14) {
+                  const recentH = highs.slice(-14)
+                  const recentL = lows.slice(-14)
+                  const hh = Math.max(...recentH)
+                  const ll = Math.min(...recentL)
+                  stochK = hh !== ll ? parseFloat(((closes[n - 1] - ll) / (hh - ll) * 100).toFixed(1)) : 50
+                }
+
+                // ATR (14)
+                let atrVal: number | null = null
+                if (n >= 14) {
+                  const trs = []
+                  for (let i = Math.max(1, n - 14); i < n; i++) {
+                    const tr = Math.max(highs[i] - lows[i], Math.abs(highs[i] - closes[i - 1]), Math.abs(lows[i] - closes[i - 1]))
+                    trs.push(tr)
+                  }
+                  atrVal = parseFloat((trs.reduce((a, b) => a + b, 0) / trs.length).toFixed(2))
+                }
+
+                const price = closes[n - 1] ?? 0
+
+                const indicators = [
+                  {
+                    label: "RSI (14)",
+                    value: rsiVal !== null ? rsiVal.toFixed(1) : "—",
+                    signal: rsiVal !== null ? (rsiVal > 70 ? "Suracheté" : rsiVal < 30 ? "Survendu" : "Neutre") : "—",
+                    color: rsiVal !== null ? (rsiVal > 70 ? "#f87171" : rsiVal < 30 ? "#4ade80" : "#9ca3af") : "#9ca3af",
+                    bar: rsiVal !== null ? rsiVal : null, barMax: 100,
+                    desc: `Oscillateur de momentum`,
+                  },
+                  {
+                    label: "MACD",
+                    value: macdVal !== null ? (macdVal >= 0 ? `+${macdVal}` : `${macdVal}`) : "—",
+                    signal: macdVal !== null ? (macdVal > 0 ? "Haussier" : "Baissier") : "—",
+                    color: macdVal !== null ? (macdVal > 0 ? "#4ade80" : "#f87171") : "#9ca3af",
+                    bar: null, barMax: 100,
+                    desc: `EMA12 − EMA26`,
+                  },
+                  {
+                    label: "Stochastic %K",
+                    value: stochK !== null ? stochK.toFixed(1) : "—",
+                    signal: stochK !== null ? (stochK > 80 ? "Suracheté" : stochK < 20 ? "Survendu" : "Neutre") : "—",
+                    color: stochK !== null ? (stochK > 80 ? "#f87171" : stochK < 20 ? "#4ade80" : "#9ca3af") : "#9ca3af",
+                    bar: stochK, barMax: 100,
+                    desc: `Oscillateur (14)`,
+                  },
+                  {
+                    label: "Bollinger",
+                    value: bbUpper !== null ? `±${((bbUpper - bbLower!) / 2).toFixed(2)}` : "—",
+                    signal: bbUpper !== null ? (price >= bbUpper ? "En zone haute" : price <= bbLower! ? "En zone basse" : "Dans les bandes") : "—",
+                    color: bbUpper !== null ? (price >= bbUpper ? "#f87171" : price <= bbLower! ? "#4ade80" : "#9ca3af") : "#9ca3af",
+                    bar: null, barMax: 100,
+                    desc: bbUpper !== null ? `${bbLower?.toFixed(0)} – ${bbUpper?.toFixed(0)}` : "MM20 ±2σ",
+                  },
+                  {
+                    label: "EMA 9 / 21",
+                    value: ema9Val !== null && ema21Val !== null ? `${ema9Val > ema21Val ? "↑" : "↓"}` : "—",
+                    signal: ema9Val !== null && ema21Val !== null ? (ema9Val > ema21Val ? "Haussier" : "Baissier") : "—",
+                    color: ema9Val !== null && ema21Val !== null ? (ema9Val > ema21Val ? "#4ade80" : "#f87171") : "#9ca3af",
+                    bar: null, barMax: 100,
+                    desc: ema9Val !== null ? `EMA9: ${ema9Val} · EMA21: ${ema21Val}` : "Croisement EMA",
+                  },
+                  {
+                    label: "ATR (14)",
+                    value: atrVal !== null ? `$${atrVal}` : "—",
+                    signal: atrVal !== null && price > 0 ? `${((atrVal / price) * 100).toFixed(1)}% volatilité` : "—",
+                    color: "#a78bfa",
+                    bar: null, barMax: 100,
+                    desc: "Average True Range",
+                  },
+                ]
+
+                return (
+                  <div className="p-3 grid grid-cols-2 gap-2">
+                    {indicators.map(ind => (
+                      <div key={ind.label} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">{ind.label}</span>
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md" style={{ background: `${ind.color}18`, color: ind.color }}>{ind.signal}</span>
+                        </div>
+                        <p className="text-xl font-black text-white">{ind.value}</p>
+                        {ind.bar !== null && (
+                          <div className="mt-1.5 h-1 rounded-full overflow-hidden bg-white/10">
+                            <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(100, ind.bar)}%`, background: ind.color }} />
+                          </div>
+                        )}
+                        <p className="text-[9px] text-gray-700 mt-1">{ind.desc}</p>
+                      </div>
+                    ))}
+                    {/* MM50 price line */}
+                    {ema50Val !== null && (
+                      <div className="col-span-2 rounded-xl p-3 flex items-center justify-between" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                        <div>
+                          <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">EMA 50</p>
+                          <p className="text-lg font-black text-white">${ema50Val}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md" style={{
+                            background: price > ema50Val ? "rgba(74,222,128,0.1)" : "rgba(248,113,113,0.1)",
+                            color: price > ema50Val ? "#4ade80" : "#f87171"
+                          }}>
+                            Prix {price > ema50Val ? "au-dessus" : "en-dessous"} — {price > ema50Val ? "Tendance haussière" : "Tendance baissière"}
+                          </span>
+                          <p className="text-[9px] text-gray-700 mt-1">Moyenne mobile 50 périodes</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+
+              {/* News & Sentiment */}
+              {activeTab === "news" && (
+                <div className="flex flex-col">
+                  <div className="flex gap-2 p-3 border-b border-white/[0.05]">
+                    <button onClick={fetchNewsData} disabled={loadingNews}
+                      className="flex-1 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-400 hover:bg-blue-500/20 transition disabled:opacity-40">
+                      {loadingNews ? "⏳ Chargement..." : "🔄 Actualiser les news"}
+                    </button>
+                  </div>
+                  {!newsData && !loadingNews && (
+                    <div className="p-6 text-center">
+                      <p className="text-gray-600 text-xs mb-3">Analyse les dernières actualités et le sentiment du marché pour {ticker.replace("-USD", "")}</p>
+                      <button onClick={fetchNewsData} className="px-4 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-sm text-blue-400 hover:bg-blue-500/20 transition">
+                        📰 Charger les actualités
+                      </button>
+                    </div>
+                  )}
+                  {loadingNews && (
+                    <div className="p-4 space-y-2">
+                      {[...Array(4)].map((_, i) => (
+                        <div key={i} className="h-12 bg-white/5 rounded-lg animate-pulse" style={{ width: `${95 - i * 5}%` }} />
+                      ))}
+                    </div>
+                  )}
+                  {newsData && !loadingNews && (
+                    <div className="p-3 space-y-3">
+                      {/* Sentiment Banner */}
+                      {newsData.sentiment && (() => {
+                        const score = newsData.sentiment.sentiment_score ?? 0
+                        const pct = ((score + 100) / 200 * 100).toFixed(0)
+                        const color = score > 20 ? "#4ade80" : score < -20 ? "#f87171" : "#facc15"
+                        const label = newsData.sentiment.overall_sentiment ?? "neutre"
+                        return (
+                          <div className="rounded-xl p-3 space-y-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Sentiment général</span>
+                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full" style={{ background: `${color}18`, color }}>{label}</span>
+                            </div>
+                            <div className="relative h-2 rounded-full overflow-hidden bg-white/5">
+                              <div className="absolute inset-y-0 left-0 rounded-full transition-all" style={{ width: `${pct}%`, background: `linear-gradient(to right, #f87171, #facc15, #4ade80)` }} />
+                              <div className="absolute top-0 h-full w-0.5 bg-white/30" style={{ left: "50%" }} />
+                            </div>
+                            <div className="flex justify-between text-[9px] text-gray-600">
+                              <span>Très négatif</span>
+                              <span className="font-bold text-white">{score > 0 ? "+" : ""}{score}</span>
+                              <span>Très positif</span>
+                            </div>
+                            {newsData.sentiment.summary && (
+                              <p className="text-[11px] text-gray-400 leading-relaxed border-t border-white/5 pt-2">{newsData.sentiment.summary}</p>
+                            )}
+                            <div className="grid grid-cols-2 gap-2 pt-1">
+                              <div>
+                                <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-1">Impact probable</p>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                  newsData.sentiment.impact_on_price === "haussier" ? "bg-green-500/10 text-green-400" :
+                                  newsData.sentiment.impact_on_price === "baissier" ? "bg-red-500/10 text-red-400" :
+                                  "bg-yellow-500/10 text-yellow-400"
+                                }`}>{newsData.sentiment.impact_on_price}</span>
+                              </div>
+                              <div>
+                                <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-1">Confiance</p>
+                                <span className="text-[10px] font-bold text-white">{newsData.sentiment.confidence}%</span>
+                              </div>
+                            </div>
+                            {newsData.sentiment.key_themes?.length > 0 && (
+                              <div>
+                                <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-1.5">Thèmes clés</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {newsData.sentiment.key_themes.map((t: string, i: number) => (
+                                    <span key={i} className="text-[9px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/15">{t}</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })()}
+
+                      {/* Reddit Buzz Meter */}
+                      {newsData.reddit && (() => {
+                        const buzz = newsData.reddit
+                        const sentColor = buzz.dominant_sentiment === "bullish" ? "#4ade80" : buzz.dominant_sentiment === "bearish" ? "#f87171" : "#9ca3af"
+                        return (
+                          <div className="rounded-xl p-3 space-y-2" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Reddit Buzz</span>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${sentColor}18`, color: sentColor }}>
+                                {buzz.dominant_sentiment === "bullish" ? "🐂 Bullish" : buzz.dominant_sentiment === "bearish" ? "🐻 Bearish" : "😐 Neutre"}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1">
+                                <div className="h-2 rounded-full overflow-hidden bg-white/5">
+                                  <div className="h-full rounded-full" style={{ width: `${buzz.buzz_score}%`, background: sentColor }} />
+                                </div>
+                              </div>
+                              <span className="text-lg font-black" style={{ color: sentColor }}>{buzz.buzz_score}</span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2 text-center">
+                              <div>
+                                <p className="text-sm font-black text-white">{buzz.mentions_24h}</p>
+                                <p className="text-[9px] text-gray-600">Mentions 24h</p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-black text-white">{buzz.avg_score}</p>
+                                <p className="text-[9px] text-gray-600">Score moyen</p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-black text-orange-400">{buzz.viral_posts?.length ?? 0}</p>
+                                <p className="text-[9px] text-gray-600">Posts viraux</p>
+                              </div>
+                            </div>
+                            {buzz.subreddits?.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {buzz.subreddits.map((sub: string, i: number) => (
+                                  <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/15">{sub}</span>
+                                ))}
+                              </div>
+                            )}
+                            {buzz.viral_posts?.slice(0, 2).map((post: any, i: number) => (
+                              <a key={i} href={post.url} target="_blank" rel="noopener noreferrer"
+                                className="flex items-start gap-2 p-2 rounded-lg bg-white/[0.02] hover:bg-white/[0.05] transition border border-white/[0.04]">
+                                <span className="text-orange-400 text-[10px] font-black mt-0.5">🔥</span>
+                                <p className="text-[10px] text-gray-400 leading-tight flex-1 line-clamp-2">{post.title}</p>
+                                <span className="text-[9px] text-orange-400 font-bold flex-shrink-0">↑{post.score}</span>
+                              </a>
+                            ))}
+                          </div>
+                        )
+                      })()}
+
+                      {/* News list */}
+                      {newsData.articles.length > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="text-[9px] text-gray-600 uppercase tracking-widest">Dernières actualités ({newsData.articles.length})</p>
+                          {newsData.articles.map((article: any, i: number) => {
+                            const ago = Math.round((Date.now() - new Date(article.published_at).getTime()) / 60000)
+                            return (
+                              <a key={i} href={article.url} target="_blank" rel="noopener noreferrer"
+                                className="flex items-start gap-2.5 p-2.5 rounded-lg bg-white/[0.025] hover:bg-white/[0.05] transition border border-white/[0.05] group">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[11px] text-gray-300 leading-tight group-hover:text-white transition line-clamp-2">{article.title}</p>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-[9px] text-gray-600">{article.source}</span>
+                                    <span className="text-[9px] text-gray-700">·</span>
+                                    <span className="text-[9px] text-gray-600">{ago < 60 ? `${ago}m` : ago < 1440 ? `${Math.round(ago/60)}h` : `${Math.round(ago/1440)}j`}</span>
+                                    {article.reddit_score != null && (
+                                      <>
+                                        <span className="text-[9px] text-gray-700">·</span>
+                                        <span className="text-[9px] text-orange-400">↑{article.reddit_score}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                                <span className="text-gray-600 group-hover:text-white text-[10px] flex-shrink-0 mt-0.5">↗</span>
+                              </a>
+                            )
+                          })}
+                        </div>
+                      )}
+                      {newsData.articles.length === 0 && (
+                        <p className="text-gray-700 text-xs text-center py-4">Aucune actualité récente trouvée pour {ticker.replace("-USD", "")}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* IA */}
@@ -748,14 +1261,19 @@ export default function Dashboard() {
         </div>
 
         {/* RIGHT — sidebar */}
-        <div className="w-72 flex-shrink-0 border-l border-white/[0.05] flex flex-col overflow-y-auto sticky top-0 h-screen" style={{ background: "#0c0c0c" }}>
+        <div className="w-full md:w-72 md:flex-shrink-0 border-t md:border-t-0 md:border-l border-white/[0.05] flex flex-col overflow-y-auto md:sticky md:top-0 md:h-screen" style={{ background: "#0c0c0c" }}>
 
           {/* Cash */}
           <div className="px-4 pt-4 pb-3 border-b border-white/[0.05]">
-            <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-1">Cash disponible</p>
+            <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-1">
+              {userProfile?.level === "débutant" ? "Capital virtuel disponible" : "Cash disponible"}
+            </p>
             <p className="text-xl font-black text-white tabular-nums">
               {account ? `$${account.cash.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
             </p>
+            {userProfile?.level === "débutant" && (
+              <p className="text-[10px] text-gray-600 mt-1">💡 Argent fictif — achète sans aucun risque réel</p>
+            )}
           </div>
 
           {/* Position */}
@@ -805,14 +1323,21 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="px-4 py-3 border-b border-white/[0.05]">
-              <p className="text-[9px] text-gray-700 uppercase tracking-widest">Aucune position ouverte sur {ticker.replace("-USD", "")}</p>
+              {userProfile?.level === "débutant" ? (
+                <div className="space-y-1">
+                  <p className="text-xs text-gray-500 font-semibold">Tu n'as pas encore acheté {ticker.replace("-USD", "")}</p>
+                  <p className="text-[10px] text-gray-700">Clique sur "Acheter" pour simuler ton premier achat ↓</p>
+                </div>
+              ) : (
+                <p className="text-[9px] text-gray-700 uppercase tracking-widest">Aucune position ouverte sur {ticker.replace("-USD", "")}</p>
+              )}
             </div>
           )}
 
           {/* Buy / Sell buttons */}
-          <div className="px-4 py-3 border-b border-white/[0.05] space-y-2">
+          <div data-tour="buy-btn" className="px-4 py-3 border-b border-white/[0.05] space-y-2">
             <button onClick={openBuy}
-              className="w-full py-3 rounded-xl bg-green-500 hover:bg-green-400 text-white text-sm font-black tracking-wide transition shadow-lg shadow-green-500/20">
+              className="w-full py-3 rounded-xl btn-primary text-sm tracking-wide">
               Acheter {ticker.replace("-USD", "")}
             </button>
             {position && (
@@ -824,11 +1349,13 @@ export default function Dashboard() {
           </div>
 
           {/* Price alerts */}
+          <div data-tour="alerts">
           <AlertsPanel
             symbol={ticker}
             currentPrice={activeData?.price}
             token={token}
           />
+          </div>
 
           {/* Market stats */}
           {activeData && (
@@ -880,6 +1407,96 @@ export default function Dashboard() {
             </div>
           )}
 
+          {/* Performance alerts */}
+          {perfAlerts.length > 0 && (
+            <div className="px-4 pt-3 space-y-2">
+              {perfAlerts.map((alert, i) => (
+                <div key={i} className={`px-3 py-2.5 rounded-xl border text-xs font-semibold ${
+                  alert.startsWith("⚠️") ? "bg-orange-500/8 border-orange-500/20 text-orange-300" :
+                  alert.startsWith("🔥") ? "bg-green-500/8 border-green-500/20 text-green-300" :
+                  "bg-blue-500/8 border-blue-500/20 text-blue-300"
+                }`}>{alert}</div>
+              ))}
+            </div>
+          )}
+
+          {/* Analytics widget */}
+          <div className="px-4 pt-3">
+            <button onClick={() => setAnalyticsOpen(!analyticsOpen)}
+              className="w-full flex items-center justify-between px-3 py-2.5 bg-[#111] border border-white/5 rounded-xl hover:bg-white/3 transition">
+              <span className="text-white font-bold text-xs">📊 Analytics 30 jours</span>
+              <span className="text-gray-600 text-[10px]">{analyticsOpen ? "▲" : "▼"}</span>
+            </button>
+            {analyticsOpen && perfSnapshots.length > 0 && (() => {
+              const thisWeek = perfSnapshots.slice(-7)
+              const lastWeek = perfSnapshots.slice(-14, -7)
+              const weekPnl = thisWeek.reduce((s, d) => s + (d.daily_pnl ?? 0), 0)
+              const lastWeekPnl = lastWeek.reduce((s, d) => s + (d.daily_pnl ?? 0), 0)
+              let streak = 0
+              for (let i = perfSnapshots.length - 1; i >= 0; i--) {
+                if ((perfSnapshots[i].daily_pnl ?? 0) > 0) streak++
+                else break
+              }
+              return (
+                <div className="mt-1.5 bg-[#111] border border-white/5 rounded-xl p-3 space-y-3">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="text-center">
+                      <p className={`text-base font-black ${weekPnl >= 0 ? "text-green-400" : "text-red-400"}`}>
+                        {weekPnl >= 0 ? "+" : ""}${Math.abs(weekPnl).toFixed(0)}
+                      </p>
+                      <p className="text-gray-600 text-[9px]">Cette semaine</p>
+                    </div>
+                    <div className="text-center">
+                      <p className={`text-base font-black ${weekPnl >= lastWeekPnl ? "text-green-400" : "text-red-400"}`}>
+                        {weekPnl >= lastWeekPnl ? "▲" : "▼"}
+                      </p>
+                      <p className="text-gray-600 text-[9px]">vs S-1</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-base font-black text-orange-400">🔥 {streak}</p>
+                      <p className="text-gray-600 text-[9px]">Jours prof.</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-0.5">
+                    {perfSnapshots.map((s, i) => (
+                      <div key={i} title={`${s.date}: ${(s.daily_pnl ?? 0) >= 0 ? "+" : ""}$${(s.daily_pnl ?? 0).toFixed(0)}`}
+                        className={`w-4 h-4 rounded-sm ${(s.daily_pnl ?? 0) > 0 ? "bg-green-500/60" : (s.daily_pnl ?? 0) < 0 ? "bg-red-500/50" : "bg-white/5"}`} />
+                    ))}
+                  </div>
+                  <a href="/reports" className="block text-center text-[10px] text-green-400 font-bold hover:text-green-300 transition">
+                    Rapport complet →
+                  </a>
+                </div>
+              )
+            })()}
+          </div>
+
+          {/* Weekly Challenges */}
+          {challenges.length > 0 && (
+            <div className="px-4 py-3 border-t border-white/[0.05]">
+              <h3 className="text-white font-bold text-sm mb-3">🎯 Défis de la semaine</h3>
+              <div className="grid grid-cols-1 gap-2">
+                {challenges.map((c: any) => (
+                  <div key={c.id} className={`rounded-xl p-3 border flex items-center gap-3 ${c.completed ? "bg-green-500/5 border-green-500/20" : "bg-[#111] border-white/5"}`}>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg flex-shrink-0 ${c.completed ? "bg-green-500/20" : "bg-white/5"}`}>
+                      {c.completed ? "✅" : "🎯"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs font-bold ${c.completed ? "text-green-400" : "text-white"}`}>{c.title}</p>
+                      <p className="text-gray-600 text-[10px] truncate">{c.description}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-xs font-black text-yellow-400">+{c.reward_xp} XP</p>
+                      {c.progress !== undefined && !c.completed && (
+                        <p className="text-[10px] text-gray-600">{c.progress}%</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Footer */}
           <div className="px-4 py-3 mt-auto border-t border-white/[0.05]">
             <div className="flex items-center gap-1.5">
@@ -892,8 +1509,8 @@ export default function Dashboard() {
 
       {/* ── Modal Ordre ───────────────────────────────────────────────────── */}
       {orderModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-          <div className="bg-[#111] border border-white/10 rounded-2xl p-5 w-full max-w-sm shadow-2xl">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 px-0 sm:px-4">
+          <div className="bg-[#111] border border-white/10 rounded-t-2xl sm:rounded-2xl p-5 w-full max-w-[95vw] sm:max-w-sm shadow-2xl mx-auto">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${orderModal === "buy" ? "bg-green-500/20" : "bg-red-500/20"}`}>
@@ -996,8 +1613,8 @@ export default function Dashboard() {
 
       {/* ── Modal TP/SL ───────────────────────────────────────────────────── */}
       {tpSlModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-          <div className="bg-[#111] border border-white/10 rounded-2xl p-5 w-full max-w-sm shadow-2xl">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 px-0 sm:px-4">
+          <div className="bg-[#111] border border-white/10 rounded-t-2xl sm:rounded-2xl p-5 w-full max-w-[95vw] sm:max-w-sm shadow-2xl mx-auto">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="text-base font-black">Modifier TP / SL</p>
@@ -1039,6 +1656,8 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {showTour && <Tour onComplete={() => setShowTour(false)} />}
     </div>
   )
 }

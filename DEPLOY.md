@@ -35,6 +35,21 @@ Configurer dans **Vercel → Settings → Environment Variables** (pour tous les
 |---|---|
 | `GROQ_API_KEY` | Clé API Groq (analyses IA forum, résumés) |
 
+### Email (Resend)
+
+| Variable | Description |
+|---|---|
+| `RESEND_API_KEY` | Clé API Resend (resend.com) — emails transactionnels |
+
+### Push Notifications (optionnel)
+
+| Variable | Description |
+|---|---|
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Clé VAPID publique pour Web Push |
+| `VAPID_PRIVATE_KEY` | Clé VAPID privée (jamais exposée côté client) |
+
+Générer les clés VAPID : `npx web-push generate-vapid-keys`
+
 ### Optionnel
 
 | Variable | Description |

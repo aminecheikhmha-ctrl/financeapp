@@ -5,6 +5,11 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
 
+  // Exclude worktrees from Turbopack compilation
+  turbopack: {
+    root: __dirname,
+  },
+
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "img.youtube.com" },

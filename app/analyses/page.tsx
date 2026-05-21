@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import UpgradeModal from "@/app/components/UpgradeModal"
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts"
@@ -292,7 +293,7 @@ function BacktestTab() {
         {/* Strategy */}
         <div>
           <p className="text-[9px] uppercase tracking-widest font-bold mb-2" style={{ color: "#444" }}>Stratégie</p>
-          <div className="grid grid-cols-5 gap-1.5 mb-2">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 mb-2">
             {BT_STRATEGIES.map(s => (
               <button key={s.id} onClick={() => setStrategy(s.id)}
                 className="flex flex-col items-center gap-1 px-2 py-2 rounded-xl text-[10px] font-bold transition"
@@ -398,7 +399,7 @@ function BacktestTab() {
           </div>
 
           {/* KPIs */}
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
             <BtKPI label="Win Rate"      value={`${fmtN(result.win_rate, 1)}%`}     sub={`${result.winning_trades}W / ${result.losing_trades}L`} positive={result.win_rate >= 50} />
             <BtKPI label="Rendement"     value={`${result.total_return >= 0 ? "+" : ""}${fmtN(result.total_return)}%`}  positive={result.total_return >= 0} />
             <BtKPI label="Max Drawdown"  value={`-${fmtN(result.max_drawdown)}%`}   positive={result.max_drawdown < 10} />
@@ -507,11 +508,15 @@ export default function AnalysesPage() {
   const [filter,        setFilter]        = useState<"all" | "stock" | "crypto" | "etf">("all")
   const [showAllBuys,   setShowAllBuys]   = useState(false)
   const [tab,           setTab]           = useState<"screener" | "market" | "backtest">("market")
+  const [plan,          setPlan]          = useState("free")
+  const [showUpgrade,   setShowUpgrade]   = useState(false)
 
-  // ── Auth guard ──────────────────────────────────────────────────────────────
+  // ── Auth guard + plan ───────────────────────────────────────────────────────
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) router.push("/login")
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) { router.push("/login"); return }
+      const { data: profile } = await supabase.from("profiles").select("plan").eq("email", data.user.email).single()
+      if (profile?.plan) setPlan(profile.plan)
     })
   }, [router])
 
@@ -555,13 +560,14 @@ export default function AnalysesPage() {
   const sent = summary ? sentimentConfig(summary.sentiment) : null
 
   return (
-    <div className="min-h-screen text-white" style={{ background: "#080808" }}>
-      <div className="max-w-6xl mx-auto px-5 py-6">
+    <>
+    <div className="min-h-screen text-white overflow-x-hidden page-enter" style={{ background: "var(--bg-canvas)" }}>
+      <div className="max-w-6xl mx-auto px-4 md:px-5 py-6">
 
         {/* ── Page header ─────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div>
-            <h1 className="text-2xl font-black tracking-tight">Analyses IA</h1>
+            <h1 className="text-xl md:text-2xl font-black tracking-tight">Analyses IA</h1>
             <p className="text-gray-600 text-sm mt-0.5">Screener algorithmique · Briefing de marché Groq LLaMA</p>
           </div>
           {sent && (
@@ -573,14 +579,14 @@ export default function AnalysesPage() {
         </div>
 
         {/* ── Tabs ────────────────────────────────────────────────────────── */}
-        <div className="flex gap-1 mb-6 p-1 rounded-xl" style={{ background: "#111" }}>
+        <div className="flex gap-1 mb-6 p-1 rounded-xl overflow-x-auto scrollbar-hide" style={{ background: "#111" }}>
           {[
-            { key: "market",   label: "📰 Résumé de marché" },
-            { key: "screener", label: "🔍 Screener IA"       },
-            { key: "backtest", label: "📊 Backtest"           },
+            { key: "market",   label: "📰 Résumé" },
+            { key: "screener", label: "🔍 Screener" },
+            { key: "backtest", label: "📊 Backtest" },
           ].map(t => (
             <button key={t.key} onClick={() => setTab(t.key as any)}
-              className="flex-1 py-2 rounded-lg text-sm font-bold transition-all"
+              className="flex-1 flex-shrink-0 whitespace-nowrap py-2 rounded-lg text-xs md:text-sm font-bold transition-all"
               style={{
                 background: tab === t.key ? "#1a1a1a" : "transparent",
                 color: tab === t.key ? "#fff" : "#555",
@@ -647,7 +653,7 @@ export default function AnalysesPage() {
                   ))}
                 </div>
               ) : summary ? (
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
                   {summary.market_data.map(d => <IndexCard key={d.symbol} d={d} />)}
                 </div>
               ) : null}
@@ -657,7 +663,7 @@ export default function AnalysesPage() {
             {summary?.top_movers && (
               <div>
                 <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Plus grandes variations</h3>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {summary.top_movers.map(d => {
                     const up = d.change >= 0
                     return (
@@ -683,7 +689,35 @@ export default function AnalysesPage() {
         {/* ══════════════════════════════════════════════════════════════════ */}
         {/* SCREENER TAB                                                      */}
         {/* ══════════════════════════════════════════════════════════════════ */}
-        {tab === "screener" && (
+        {tab === "screener" && plan === "free" && (
+          <div className="relative rounded-2xl overflow-hidden" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
+            {/* Blurred preview */}
+            <div className="p-6 blur-sm pointer-events-none select-none opacity-40">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {[1,2,3,4,5,6,7,8].map(i => (
+                  <div key={i} className="h-28 rounded-xl animate-pulse" style={{ background: "#151515" }} />
+                ))}
+              </div>
+            </div>
+            {/* Lock overlay */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl" style={{ background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.2)" }}>🔒</div>
+              <div>
+                <p className="text-white font-black text-lg">Screener IA réservé Pro</p>
+                <p className="text-gray-500 text-sm mt-1">Scanne 160+ actifs en temps réel avec scoring algorithmique</p>
+              </div>
+              <button
+                onClick={() => setShowUpgrade(true)}
+                className="px-6 py-3 rounded-xl font-black text-sm text-black transition hover:opacity-90"
+                style={{ background: "linear-gradient(135deg, #4ade80, #22c55e)" }}
+              >
+                Passer à Pro →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {tab === "screener" && plan !== "free" && (
           <div className="space-y-6">
 
             {/* Section header + controls */}
@@ -818,5 +852,7 @@ export default function AnalysesPage() {
 
       </div>
     </div>
+    <UpgradeModal open={showUpgrade} onClose={() => setShowUpgrade(false)} context="screener" />
+    </>
   )
 }

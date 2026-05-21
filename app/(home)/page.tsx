@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
+import NewsletterSignup from "@/app/components/NewsletterSignup"
 
 export default function Home() {
   const router = useRouter()
@@ -77,7 +78,7 @@ function Landing() {
       `}</style>
 
       {/* HERO */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center px-6 pt-24 pb-16 text-center overflow-hidden">
+      <section className="relative min-h-screen flex flex-col items-center justify-center px-4 md:px-6 pt-20 md:pt-24 pb-16 text-center overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[450px] rounded-full opacity-25 blur-[120px] anim-gradient"
             style={{ background: "linear-gradient(135deg,#22c55e,#059669,#10b981,#16a34a)" }} />
@@ -91,7 +92,7 @@ function Landing() {
         </div>
 
         <div className="anim-fade-up" style={{ animationDelay: "120ms", opacity: 0 }}>
-          <h1 className="text-5xl md:text-7xl font-black leading-[1.05] mb-5 max-w-4xl">
+          <h1 className="text-3xl sm:text-5xl md:text-7xl font-black leading-[1.05] mb-5 max-w-4xl">
             Tradez plus intelligemment{" "}
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-green-400 via-emerald-300 to-green-500">
               avec l'IA
@@ -100,7 +101,7 @@ function Landing() {
         </div>
 
         <div className="anim-fade-up" style={{ animationDelay: "240ms", opacity: 0 }}>
-          <p className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto mb-8 leading-relaxed">
+          <p className="text-base md:text-xl text-gray-400 max-w-2xl mx-auto mb-8 leading-relaxed px-2">
             Signaux de trading en temps réel, analyses IA, graphes professionnels et académie de trading — tout en un.
           </p>
         </div>
@@ -114,7 +115,7 @@ function Landing() {
           </a>
         </div>
 
-        <div className="anim-fade-up flex flex-wrap justify-center gap-10 text-center" style={{ animationDelay: "480ms", opacity: 0 }}>
+        <div className="anim-fade-up flex flex-wrap justify-center gap-6 md:gap-10 text-center" style={{ animationDelay: "480ms", opacity: 0 }}>
           {[["10 000+","traders actifs"],["160+","actifs scannés"],["20+","indicateurs IA"],["98%","satisfaction"]].map(([v,l]) => (
             <div key={l}>
               <div className="text-2xl font-black text-white">{v}</div>
@@ -132,20 +133,20 @@ function Landing() {
               <div className="w-3 h-3 rounded-full bg-green-500/60" />
               <span className="ml-3 text-xs text-gray-600">financeapp.io — Dashboard</span>
             </div>
-            <div className="p-5 grid grid-cols-4 gap-3">
+            <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
               {[["AAPL","+2.4%"],["BTC","+5.1%"],["NVDA","+3.8%"],["ETH","+1.2%"]].map(([sym,chg]) => (
                 <div key={sym} className="bg-[#151515] rounded-xl p-3 border border-white/5">
                   <div className="text-[10px] text-gray-500 mb-0.5">{sym}</div>
                   <div className="text-sm font-black text-green-400">{chg}</div>
                 </div>
               ))}
-              <div className="col-span-3 bg-[#151515] rounded-xl border border-white/5 h-32 flex items-center justify-center">
+              <div className="col-span-2 sm:col-span-3 bg-[#151515] rounded-xl border border-white/5 h-24 sm:h-32 flex items-center justify-center">
                 <div className="text-gray-700 text-xs text-center">
-                  <div className="text-2xl mb-1">📊</div>
-                  Graphe interactif temps réel
+                  <div className="text-xl sm:text-2xl mb-1">📊</div>
+                  Graphe interactif
                 </div>
               </div>
-              <div className="col-span-1 bg-[#151515] rounded-xl border border-white/5 h-32 p-3">
+              <div className="col-span-2 sm:col-span-1 bg-[#151515] rounded-xl border border-white/5 h-24 sm:h-32 p-3">
                 <div className="text-[10px] text-gray-500 mb-2 font-bold uppercase">Signaux IA</div>
                 {[["BUY","AAPL"],["SELL","TSLA"],["BUY","BTC"]].map(([sig,sym]) => (
                   <div key={sym} className={`text-[10px] font-bold mb-1.5 flex items-center gap-1 ${sig==="BUY"?"text-green-400":"text-red-400"}`}>
@@ -172,12 +173,12 @@ function Landing() {
       </div>
 
       {/* FEATURES */}
-      <section id="features" className="py-24 px-6">
+      <section id="features" className="py-16 md:py-24 px-4 md:px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <span className="text-xs font-bold uppercase tracking-widest text-green-400">Fonctionnalités</span>
-            <h2 className="text-4xl font-black text-white mt-2 mb-3">Tout ce dont un trader a besoin</h2>
-            <p className="text-gray-400 text-lg max-w-xl mx-auto">Des outils institutionnels accessibles à tous, propulsés par l'IA.</p>
+            <h2 className="text-2xl md:text-4xl font-black text-white mt-2 mb-3">Tout ce dont un trader a besoin</h2>
+            <p className="text-gray-400 text-base md:text-lg max-w-xl mx-auto">Des outils institutionnels accessibles à tous, propulsés par l'IA.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {FEATURES.map(f => (
@@ -192,11 +193,11 @@ function Landing() {
       </section>
 
       {/* HOW IT WORKS */}
-      <section className="py-24 px-6 bg-[#0a0a0a]">
+      <section className="py-16 md:py-24 px-4 md:px-6 bg-[#0a0a0a]">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
             <span className="text-xs font-bold uppercase tracking-widest text-green-400">Simple</span>
-            <h2 className="text-4xl font-black text-white mt-2 mb-3">Démarrez en 3 minutes</h2>
+            <h2 className="text-2xl md:text-4xl font-black text-white mt-2 mb-3">Démarrez en 3 minutes</h2>
           </div>
           <div className="flex flex-col md:flex-row items-stretch gap-4">
             {[
@@ -219,25 +220,25 @@ function Landing() {
       </section>
 
       {/* LIVE SCREENER */}
-      <section className="py-24 px-6">
+      <section className="py-16 md:py-24 px-4 md:px-6">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-12">
             <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-green-400">
               <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"/><span className="relative inline-flex rounded-full h-2 w-2 bg-green-400"/></span>
               Live
             </span>
-            <h2 className="text-4xl font-black text-white mt-2 mb-3">Opportunités en ce moment</h2>
+            <h2 className="text-2xl md:text-4xl font-black text-white mt-2 mb-3">Opportunités en ce moment</h2>
             <p className="text-gray-400">Les signaux les plus forts détectés par notre IA à l'instant.</p>
           </div>
           <div className="space-y-3 mb-8">
             {signals.length > 0 ? signals.map((s: any, i: number) => (
-              <div key={i} className="flex items-center gap-4 bg-[#111] border border-white/8 rounded-xl px-5 py-4 hover:border-green-500/15 transition">
-                <span className="text-sm font-black text-white w-16 flex-shrink-0">{s.symbol ?? s.ticker ?? "—"}</span>
-                <span className={`text-xs font-bold px-2.5 py-1 rounded-lg flex-shrink-0 ${(s.signal ?? "").toLowerCase().includes("buy") || (s.signal ?? "").toLowerCase().includes("achat") ? "bg-green-500/15 text-green-400 border border-green-500/20" : "bg-red-500/15 text-red-400 border border-red-500/20"}`}>
+              <div key={i} className="flex items-center gap-3 bg-[#111] border border-white/8 rounded-xl px-4 py-3 hover:border-green-500/15 transition">
+                <span className="text-sm font-black text-white w-14 flex-shrink-0">{s.symbol ?? s.ticker ?? "—"}</span>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-lg flex-shrink-0 ${(s.signal ?? "").toLowerCase().includes("buy") || (s.signal ?? "").toLowerCase().includes("achat") ? "bg-green-500/15 text-green-400 border border-green-500/20" : "bg-red-500/15 text-red-400 border border-red-500/20"}`}>
                   {s.signal ?? "SIGNAL"}
                 </span>
-                <span className="text-xs text-gray-500 truncate flex-1">{s.reason ?? s.description ?? "Confluence d'indicateurs détectée"}</span>
-                <span className={`text-xs font-bold flex-shrink-0 ${s.strength === "strong" ? "text-green-400" : s.strength === "medium" ? "text-yellow-400" : "text-gray-600"}`}>
+                <span className="text-xs text-gray-500 truncate flex-1 hidden sm:block">{s.reason ?? s.description ?? "Confluence d'indicateurs détectée"}</span>
+                <span className={`text-xs font-bold flex-shrink-0 hidden sm:block ${s.strength === "strong" ? "text-green-400" : s.strength === "medium" ? "text-yellow-400" : "text-gray-600"}`}>
                   {s.strength === "strong" ? "🔥 Fort" : s.strength === "medium" ? "⚡ Moyen" : "— Faible"}
                 </span>
               </div>
@@ -254,11 +255,11 @@ function Landing() {
       </section>
 
       {/* TESTIMONIALS */}
-      <section className="py-24 px-6 bg-[#0a0a0a]">
+      <section className="py-16 md:py-24 px-4 md:px-6 bg-[#0a0a0a]">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <span className="text-xs font-bold uppercase tracking-widest text-green-400">Avis traders</span>
-            <h2 className="text-4xl font-black text-white mt-2 mb-3">Ce que disent nos traders</h2>
+            <h2 className="text-2xl md:text-4xl font-black text-white mt-2 mb-3">Ce que disent nos traders</h2>
             <p className="text-gray-400">Plus de 10 000 traders font confiance à FinanceApp.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -281,11 +282,11 @@ function Landing() {
       </section>
 
       {/* PRICING SUMMARY */}
-      <section className="py-24 px-6">
+      <section className="py-16 md:py-24 px-4 md:px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
             <span className="text-xs font-bold uppercase tracking-widest text-green-400">Tarifs</span>
-            <h2 className="text-4xl font-black text-white mt-2 mb-3">Simple et transparent</h2>
+            <h2 className="text-2xl md:text-4xl font-black text-white mt-2 mb-3">Simple et transparent</h2>
             <p className="text-gray-400">Commence gratuitement, upgrade quand tu es prêt.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -316,11 +317,11 @@ function Landing() {
       </section>
 
       {/* FAQ */}
-      <section className="py-24 px-6 bg-[#0a0a0a]">
+      <section className="py-16 md:py-24 px-4 md:px-6 bg-[#0a0a0a]">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-16">
             <span className="text-xs font-bold uppercase tracking-widest text-green-400">FAQ</span>
-            <h2 className="text-4xl font-black text-white mt-2 mb-3">Questions fréquentes</h2>
+            <h2 className="text-2xl md:text-4xl font-black text-white mt-2 mb-3">Questions fréquentes</h2>
           </div>
           <div className="space-y-2">
             {FAQS.map((faq,i) => (
@@ -341,10 +342,10 @@ function Landing() {
       </section>
 
       {/* CTA BAND */}
-      <section className="py-20 px-6 relative overflow-hidden">
+      <section className="py-16 md:py-20 px-4 md:px-6 relative overflow-hidden">
         <div className="absolute inset-0 anim-gradient opacity-10" style={{background:"linear-gradient(135deg,#22c55e,#059669,#10b981)"}} />
         <div className="max-w-3xl mx-auto text-center relative">
-          <h2 className="text-4xl font-black text-white mb-4">Prêt à trader plus intelligemment ?</h2>
+          <h2 className="text-2xl md:text-4xl font-black text-white mb-4">Prêt à trader plus intelligemment ?</h2>
           <p className="text-gray-300 mb-8">Rejoins 10 000+ traders qui utilisent FinanceApp au quotidien.</p>
           <a href="/signup" className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl font-black bg-white text-black hover:bg-gray-100 transition shadow-xl">
             Créer un compte gratuit →
@@ -352,8 +353,15 @@ function Landing() {
         </div>
       </section>
 
+      {/* NEWSLETTER */}
+      <section className="py-12 px-4 md:px-6" style={{ background: "#0a0a0a", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+        <div className="max-w-xl mx-auto">
+          <NewsletterSignup source="landing-footer" />
+        </div>
+      </section>
+
       {/* FOOTER */}
-      <footer className="border-t border-white/5 py-12 px-6 bg-[#080808]">
+      <footer className="border-t border-white/5 py-10 md:py-12 px-4 md:px-6 bg-[#080808]">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
             <div className="col-span-2 md:col-span-1">
@@ -366,9 +374,9 @@ function Landing() {
               <p className="text-gray-600 text-xs leading-relaxed max-w-[200px]">La plateforme de trading intelligente pour les traders modernes.</p>
             </div>
             {[
-              {title:"Produit", links:[["Fonctionnalités","/#features"],["Signaux","/signaux"],["Académie","/apprendre"],["Forum","/forum"]]},
+              {title:"Produit", links:[["Fonctionnalités","/#features"],["Signaux","/signaux"],["Académie","/apprendre"],["Blog","/blog"],["Forum","/forum"]]},
               {title:"Tarifs", links:[["Plans & Prix","/pricing"],["Free","/signup"],["Pro","/pricing"],["Premium","/pricing"]]},
-              {title:"Légal", links:[["CGU","#"],["Confidentialité","#"],["Support","#"],["Status","#"]]},
+              {title:"Légal", links:[["CGU","/legal/terms"],["Confidentialité","/legal/privacy"],["Cookies","/legal/cookies"],["Support","mailto:support@financeapp.io"]]},
             ].map(col => (
               <div key={col.title}>
                 <h4 className="text-white font-bold text-xs mb-3 uppercase tracking-wide">{col.title}</h4>
@@ -387,6 +395,13 @@ function Landing() {
                 <a key={icon} href={href} className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-500 hover:text-white transition text-xs font-bold">{icon}</a>
               ))}
             </div>
+          </div>
+          {/* Legal links */}
+          <div className="flex flex-wrap justify-center gap-4 mt-4 text-xs text-gray-700">
+            <a href="/legal/privacy" className="hover:text-gray-500 transition">Confidentialité</a>
+            <a href="/legal/terms" className="hover:text-gray-500 transition">CGU</a>
+            <a href="/legal/cookies" className="hover:text-gray-500 transition">Cookies</a>
+            <a href="mailto:support@financeapp.io" className="hover:text-gray-500 transition">Support</a>
           </div>
         </div>
       </footer>

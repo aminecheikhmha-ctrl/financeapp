@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server"
+import { createClient } from "@supabase/supabase-js"
 import { CORS_HEADERS } from "@/app/lib/api"
+
+function makeSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!
+  )
+}
 
 type Category = "stock" | "crypto" | "etf"
 type Asset = { symbol: string; name: string; category: Category }
@@ -72,39 +80,45 @@ function rsiVal(closes: number[], period = 14): number {
 }
 
 // ── Score 0-100 ───────────────────────────────────────────────────────────────
-function computeScore(rsi: number, change: number, price: number, ma20: number | null, ma50: number | null, volRatio: number): number {
-  // RSI (0-30 pts): oversold = bullish
+// sentimentScore: raw -100..100 from news_sentiment_cache
+function computeScore(rsi: number, change: number, price: number, ma20: number | null, ma50: number | null, volRatio: number, sentimentScore?: number | null): number {
+  // RSI (0-25 pts): oversold = bullish
   const rsiScore =
-    rsi < 30 ? 30 : rsi < 40 ? 24 : rsi < 50 ? 18 : rsi < 60 ? 12 : rsi < 70 ? 6 : 0
+    rsi < 30 ? 25 : rsi < 40 ? 20 : rsi < 50 ? 15 : rsi < 60 ? 10 : rsi < 70 ? 5 : 0
 
-  // Momentum (0-25 pts): slight dip is optimal entry
+  // Momentum (0-22 pts): slight dip is optimal entry
   const momentumScore =
-    change >= -3 && change < 0 ? 25
-    : change >= 0 && change < 2 ? 20
-    : change >= -5 && change < -3 ? 16
-    : change >= 2 && change < 5 ? 12
-    : change < -5 ? 7
-    : 4  // change >= 5 (overbought momentum)
+    change >= -3 && change < 0 ? 22
+    : change >= 0 && change < 2 ? 17
+    : change >= -5 && change < -3 ? 14
+    : change >= 2 && change < 5 ? 10
+    : change < -5 ? 6
+    : 3  // change >= 5 (overbought momentum)
 
-  // MA structure (0-30 pts)
-  let maScore = 15
+  // MA structure (0-25 pts)
+  let maScore = 12
   if (ma20 != null && ma50 != null) {
-    if (price > ma20 && price > ma50 && ma20 > ma50) maScore = 30
-    else if (price > ma50 && price < ma20)            maScore = 22
-    else if (price > ma50)                            maScore = 18
-    else if (price < ma50 && price > ma20)            maScore = 10
+    if (price > ma20 && price > ma50 && ma20 > ma50) maScore = 25
+    else if (price > ma50 && price < ma20)            maScore = 18
+    else if (price > ma50)                            maScore = 15
+    else if (price < ma50 && price > ma20)            maScore = 8
     else                                              maScore = 2
   }
 
-  // Volume ratio (0-15 pts)
+  // Volume ratio (0-13 pts)
   const volScore =
-    volRatio > 2 ? 15 : volRatio > 1.5 ? 12 : volRatio > 1 ? 8 : volRatio > 0.5 ? 4 : 0
+    volRatio > 2 ? 13 : volRatio > 1.5 ? 10 : volRatio > 1 ? 7 : volRatio > 0.5 ? 3 : 0
 
-  return Math.min(100, Math.max(0, rsiScore + momentumScore + maScore + volScore))
+  // News sentiment (0-15 pts): scale from -100..100 → 0..15
+  const newsScorePts = sentimentScore != null
+    ? Math.round(((sentimentScore + 100) / 200) * 15)
+    : 7 // neutral default if no news data
+
+  return Math.min(100, Math.max(0, rsiScore + momentumScore + maScore + volScore + newsScorePts))
 }
 
 // ── Per-asset fetch ───────────────────────────────────────────────────────────
-async function fetchAsset(asset: Asset) {
+async function fetchAsset(asset: Asset, sentimentCache?: Record<string, number>) {
   try {
     const res = await fetch(
       `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(asset.symbol)}?interval=1d&range=3mo`,
@@ -134,8 +148,10 @@ async function fetchAsset(asset: Asset) {
     const avgVol     = slice20.length > 0 ? slice20.reduce((a, b) => a + b, 0) / slice20.length : 0
     const volRatio   = avgVol > 0 ? currentVol / avgVol : 1
 
-    const score  = computeScore(rsi, change, price, ma20, ma50, volRatio)
+    const sentimentScore = sentimentCache?.[asset.symbol] ?? null
+    const score  = computeScore(rsi, change, price, ma20, ma50, volRatio, sentimentScore)
     const signal = score >= 70 ? "ACHETER" : score < 30 ? "ÉVITER" : "ATTENDRE"
+    const hasNewsBadge = sentimentScore != null
 
     return {
       ...asset,
@@ -149,6 +165,8 @@ async function fetchAsset(asset: Asset) {
       volRatio: parseFloat(volRatio.toFixed(2)),
       score,
       signal,
+      news_sentiment_score: sentimentScore,
+      has_news_badge: hasNewsBadge,
     }
   } catch {
     return { ...asset, price: null }
@@ -161,7 +179,23 @@ export async function OPTIONS() {
 
 // ── Route ─────────────────────────────────────────────────────────────────────
 export async function GET() {
-  const results = await Promise.all(ASSETS.map(fetchAsset))
+  // Fetch news sentiment cache from Supabase (best-effort, doesn't block)
+  let sentimentCache: Record<string, number> = {}
+  try {
+    const supabase = makeSupabase()
+    const { data } = await supabase
+      .from("news_sentiment_cache")
+      .select("symbol, sentiment_score")
+    if (data) {
+      for (const row of data) {
+        if (row.symbol && typeof row.sentiment_score === "number") {
+          sentimentCache[row.symbol] = row.sentiment_score
+        }
+      }
+    }
+  } catch {}
+
+  const results = await Promise.all(ASSETS.map(a => fetchAsset(a, sentimentCache)))
   const assets  = (results.filter(Boolean) as NonNullable<Awaited<ReturnType<typeof fetchAsset>>>[])
     .filter(a => (a as any).score != null)
     .sort((a, b) => (b as any).score - (a as any).score)

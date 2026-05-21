@@ -4,6 +4,8 @@ import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 import { COURSES, LEVEL_COLORS, getTotalChapters, type Course } from "@/lib/courses"
+import { PLANS, getPlan, type PlanKey } from "@/lib/plans"
+import UpgradeModal from "@/app/components/UpgradeModal"
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -44,10 +46,12 @@ function totalHoursLearned(progress: ProgressMap): number {
 
 // ─── Course Card ───────────────────────────────────────────────────────────────
 
-function CourseCard({ course, progress, onClick }: {
+function CourseCard({ course, progress, onClick, plan, onUpgrade }: {
   course: Course
   progress: ProgressMap
   onClick: () => void
+  plan: PlanKey
+  onUpgrade: () => void
 }) {
   const lc   = LEVEL_COLORS[course.level]
   const { done, total, pct } = getCourseProgress(course, progress)
@@ -55,14 +59,32 @@ function CourseCard({ course, progress, onClick }: {
   const isStarted    = done > 0 && !isCompleted
   const hasVid       = hasVideos(course)
 
+  // Free users can access all débutant courses; intermédiaire + avancé require Pro
+  const isLocked = plan === "free" && course.level !== "débutant"
+
+  function handleClick() {
+    if (isLocked) {
+      onUpgrade()
+    } else {
+      onClick()
+    }
+  }
+
   return (
     <div
-      onClick={onClick}
-      className="relative rounded-2xl cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99] overflow-hidden"
+      onClick={handleClick}
+      className={`relative rounded-2xl cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99] overflow-hidden${isLocked ? " opacity-60" : ""}`}
       style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}
     >
       {/* Top color band */}
       <div className="h-1.5 w-full" style={{ background: `linear-gradient(90deg, ${lc.text}66, ${lc.text}22)` }} />
+
+      {/* Lock overlay for free plan */}
+      {isLocked && (
+        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+          <span className="text-4xl drop-shadow-lg">🔒</span>
+        </div>
+      )}
 
       <div className="p-5">
         {/* Header row */}
@@ -98,10 +120,30 @@ function CourseCard({ course, progress, onClick }: {
               📹 Vidéos
             </span>
           )}
-          <span className="text-[9px] font-bold px-2 py-0.5 rounded-md"
-            style={{ background: "rgba(167,139,250,0.08)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.15)" }}>
-            🎯 Quiz
-          </span>
+          {course.chapters.some(c => c.type === "visualization") && (
+            <span className="text-[9px] font-bold px-2 py-0.5 rounded-md"
+              style={{ background: "rgba(249,115,22,0.08)", color: "#f97316", border: "1px solid rgba(249,115,22,0.15)" }}>
+              ✨ Animations
+            </span>
+          )}
+          {course.chapters.some(c => c.type === "sandbox") && (
+            <span className="text-[9px] font-bold px-2 py-0.5 rounded-md"
+              style={{ background: "rgba(74,222,128,0.08)", color: "#4ade80", border: "1px solid rgba(74,222,128,0.15)" }}>
+              🏦 Simulation
+            </span>
+          )}
+          {course.chapters.some(c => c.type === "interactive") && (
+            <span className="text-[9px] font-bold px-2 py-0.5 rounded-md"
+              style={{ background: "rgba(167,139,250,0.08)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.15)" }}>
+              🎮 Interactif
+            </span>
+          )}
+          {course.chapters.some(c => c.type === "quiz" || c.type === "quiz_only") && (
+            <span className="text-[9px] font-bold px-2 py-0.5 rounded-md"
+              style={{ background: "rgba(250,204,21,0.08)", color: "#facc15", border: "1px solid rgba(250,204,21,0.15)" }}>
+              🎯 Quiz
+            </span>
+          )}
           <span className="text-[9px] font-bold px-2 py-0.5 rounded-md"
             style={{ background: "rgba(74,222,128,0.08)", color: "#4ade80", border: "1px solid rgba(74,222,128,0.15)" }}>
             🤖 IA Tuteur
@@ -150,13 +192,59 @@ export default function Apprendre() {
   const [levelFilter, setLevel]   = useState<"all" | "débutant" | "intermédiaire" | "avancé">("all")
   const [typeFilter, setType]     = useState<"all" | "video" | "interactive">("all")
   const [statusFilter, setStatus] = useState<"all" | "started" | "completed" | "new">("all")
+  const [plan, setPlan]           = useState<PlanKey>("free")
+  const [showUpgrade, setShowUpgrade] = useState(false)
+  const [dailyChallenge, setDailyChallenge] = useState<any>(null)
+  const [challengeDone, setChallengeDone]   = useState(false)
+  const [totalXP, setTotalXP]     = useState(0)
+  const [leaderboard, setLeaderboard] = useState<{ username: string; xp: number; avatar_color: string }[]>([])
 
   useEffect(() => {
     async function init() {
       const { data: authData } = await supabase.auth.getUser()
       if (!authData.user) { router.push("/login"); return }
       setUser(authData.user)
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("plan")
+        .eq("email", authData.user.email)
+        .single()
+      if (profile?.plan) setPlan(getPlan(profile.plan))
+
       await fetchProgress(authData.user.id)
+
+      // Fetch total XP
+      const { data: xpData } = await supabase
+        .from("user_progress")
+        .select("xp_earned")
+        .eq("user_id", authData.user.id)
+      if (xpData) setTotalXP(xpData.reduce((s: number, r: any) => s + (r.xp_earned ?? 0), 0))
+
+      // Fetch daily challenge
+      fetch("/api/academy/daily-challenge")
+        .then(r => r.json())
+        .then(d => { if (d.id) setDailyChallenge(d) })
+        .catch(() => {})
+
+      // Simple leaderboard from user_progress (top 5 by total XP)
+      const { data: lb } = await supabase
+        .from("user_progress")
+        .select("user_id, xp_earned")
+        .not("xp_earned", "is", null)
+      if (lb) {
+        const byUser: Record<string, number> = {}
+        for (const r of lb) {
+          byUser[r.user_id] = (byUser[r.user_id] ?? 0) + (r.xp_earned ?? 0)
+        }
+        const sorted = Object.entries(byUser).sort((a, b) => b[1] - a[1]).slice(0, 5)
+        setLeaderboard(sorted.map(([uid, xp], i) => ({
+          username: `Trader #${i + 1}`,
+          xp,
+          avatar_color: ["#4ade80", "#60a5fa", "#a78bfa", "#f97316", "#facc15"][i],
+        })))
+      }
+
       setReady(true)
     }
     init()
@@ -221,7 +309,7 @@ export default function Apprendre() {
   })
 
   if (!ready) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "#080808" }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg-canvas)" }}>
       <div className="flex flex-col items-center gap-3">
         <div className="w-8 h-8 border-2 border-green-400 border-t-transparent rounded-full animate-spin" />
         <p className="text-gray-500 text-sm">Chargement de l'académie…</p>
@@ -230,17 +318,17 @@ export default function Apprendre() {
   )
 
   return (
-    <div className="min-h-screen text-white" style={{ background: "#080808" }}>
-      <div className="max-w-6xl mx-auto px-5 py-7">
+    <div className="min-h-screen text-white overflow-x-hidden page-enter" style={{ background: "var(--bg-canvas)" }}>
+      <div className="max-w-6xl mx-auto px-4 md:px-5 py-6 md:py-7">
 
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <span className="text-3xl">🎓</span>
-            <h1 className="text-3xl font-black tracking-tight">Académie FinanceApp</h1>
+            <h1 className="text-2xl md:text-3xl font-black tracking-tight">Académie FinanceApp</h1>
           </div>
           <p className="text-sm mb-6" style={{ color: "#666" }}>
-            15 cours complets · Contenu IA · Vidéos · Quiz interactifs
+            15 cours complets · ~45h de contenu · Vidéos · Quiz interactifs
           </p>
 
           {/* Stats strip */}
@@ -248,7 +336,7 @@ export default function Apprendre() {
             {[
               { label: "Cours complétés", value: `${completedCourses}/15`,    color: "#4ade80" },
               { label: "Chapitres faits",  value: `${completedChapters}/${TOTAL_CHAPTERS}`, color: "#60a5fa" },
-              { label: "Heures apprises",  value: `${hoursLearned}h`,          color: "#a78bfa" },
+              { label: "XP Total",         value: `⚡ ${totalXP.toLocaleString()}`, color: "#facc15" },
               { label: "Progression",      value: `${globalPct}%`,             color: "#fb923c" },
             ].map(s => (
               <div key={s.label} className="rounded-xl p-4" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
@@ -327,7 +415,7 @@ export default function Apprendre() {
         })()}
 
         {/* ── Filters ──────────────────────────────────────────────────────── */}
-        <div className="flex flex-wrap gap-3 mb-7">
+        <div className="flex gap-2 mb-7 overflow-x-auto scrollbar-hide pb-1 flex-nowrap md:flex-wrap">
           {/* Level */}
           <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid #1a1a1a" }}>
             {(["all", "débutant", "intermédiaire", "avancé"] as const).map(lv => (
@@ -371,6 +459,88 @@ export default function Apprendre() {
           </span>
         </div>
 
+        {/* ── Daily Challenge + Leaderboard row ────────────────────────────── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-7">
+
+          {/* Daily Challenge */}
+          <div className="rounded-2xl p-5" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xl">⚡</span>
+              <p className="font-black text-white">Défi du jour</p>
+              <span className="ml-auto text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider"
+                style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }}>
+                DAILY
+              </span>
+            </div>
+            {dailyChallenge ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black px-2 py-1 rounded-lg" style={{ background: "#111", color: "#60a5fa", border: "1px solid #1a1a1a" }}>
+                    {dailyChallenge.symbol}
+                  </span>
+                  <span className="text-xs text-gray-500">{dailyChallenge.challenge_type?.replace(/_/g, " ")}</span>
+                </div>
+                <p className="text-sm text-gray-300 leading-relaxed">{dailyChallenge.description}</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold" style={{ color: "#facc15" }}>⚡ +{dailyChallenge.xp_reward} XP</span>
+                  {challengeDone ? (
+                    <span className="text-xs font-bold px-3 py-1.5 rounded-xl" style={{ background: "rgba(74,222,128,0.1)", color: "#4ade80", border: "1px solid rgba(74,222,128,0.2)" }}>
+                      ✅ Complété aujourd'hui !
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => router.push(`/dashboard?symbol=${dailyChallenge.symbol}&lesson=${dailyChallenge.challenge_type}`)}
+                      className="text-xs font-bold px-3 py-1.5 rounded-xl transition"
+                      style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }}>
+                      Relever le défi →
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-4 rounded animate-pulse" style={{ background: "#151515", width: `${85 - i * 10}%` }} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Leaderboard + XP */}
+          <div className="rounded-2xl p-5" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xl">🏆</span>
+              <p className="font-black text-white">Top apprenants</p>
+              <span className="ml-auto flex items-center gap-1.5 text-xs font-bold" style={{ color: "#facc15" }}>
+                ⚡ {totalXP.toLocaleString()} XP
+              </span>
+            </div>
+            {leaderboard.length > 0 ? (
+              <div className="space-y-2">
+                {leaderboard.map((entry, i) => (
+                  <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ background: "#111" }}>
+                    <span className="text-xs font-black w-5 text-center" style={{ color: i === 0 ? "#facc15" : i === 1 ? "#94a3b8" : i === 2 ? "#f97316" : "#555" }}>
+                      {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`}
+                    </span>
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0"
+                      style={{ background: `${entry.avatar_color}20`, color: entry.avatar_color, border: `1px solid ${entry.avatar_color}40` }}>
+                      {entry.username.slice(-1)}
+                    </div>
+                    <span className="flex-1 text-xs text-gray-400">{entry.username}</span>
+                    <span className="text-xs font-black" style={{ color: "#facc15" }}>⚡ {entry.xp.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="h-10 rounded-xl animate-pulse" style={{ background: "#111" }} />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* ── Course grid ───────────────────────────────────────────────────── */}
         {filtered.length === 0 ? (
           <div className="text-center py-20" style={{ color: "#444" }}>
@@ -385,12 +555,16 @@ export default function Apprendre() {
                 course={course}
                 progress={progress}
                 onClick={() => router.push(`/apprendre/${course.id}`)}
+                plan={plan}
+                onUpgrade={() => setShowUpgrade(true)}
               />
             ))}
           </div>
         )}
 
       </div>
+
+      <UpgradeModal open={showUpgrade} onClose={() => setShowUpgrade(false)} context="courses" />
     </div>
   )
 }

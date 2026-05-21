@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ ok: true, updated: results.length, results })
   } catch (err) {
-    console.error("[cron/signals]", err)
+    // cron error silenced
     return NextResponse.json({ error: "Internal error" }, { status: 500 })
   }
 }

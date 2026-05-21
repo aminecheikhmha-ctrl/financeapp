@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
+import { getPricingVariant, trackABEvent, type ABVariant } from "@/lib/ab-test"
 
 const PRO_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID
 const PREMIUM_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PREMIUM_PRICE_ID
@@ -38,9 +39,13 @@ export default function Pricing() {
   const [annual, setAnnual] = useState(false)
   const [loading, setLoading] = useState<string | null>(null)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
+  const [abVariant, setAbVariant] = useState<ABVariant>("control")
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
+    const variant = getPricingVariant()
+    setAbVariant(variant)
+    trackABEvent(variant, "shown")
   }, [])
 
   async function handleCheckout(priceId: string, planName: string) {
@@ -124,13 +129,20 @@ export default function Pricing() {
   ]
 
   return (
-    <div className="min-h-screen bg-[#080808] text-white pb-24">
+    <div className="min-h-screen bg-[#080808] text-white pb-24 overflow-x-hidden">
 
       {/* Header */}
-      <div className="pt-24 pb-12 px-6 text-center">
+      <div className="pt-20 md:pt-24 pb-10 md:pb-12 px-4 md:px-6 text-center">
         <span className="text-xs font-bold uppercase tracking-widest text-green-400">Tarifs</span>
-        <h1 className="text-5xl font-black text-white mt-2 mb-3">Choisissez votre plan</h1>
-        <p className="text-gray-400 text-lg mb-8">Commence gratuitement, upgrade quand tu es prêt.</p>
+        <h1 className="text-3xl md:text-5xl font-black text-white mt-2 mb-3">Choisissez votre plan</h1>
+        <p className="text-gray-400 text-lg mb-4">Commence gratuitement, upgrade quand tu es prêt.</p>
+
+        {/* A/B test: trial banner for variant B */}
+        {abVariant === "trial" && (
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/15 border border-green-500/30 text-green-400 text-sm font-bold mb-6 animate-pulse">
+            🎁 Offre limitée — Essai gratuit 7 jours sur le plan Pro
+          </div>
+        )}
 
         {/* Toggle mensuel/annuel */}
         <div className="inline-flex items-center gap-3 bg-[#111] border border-white/8 rounded-xl p-1">
@@ -151,7 +163,7 @@ export default function Pricing() {
       </div>
 
       {/* Plans */}
-      <div className="max-w-5xl mx-auto px-6">
+      <div className="max-w-5xl mx-auto px-4 md:px-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
           {plans.map(plan => {
             const price = annual ? plan.annualPrice : plan.monthlyPrice
@@ -184,7 +196,7 @@ export default function Pricing() {
                 </ul>
                 {plan.priceId ? (
                   <button
-                    onClick={() => handleCheckout(plan.priceId as string, plan.name)}
+                    onClick={() => { trackABEvent(abVariant, "clicked_cta"); handleCheckout(plan.priceId as string, plan.name) }}
                     disabled={loading === plan.name}
                     className={`w-full py-3 rounded-xl font-bold text-sm transition disabled:opacity-50 ${
                       isHighlight
@@ -192,7 +204,11 @@ export default function Pricing() {
                         : "border border-white/15 hover:border-white/30 text-white"
                     }`}
                   >
-                    {loading === plan.name ? "Redirection..." : `Choisir ${plan.name}`}
+                    {loading === plan.name
+                      ? "Redirection..."
+                      : isHighlight && abVariant === "trial"
+                        ? "Essayer 7 jours gratuitement →"
+                        : `Choisir ${plan.name}`}
                   </button>
                 ) : (
                   <a href="/signup" className="w-full py-3 rounded-xl font-bold text-sm border border-white/15 hover:border-white/30 text-white text-center block transition">
@@ -208,15 +224,16 @@ export default function Pricing() {
         <div className="mb-16">
           <h2 className="text-2xl font-black text-white mb-6 text-center">Comparaison complète</h2>
           <div className="bg-[#111] border border-white/8 rounded-2xl overflow-hidden">
+            <div className="overflow-x-auto">
             {/* Header */}
-            <div className="grid grid-cols-4 px-5 py-3 border-b border-white/8 bg-[#0d0d0d]">
+            <div className="grid grid-cols-4 px-4 py-3 border-b border-white/8 bg-[#0d0d0d] min-w-[360px]">
               <span className="text-xs font-bold uppercase tracking-wide text-gray-600">Fonctionnalité</span>
               {["Free","Pro","Premium"].map(p => (
                 <span key={p} className={`text-xs font-black text-center uppercase tracking-wide ${p==="Pro"?"text-green-400":p==="Premium"?"text-yellow-400":"text-gray-500"}`}>{p}</span>
               ))}
             </div>
             {COMPARISON_ROWS.map((row, i) => (
-              <div key={row.feature} className={`grid grid-cols-4 px-5 py-3 ${i%2===0?"":"bg-white/[0.015]"} hover:bg-white/5 transition`}>
+              <div key={row.feature} className={`grid grid-cols-4 px-4 py-3 min-w-[360px] ${i%2===0?"":"bg-white/[0.015]"} hover:bg-white/5 transition`}>
                 <span className="text-sm text-gray-400 font-medium">{row.feature}</span>
                 {[row.free, row.pro, row.premium].map((val, j) => (
                   <span key={j} className={`text-xs text-center font-semibold ${
@@ -229,11 +246,12 @@ export default function Pricing() {
                 ))}
               </div>
             ))}
+            </div>
           </div>
         </div>
 
         {/* Guarantee */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-16">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-16">
           {[
             { icon: "🛡️", title: "30 jours satisfait", desc: "ou remboursé intégralement, sans condition" },
             { icon: "⚡", title: "Annulation facile", desc: "en un clic depuis ton profil, sans engagement" },

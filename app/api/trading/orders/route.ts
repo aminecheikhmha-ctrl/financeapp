@@ -6,7 +6,6 @@ export async function GET(req: NextRequest) {
   if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const symbol = req.nextUrl.searchParams.get("symbol")
-  if (!symbol) return NextResponse.json({ error: "No symbol" }, { status: 400 })
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,6 +15,27 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser(token)
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
+  // Sans symbol → retourne tous les ordres (pour le profil / coach)
+  if (!symbol) {
+    const { data: allOrders } = await supabase
+      .from("orders")
+      .select("symbol, side, price, qty, total, status, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+    return NextResponse.json(
+      (allOrders ?? []).map((o) => ({
+        symbol: o.symbol,
+        type: o.side as "buy" | "sell",
+        price: o.price,
+        qty: o.qty,
+        total: o.total,
+        status: o.status,
+        date: o.created_at.slice(0, 10),
+      }))
+    )
+  }
+
+  // Avec symbol → ordres pour le graphe du dashboard
   const { data: orders } = await supabase
     .from("orders")
     .select("side, price, qty, created_at")
@@ -29,7 +49,7 @@ export async function GET(req: NextRequest) {
       type: o.side as "buy" | "sell",
       price: o.price,
       qty: o.qty,
-      date: o.created_at.slice(0, 10), // YYYY-MM-DD for chart marker matching
+      date: o.created_at.slice(0, 10),
     }))
   )
 }

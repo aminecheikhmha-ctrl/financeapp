@@ -4,6 +4,8 @@ import { useEffect, useState, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import type { SignalResult } from "@/app/api/signals/route"
+import UpgradeModal from "@/app/components/UpgradeModal"
+import { cn } from "@/lib/utils"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -251,7 +253,7 @@ function Top3Card({ signal }: { signal: SignalResult }) {
 
 // ─── Signal Card (list view) ───────────────────────────────────────────────────
 
-function SignalCard({ signal, blurred }: { signal: SignalResult; blurred?: boolean }) {
+function SignalCard({ signal, blurred, buzz }: { signal: SignalResult; blurred?: boolean; buzz?: { buzz_score: number; dominant_sentiment: string; mentions_24h: number } | null }) {
   const router = useRouter()
   const b = signalBadge(signal.signal)
   const isLong = isBuySignal(signal.signal)
@@ -287,6 +289,15 @@ function SignalCard({ signal, blurred }: { signal: SignalResult; blurred?: boole
             <span className="text-gray-500 text-sm">· {signal.name}</span>
           </div>
           <span className="text-xs text-gray-600 bg-white/5 px-2 py-0.5 rounded-full">scalp</span>
+          {buzz && buzz.buzz_score > 0 && (
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+              buzz.dominant_sentiment === "bullish" ? "bg-orange-500/10 text-orange-400 border-orange-500/20" :
+              buzz.dominant_sentiment === "bearish" ? "bg-red-500/10 text-red-400 border-red-500/20" :
+              "bg-gray-500/10 text-gray-400 border-gray-500/20"
+            }`}>
+              🔥 {buzz.mentions_24h} Reddit
+            </span>
+          )}
         </div>
         <div className="text-right flex-shrink-0">
           <p className="text-white font-black text-lg">
@@ -668,6 +679,7 @@ export default function Signaux() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [plan, setPlan] = useState("free")
+  const [showUpgrade, setShowUpgrade] = useState(false)
   const [signals, setSignals] = useState<SignalResult[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -682,6 +694,29 @@ export default function Signaux() {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
   const [historique, setHistorique] = useState<HistoriqueRow[]>([])
   const [histLoading, setHistLoading] = useState(false)
+  const [filter, setFilter] = useState("all")
+  const [signalSentiment, setSignalSentiment] = useState<Record<string, { buzz_score: number; dominant_sentiment: string; mentions_24h: number }>>({})
+
+  // Fetch Reddit buzz for visible signals (top 6)
+  useEffect(() => {
+    if (signals.length === 0) return
+    const top = signals.slice(0, 6).map(s => s.symbol)
+    Promise.allSettled(
+      top.map(sym =>
+        fetch(`/api/news/reddit-buzz?symbol=${sym}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(d => d ? { sym, d } : null)
+      )
+    ).then(results => {
+      const map: Record<string, any> = {}
+      for (const r of results) {
+        if (r.status === "fulfilled" && r.value) {
+          map[r.value.sym] = r.value.d
+        }
+      }
+      setSignalSentiment(map)
+    }).catch(() => {})
+  }, [signals])
 
   const fetchSignals = useCallback(async () => {
     try {
@@ -717,13 +752,9 @@ export default function Signaux() {
     })
   }, [router])
 
-  // Fetch signals on mount + auto-refresh
+  // Fetch signals on mount + auto-refresh (free users see first 3)
   useEffect(() => {
     if (!user) return
-    if (plan === "free") {
-      setLoading(false)
-      return
-    }
     fetchSignals()
     const interval = setInterval(fetchSignals, 300_000)
     return () => clearInterval(interval)
@@ -754,35 +785,6 @@ export default function Signaux() {
 
   if (!user) return null
 
-  if (plan === "free") {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center p-8">
-        <div className="max-w-md text-center">
-          <div className="text-6xl mb-6">🔒</div>
-          <h1 className="text-3xl font-bold mb-4">Signaux algorithmiques</h1>
-          <p className="text-gray-400 mb-4">
-            Notre algorithme scanne ~100 actifs en temps réel et génère des signaux avec confluence scoring sur 17 indicateurs.
-          </p>
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 mb-6 text-left">
-            <p className="text-gray-400 text-sm mb-3">Ce que tu obtiens avec Pro :</p>
-            <ul className="space-y-2 text-sm">
-              <li className="flex gap-2"><span className="text-green-400">✓</span> 17 indicateurs techniques par signal</li>
-              <li className="flex gap-2"><span className="text-green-400">✓</span> RSI, MACD, Stochastique, Williams %R, OBV, CCI…</li>
-              <li className="flex gap-2"><span className="text-green-400">✓</span> Score de confluence + TP1/2/3 + Stop Loss</li>
-              <li className="flex gap-2"><span className="text-green-400">✓</span> Commentaire IA sur les signaux forts</li>
-              <li className="flex gap-2"><span className="text-yellow-400">✓</span> Premium : accès complet + historique</li>
-            </ul>
-          </div>
-          <a
-            href="/pricing"
-            className="block w-full bg-green-500 hover:bg-green-600 text-white py-4 rounded-lg font-semibold transition text-center"
-          >
-            Upgrader mon plan
-          </a>
-        </div>
-      </div>
-    )
-  }
 
   // ─── Filtering + sorting ─────────────────────────────────────────────────
 
@@ -820,12 +822,13 @@ export default function Signaux() {
 
   const top3 = [...signals].sort((a, b) => b.confluence_score - a.confluence_score).slice(0, 3)
 
-  // Pro plan shows first 3 clear, rest blurred
-  const isBlurring = plan === "pro"
+  // Free plan shows first 3 clear, rest blurred
+  const isBlurring = plan === "free"
 
   return (
-    <div className="min-h-screen bg-black text-white p-5 md:p-8">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <>
+    <div className="min-h-screen p-4 md:p-6 overflow-x-hidden page-enter" style={{ background: "var(--bg-canvas)" }}>
+      <div className="max-w-6xl mx-auto space-y-5">
 
         {/* ── Tabs ─────────────────────────────────────────────────────────── */}
         <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1 w-fit">
@@ -859,7 +862,7 @@ export default function Signaux() {
             <div className="space-y-3">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
-                  <h1 className="text-2xl font-black tracking-tight">Signaux de Trading</h1>
+                  <h1 className="text-xl md:text-2xl font-black tracking-tight">Signaux de Trading</h1>
                   <span className="flex items-center gap-1.5 bg-green-500/15 border border-green-500/30 px-2.5 py-1 rounded-full">
                     <span className="relative flex h-2 w-2">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
@@ -868,13 +871,20 @@ export default function Signaux() {
                     <span className="text-green-400 text-[10px] font-black tracking-wider">LIVE</span>
                   </span>
                 </div>
-                <div className={`text-xs px-3 py-1.5 rounded-full font-bold uppercase tracking-wide ${
-                  plan === "premium"
-                    ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
-                    : "bg-green-500/20 text-green-400 border border-green-500/30"
-                }`}>
-                  {plan === "pro" ? "⭐ Pro" : "💎 Premium"}
-                </div>
+                {plan !== "free" && (
+                  <div className={`text-xs px-3 py-1.5 rounded-full font-bold uppercase tracking-wide ${
+                    plan === "premium"
+                      ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+                      : "bg-green-500/20 text-green-400 border border-green-500/30"
+                  }`}>
+                    {plan === "pro" ? "⭐ Pro" : "💎 Premium"}
+                  </div>
+                )}
+                {plan === "free" && (
+                  <a href="/pricing" className="text-xs px-3 py-1.5 rounded-full font-bold uppercase tracking-wide bg-white/5 text-white/40 border border-white/10 hover:border-green-500/30 hover:text-green-400 transition">
+                    🔒 3 signaux gratuits · Passer Pro
+                  </a>
+                )}
               </div>
 
               {/* Stats row */}
@@ -934,9 +944,9 @@ export default function Signaux() {
             <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-4 space-y-3">
 
               {/* Row 1 — Signal type */}
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest min-w-[44px]">Signal</span>
-                <div className="flex gap-1.5 flex-wrap">
+              <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide pb-0.5">
+                <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest min-w-[44px] flex-shrink-0">Signal</span>
+                <div className="flex gap-1.5 flex-nowrap">
                   {[
                     { key: "tous",        label: "Tout",          active: "bg-white/15 text-white border-white/20" },
                     { key: "achat fort",  label: "⚡ Achat Fort", active: "bg-green-500/25 text-green-300 border-green-500/40" },
@@ -947,7 +957,7 @@ export default function Signaux() {
                     <button
                       key={key}
                       onClick={() => setFilterSignal(key)}
-                      className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition border ${
+                      className={`flex-shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-[11px] font-semibold transition border ${
                         filterSignal === key ? active : "border-white/8 text-gray-500 hover:text-white hover:border-white/15"
                       }`}
                     >
@@ -958,7 +968,7 @@ export default function Signaux() {
               </div>
 
               {/* Row 2 — Force + Type */}
-              <div className="flex items-center gap-5 flex-wrap">
+              <div className="flex items-center gap-3 flex-wrap overflow-x-auto scrollbar-hide pb-0.5">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest min-w-[44px]">Force</span>
                   <div className="flex bg-white/5 rounded-lg p-0.5">
@@ -1006,7 +1016,7 @@ export default function Signaux() {
               </div>
 
               {/* Row 3 — Tri + IA toggle + Vue */}
-              <div className="flex items-center gap-3 flex-wrap pt-2 border-t border-white/5">
+              <div className="flex items-center gap-3 flex-wrap overflow-x-auto scrollbar-hide pb-0.5 pt-2 border-t border-white/5">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Tri</span>
                   <div className="flex bg-white/5 rounded-lg p-0.5">
@@ -1073,24 +1083,49 @@ export default function Signaux() {
                 <p className="mt-2 text-sm">Essayez de modifier les filtres ou attendez la prochaine actualisation</p>
               </div>
             ) : viewMode === "list" ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                {filtered.map((signal, idx) => (
-                  <SignalCard
-                    key={signal.symbol}
-                    signal={signal}
-                    blurred={isBlurring && idx >= 3}
-                  />
-                ))}
+              <div className="relative">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  {filtered.map((signal, idx) => (
+                    <SignalCard
+                      key={signal.symbol}
+                      signal={signal}
+                      blurred={isBlurring && idx >= 3}
+                      buzz={signalSentiment[signal.symbol] ?? null}
+                    />
+                  ))}
+                </div>
+                {isBlurring && filtered.length > 3 && (
+                  <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black to-transparent flex items-end justify-center pb-6">
+                    <button
+                      onClick={() => setShowUpgrade(true)}
+                      className="px-6 py-3 rounded-xl bg-green-500 hover:bg-green-400 text-black font-black text-sm transition shadow-lg shadow-green-500/25"
+                    >
+                      🚀 Débloquer les signaux illimités
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {filtered.map((signal, idx) => (
-                  <GridCard
-                    key={signal.symbol}
-                    signal={signal}
-                    blurred={isBlurring && idx >= 3}
-                  />
-                ))}
+              <div className="relative">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {filtered.map((signal, idx) => (
+                    <GridCard
+                      key={signal.symbol}
+                      signal={signal}
+                      blurred={isBlurring && idx >= 3}
+                    />
+                  ))}
+                </div>
+                {isBlurring && filtered.length > 3 && (
+                  <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black to-transparent flex items-end justify-center pb-6">
+                    <button
+                      onClick={() => setShowUpgrade(true)}
+                      className="px-6 py-3 rounded-xl bg-green-500 hover:bg-green-400 text-black font-black text-sm transition shadow-lg shadow-green-500/25"
+                    >
+                      🚀 Débloquer les signaux illimités
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </>
@@ -1114,5 +1149,7 @@ export default function Signaux() {
 
       </div>
     </div>
+    <UpgradeModal open={showUpgrade} onClose={() => setShowUpgrade(false)} context="signals" />
+    </>
   )
 }

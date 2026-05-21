@@ -1,12 +1,17 @@
 import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-import Navbar from "./components/Navbar"
-import Sidebar from "./components/Sidebar"
+import Navbar       from "./components/Navbar"
+import Sidebar      from "./components/Sidebar"
+import BottomNav    from "./components/BottomNav"
+import MobileHeader from "./components/MobileHeader"
+import Topbar from "./components/Topbar"
 import ServiceWorker from "./components/ServiceWorker"
 import { ToastProvider } from "./components/Toast"
 import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/next"
+import ChatBot from "./components/ChatBot"
+import CookieBanner from "./components/CookieBanner"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -15,6 +20,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://financeapp-kappa-six.vercel.app"),
   title: {
     default: "FinanceApp — Trading intelligent avec l'IA",
     template: "%s | FinanceApp",
@@ -58,16 +64,25 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fr">
-      <body className={`${inter.variable} font-sans bg-[#080808] text-white`}>
+      <body className={`${inter.variable} font-sans bg-[#050505] text-white`}>
         <ToastProvider>
           <ServiceWorker />
+          {/* Public marketing navbar (unauthenticated only) */}
           <Navbar />
+          {/* Desktop sidebar */}
           <Sidebar />
-          <main className="pt-16 sidebar-main">
+          {/* Desktop topbar */}
+          <Topbar />
+          {/* Mobile: header bar + bottom tab nav */}
+          <MobileHeader />
+          <BottomNav />
+          <main className="sidebar-main">
             {children}
           </main>
           <Analytics />
           <SpeedInsights />
+          <ChatBot />
+          <CookieBanner />
         </ToastProvider>
       </body>
     </html>

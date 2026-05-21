@@ -45,6 +45,7 @@ export default function AlertsPanel({
   const [condition, setCondition] = useState<"above" | "below">("above")
   const [priceInput, setPriceInput] = useState("")
   const [creating, setCreating] = useState(false)
+  const [errMsg, setErrMsg]     = useState<string | null>(null)
   const notifiedRef = useRef<Set<string>>(new Set())
   const mountedRef  = useRef(true)
 
@@ -101,9 +102,12 @@ export default function AlertsPanel({
   // ── Create alert ────────────────────────────────────────────────────────
   async function createAlert() {
     if (!token || !priceInput) return
+    const priceVal = parseFloat(priceInput)
+    if (isNaN(priceVal) || priceVal <= 0) { setErrMsg("Prix invalide"); return }
     setCreating(true)
+    setErrMsg(null)
 
-    // Request permission the first time user creates an alert (not on page load)
+    // Request permission the first time user creates an alert
     if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
       await Notification.requestPermission()
     }
@@ -112,13 +116,27 @@ export default function AlertsPanel({
       const res = await fetch("/api/alerts", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ symbol, condition, price: parseFloat(priceInput) }),
+        body: JSON.stringify({ symbol, condition, price: priceVal }),
       })
-      if (res.ok) {
+      const json = await res.json()
+      if (res.ok && !json.error) {
         setPriceInput("")
+        pushToast(`✅ Alerte créée · ${symbol} ${condition === "above" ? "▲" : "▼"} $${priceVal.toFixed(2)}`, UP)
+        // Optimistic update: add immediately then reload
+        setAlerts(prev => [{ id: json.id, symbol, condition, price: priceVal, triggered: false, created_at: new Date().toISOString() }, ...prev])
         await loadAlerts()
+      } else {
+        const msg = json.error ?? "Erreur lors de la création de l'alerte"
+        setErrMsg(msg)
+        pushToast(`❌ ${msg}`, DOWN)
+        console.error("[AlertsPanel] createAlert error:", json)
       }
-    } catch {}
+    } catch (e) {
+      const msg = "Erreur réseau — réessaie"
+      setErrMsg(msg)
+      pushToast(`❌ ${msg}`, DOWN)
+      console.error("[AlertsPanel] createAlert exception:", e)
+    }
     setCreating(false)
   }
 
@@ -234,6 +252,11 @@ export default function AlertsPanel({
             {creating ? "…" : "+ Ajouter"}
           </button>
         </div>
+
+        {/* Error message */}
+        {errMsg && (
+          <p className="text-[10px] text-red-400 mb-1.5 px-1">{errMsg}</p>
+        )}
 
         {/* Quick % shortcuts */}
         {currentPrice && (

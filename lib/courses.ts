@@ -1,6 +1,66 @@
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type ChapterType = "video" | "lecture" | "interactive" | "quiz_only"
+export type ChapterType =
+  | "video"
+  | "lecture"
+  | "interactive"
+  | "quiz_only"
+  | "quiz"
+  | "sandbox"
+  | "visualization"
+  | "challenge"
+
+export type VisualizationType =
+  | "candlestick_explained"
+  | "rsi_calculation"
+  | "rsi_divergence"
+  | "bollinger_bands"
+  | "macd_explained"
+  | "support_resistance"
+
+export type LessonMode =
+  | "identify_support"
+  | "identify_resistance"
+  | "spot_rsi"
+  | "identify_macd_crossover"
+  | "find_pattern"
+
+export interface InteractiveConfig {
+  lesson_mode: LessonMode
+  symbol?: string
+  instruction: string
+  hint?: string
+}
+
+export interface VisualizationConfig {
+  type: VisualizationType
+  speed_control?: boolean
+}
+
+export interface SandboxConfig {
+  scenario_id?: string
+  live?: boolean
+  symbol?: string
+  context?: string
+  question?: string
+}
+
+export interface ChallengeConfig {
+  time_limit: number
+  task: string
+  symbol: string
+  type: "find_signals" | "identify_patterns" | "read_indicators"
+}
+
+export interface QuizQuestion {
+  id: number
+  type: "multiple_choice" | "true_false" | "fill_the_blank" | "order_steps"
+  question: string
+  options: string[]
+  correct: number
+  explanation: string
+  hint?: string
+}
 
 export type Chapter = {
   id: number
@@ -10,6 +70,13 @@ export type Chapter = {
   video_url?: string
   key_concepts: string[]
   practical_example: string
+  // NEW fields
+  xp_reward?: number
+  interactive_config?: InteractiveConfig
+  visualization?: VisualizationConfig
+  sandbox_config?: SandboxConfig
+  challenge?: ChallengeConfig
+  quiz?: QuizQuestion[]
 }
 
 export type Course = {
@@ -117,7 +184,7 @@ export const COURSES: Course[] = [
     title: "Les bases du trading",
     level: "débutant",
     duration: "1h30",
-    chapters_count: 10,
+    chapters_count: 12,
     icon: "📈",
     description: "Apprendre à lire un graphe, passer ses premiers ordres et gérer son capital",
     video_intro: "https://www.youtube.com/embed/dn4R6BGGOCA",
@@ -126,10 +193,12 @@ export const COURSES: Course[] = [
         id: 1,
         title: "Lire un graphique chandelier (candlestick)",
         duration: "10 min",
-        type: "video",
+        type: "visualization",
         video_url: "https://www.youtube.com/embed/dn4R6BGGOCA",
         key_concepts: ["Bougie japonaise", "Corps", "Ombre haute/basse", "Bougie haussière/baissière", "Open/Close/High/Low"],
         practical_example: "Sur le graphique AAPL du 3 janvier 2024 : ouverture $185, clôture $184, high $186, low $183 → bougie rouge avec petites ombres = session indécise légèrement baissière.",
+        xp_reward: 50,
+        visualization: { type: "candlestick_explained", speed_control: true },
       },
       {
         id: 2,
@@ -143,10 +212,12 @@ export const COURSES: Course[] = [
         id: 3,
         title: "Tendances, supports et résistances",
         duration: "9 min",
-        type: "video",
+        type: "visualization",
         video_url: "https://www.youtube.com/embed/pdSXxCMBGEI",
         key_concepts: ["Tendance haussière/baissière", "Range", "Support", "Résistance", "Retest"],
         practical_example: "NVDA avait un support solide à $500 en octobre 2023. Chaque fois que le prix touchait ce niveau, des acheteurs intervenaient. Une fois cassé à la hausse, ce support devient résistance.",
+        xp_reward: 75,
+        visualization: { type: "support_resistance", speed_control: true },
       },
       {
         id: 4,
@@ -191,19 +262,98 @@ export const COURSES: Course[] = [
       },
       {
         id: 9,
-        title: "Construire son plan de trading",
-        duration: "9 min",
+        title: "Identifier un niveau de support",
+        duration: "8 min",
         type: "interactive",
-        key_concepts: ["Setup de trading", "Critères d'entrée", "Règles de sortie", "Journal de trading"],
-        practical_example: "Plan type : Je trade uniquement le breakout du high de la veille sur des actions S&P 500 > $10B cap. Je risque max 1% par trade avec un R/R minimum de 2:1. Je tradeen pre-market et les 2h suivant l'ouverture.",
+        key_concepts: ["Setup de trading", "Critères d'entrée", "Niveaux clés", "Journal de trading"],
+        practical_example: "Exercice pratique : positionnez votre ligne sur le niveau de support d'AAPL et validez votre analyse. C'est en pratiquant qu'on développe son œil de trader.",
+        xp_reward: 100,
+        interactive_config: {
+          lesson_mode: "identify_support",
+          symbol: "AAPL",
+          instruction: "Identifiez le niveau de support principal sur ce graphique AAPL. Glissez la ligne horizontale au bon endroit.",
+          hint: "Le support est le niveau de prix où les acheteurs interviennent régulièrement pour stopper la baisse.",
+        },
       },
       {
         id: 10,
+        title: "Construire son plan de trading",
+        duration: "9 min",
+        type: "lecture",
+        key_concepts: ["Setup de trading", "Critères d'entrée", "Règles de sortie", "Journal de trading"],
+        practical_example: "Plan type : Je trade uniquement le breakout du high de la veille sur des actions S&P 500 > $10B cap. Je risque max 1% par trade avec un R/R minimum de 2:1. Je trade en pre-market et les 2h suivant l'ouverture.",
+      },
+      {
+        id: 11,
+        title: "Simulation : AAPL RSI survendu — Janvier 2024",
+        duration: "10 min",
+        type: "sandbox",
+        key_concepts: ["RSI survente", "Signal d'entrée", "Prise de décision", "Résultat historique"],
+        practical_example: "Revivez une opportunité de trading réelle sur AAPL en janvier 2024. RSI à 27, support mensuel. Auriez-vous saisi l'opportunité ?",
+        xp_reward: 200,
+        sandbox_config: {
+          scenario_id: "aapl_rsi_oversold_2024",
+          symbol: "AAPL",
+          context: "Nous sommes en janvier 2024. AAPL a corrigé de 18% depuis ses plus hauts. Le RSI(14) est à 27 — survente rare sur ce titre solide.",
+          question: "Le RSI est à 27 et le prix est sur un support mensuel. Que faites-vous ?",
+        },
+      },
+      {
+        id: 12,
         title: "Quiz final — Bases du trading",
-        duration: "5 min",
-        type: "quiz_only",
-        key_concepts: ["Récapitulatif", "Test final"],
-        practical_example: "Évalue ta maîtrise des bases du trading.",
+        duration: "8 min",
+        type: "quiz",
+        key_concepts: ["Bougies japonaises", "Supports/Résistances", "Ordres", "Plan de trading"],
+        practical_example: "Évalue ta maîtrise des bases du trading avec ce quiz interactif.",
+        xp_reward: 150,
+        quiz: [
+          {
+            id: 1,
+            type: "multiple_choice",
+            question: "Quelle information n'est PAS contenue dans une bougie japonaise ?",
+            options: ["Prix d'ouverture", "Prix de clôture", "Volume échangé", "Plus haut de la session"],
+            correct: 2,
+            explanation: "Une bougie (OHLC) contient Open, High, Low, Close. Le volume est affiché séparément sous le graphique sous forme de barres.",
+            hint: "Pensez à ce que représente le corps et les mèches d'une bougie.",
+          },
+          {
+            id: 2,
+            type: "true_false",
+            question: "Un support devient résistance après avoir été cassé à la baisse.",
+            options: ["Vrai", "Faux"],
+            correct: 0,
+            explanation: "Exact ! Quand un support est cassé, il se transforme en résistance — les anciens acheteurs deviennent vendeurs pour récupérer leurs pertes.",
+          },
+          {
+            id: 3,
+            type: "multiple_choice",
+            question: "Vous placez un ordre limite d'achat à $150 sur une action qui trade à $155. Quand s'exécute-t-il ?",
+            options: ["Immédiatement à $155", "Quand le prix descend à $150", "Jamais, le prix est trop bas", "Quand le prix monte à $160"],
+            correct: 1,
+            explanation: "Un ordre limite d'achat s'exécute uniquement quand le prix descend au niveau spécifié (ou en dessous). C'est l'avantage des ordres limites : vous contrôlez votre prix d'entrée.",
+          },
+          {
+            id: 4,
+            type: "multiple_choice",
+            question: "Un RSI(14) à 27 indique que l'action est :",
+            options: ["En surachat fort", "En survente — potentiellement bon pour acheter", "Neutre", "En tendance haussière confirmée"],
+            correct: 1,
+            explanation: "RSI < 30 = zone de survente. Cela ne garantit pas un rebond immédiat, mais signale que la pression vendeuse est excessive. À combiner avec d'autres signaux.",
+          },
+          {
+            id: 5,
+            type: "multiple_choice",
+            question: "Quel est l'avantage principal d'un trader avec un ratio R/R de 1:3 ?",
+            options: [
+              "Il gagne 3x plus souvent qu'il ne perd",
+              "Il est profitable même en ne gagnant que 30% de ses trades",
+              "Il ne prend jamais de pertes",
+              "Il utilise 3x plus de capital par trade",
+            ],
+            correct: 1,
+            explanation: "Avec R/R 1:3, même 30% de trades gagnants suffisent : (0.3 × 3) - (0.7 × 1) = 0.9 - 0.7 = +0.2 d'espérance positive. C'est la puissance du ratio risque/récompense.",
+          },
+        ],
       },
     ],
   },
@@ -430,7 +580,7 @@ export const COURSES: Course[] = [
     title: "Analyse technique complète",
     level: "intermédiaire",
     duration: "2h30",
-    chapters_count: 12,
+    chapters_count: 15,
     icon: "📊",
     description: "Maîtriser tous les indicateurs techniques : RSI, MACD, Bollinger, Fibonacci",
     video_intro: "https://www.youtube.com/embed/eynxyoKgpng",
@@ -448,26 +598,32 @@ export const COURSES: Course[] = [
         id: 2,
         title: "RSI — Relative Strength Index",
         duration: "10 min",
-        type: "lecture",
+        type: "visualization",
         key_concepts: ["RSI(14)", "Zones surachat/survente", "Divergence RSI/prix", "RSI sur différents timeframes"],
         practical_example: "Bitcoin avril 2021 : RSI(14) à 89 (extrême surachat) sur le graphique hebdomadaire = signal de correction majeure. 3 semaines plus tard : -50%. La divergence baissière du RSI précède souvent les tops.",
+        xp_reward: 75,
+        visualization: { type: "rsi_calculation", speed_control: true },
       },
       {
         id: 3,
         title: "MACD — Moving Average Convergence Divergence",
         duration: "10 min",
-        type: "lecture",
+        type: "visualization",
         key_concepts: ["MACD Line", "Signal Line", "Histogramme", "Croisement", "Divergence MACD"],
         practical_example: "Tesla Q4 2023 : histogramme MACD passait positif pour la première fois en 2 mois, avec le MACD croisant au-dessus du signal. L'action a rallié +40% dans les 6 semaines suivantes.",
+        xp_reward: 75,
+        visualization: { type: "macd_explained", speed_control: true },
       },
       {
         id: 4,
         title: "Bandes de Bollinger",
         duration: "8 min",
-        type: "video",
+        type: "visualization",
         video_url: "https://www.youtube.com/embed/tkwUOUZQSkE",
         key_concepts: ["Bande haute/basse/médiane", "Squeeze Bollinger", "Breakout des bandes", "BB Width", "%B indicator"],
         practical_example: "Amazon avant ses résultats Q3 2023 : squeeze Bollinger extrême (bandes très resserrées) pendant 2 semaines. La compression précède toujours l'expansion. Résultats publiés → breakout +8% en une nuit.",
+        xp_reward: 75,
+        visualization: { type: "bollinger_bands", speed_control: true },
       },
       {
         id: 5,
@@ -512,6 +668,30 @@ export const COURSES: Course[] = [
       },
       {
         id: 10,
+        title: "Identifier la divergence RSI",
+        duration: "8 min",
+        type: "visualization",
+        key_concepts: ["Divergence haussière", "Divergence baissière", "Confirmation de signal", "Filtrage des faux signaux"],
+        practical_example: "Une divergence RSI haussière (prix fait un plus bas, RSI fait un plus haut) est souvent le signal précurseur d'un retournement. C'est l'un des signaux les plus fiables de l'analyse technique.",
+        xp_reward: 100,
+        visualization: { type: "rsi_divergence", speed_control: true },
+      },
+      {
+        id: 11,
+        title: "Exercice : Identifier le RSI",
+        duration: "5 min",
+        type: "interactive",
+        key_concepts: ["Lecture du RSI", "Zones surachat/survente", "Interprétation pratique"],
+        practical_example: "Mise en pratique directe : face à un RSI affiché, identifiez s'il signale un surachat, une survente ou une zone neutre.",
+        xp_reward: 100,
+        interactive_config: {
+          lesson_mode: "spot_rsi",
+          instruction: "Le RSI est actuellement à 78. Que signifie-t-il ?",
+          hint: "Rappelez-vous : RSI > 70 = surachat, RSI < 30 = survente, entre les deux = neutre.",
+        },
+      },
+      {
+        id: 12,
         title: "Confluence et stratégies multi-indicateurs",
         duration: "10 min",
         type: "interactive",
@@ -519,20 +699,42 @@ export const COURSES: Course[] = [
         practical_example: "Notre système FinanceApp utilise 17 indicateurs pondérés. Un signal avec 80% de confluence = 5 indicateurs fort alignés. Cette approche filtre 70% des faux signaux par rapport à un seul indicateur.",
       },
       {
-        id: 11,
+        id: 13,
+        title: "Simulation : NVDA surachat — Mars 2024",
+        duration: "10 min",
+        type: "sandbox",
+        key_concepts: ["RSI surachat", "Divergence baissière", "Signal de sortie", "Gestion de la cupidité"],
+        practical_example: "NVDA a doublé en 6 mois. Le RSI crie surachat. Les volumes divergent. Auriez-vous eu le courage de vendre ou cédé à la cupidité ?",
+        xp_reward: 250,
+        sandbox_config: {
+          scenario_id: "nvda_overbought_2024",
+          symbol: "NVDA",
+          context: "Mars 2024 — NVDA a explosé de +220% en 6 mois grâce à l'engouement IA. RSI(14) à 84, volumes en divergence baissière.",
+          question: "NVDA RSI à 84, divergence volumes. Que faites-vous ?",
+        },
+      },
+      {
+        id: 14,
+        title: "Simulation : BTC Breakout — Octobre 2024",
+        duration: "10 min",
+        type: "sandbox",
+        key_concepts: ["Squeeze Bollinger", "Consolidation pré-breakout", "Post-halving", "Breakout de range"],
+        practical_example: "Bitcoin consolide depuis 3 mois. Squeeze Bollinger extrême post-halving. La compression précède toujours l'expansion. Étiez-vous positionné ?",
+        xp_reward: 250,
+        sandbox_config: {
+          scenario_id: "btc_breakout_2024",
+          symbol: "BTC",
+          context: "Octobre 2024 — BTC consolide entre $58k et $64k depuis 90 jours. Squeeze Bollinger, RSI neutre. 6 mois après le halving.",
+          question: "BTC consolide depuis 90 jours avec un squeeze Bollinger. Que faites-vous ?",
+        },
+      },
+      {
+        id: 15,
         title: "Backtesting de stratégies techniques",
         duration: "9 min",
         type: "interactive",
         key_concepts: ["Backtesting", "Overfitting", "In-sample vs out-of-sample", "Métriques de performance"],
         practical_example: "Notre outil Backtest (onglet Analyses) te permet de tester RSI Reversal sur AAPL en 2023. Résultat : 67% win rate, +23% rendement, max drawdown 8%. Valide la stratégie avant de trader en réel.",
-      },
-      {
-        id: 12,
-        title: "Quiz final — Analyse technique",
-        duration: "5 min",
-        type: "quiz_only",
-        key_concepts: ["Récapitulatif analyse technique"],
-        practical_example: "Test complet sur tous les indicateurs techniques.",
       },
     ],
   },
@@ -922,7 +1124,7 @@ export const COURSES: Course[] = [
         duration: "11 min",
         type: "lecture",
         key_concepts: ["OHLCV data", "Données alternatives", "Normalisation", "Survivorship bias", "Look-ahead bias"],
-        practical_example: "Yahoo Finance API : données gratuites mais avec survivorship bias (les entreprises faillies disparaissent). Pour un backtest propre, utiliser des données point-in-time incluant les délisted stocks.",
+        practical_example: "Yahoo Finance API : données gratuites mais avec survivorship bias (les entreprises faillies disparaissent). Pour un backtest propre, utiliser des données point-in-time incluant les delisted stocks.",
       },
       {
         id: 3,
@@ -1356,6 +1558,16 @@ export function getCourse(id: string): Course | undefined {
 
 export function getTotalChapters(): number {
   return COURSES.reduce((sum, c) => sum + c.chapters.length, 0)
+}
+
+export function getChapterXP(chapter: Chapter): number {
+  return chapter.xp_reward ?? (
+    chapter.type === "sandbox"        ? 150 :
+    chapter.type === "visualization"  ? 75  :
+    chapter.type === "interactive"    ? 100 :
+    chapter.type === "quiz"           ? 125 :
+    50
+  )
 }
 
 export const LEVEL_COLORS = {

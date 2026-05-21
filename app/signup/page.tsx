@@ -16,9 +16,38 @@ export default function Signup() {
     if (password.length < 6) { setError("Le mot de passe doit faire au moins 6 caractères."); return }
     setLoading(true)
     setError("")
-    const { error } = await supabase.auth.signUp({ email, password })
-    if (error) setError(error.message)
-    else setSuccess(true)
+    const { data: signUpData, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+    if (error) {
+      setError(error.message)
+    } else {
+      // Auto-confirme l'email immédiatement (bypass email verification)
+      if (signUpData.user) {
+        await fetch("/api/auth/confirm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: signUpData.user.id }),
+        }).catch(() => {})
+      }
+      // Auto-login immédiatement après inscription
+      const { error: loginError } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+      // Email de bienvenue (best-effort)
+      fetch("/api/emails/welcome", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      }).catch(() => {})
+      if (!loginError) {
+        router.push("/onboarding")
+        return
+      }
+      setSuccess(true)
+    }
     setLoading(false)
   }
 
@@ -27,10 +56,10 @@ export default function Signup() {
       <div className="min-h-screen bg-[#080808] flex items-center justify-center px-6">
         <div className="bg-[#111] border border-white/10 rounded-2xl p-8 w-full max-w-md text-center">
           <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 text-3xl mx-auto mb-4">✓</div>
-          <h2 className="text-2xl font-black text-white mb-2">Vérifie ton email</h2>
-          <p className="text-gray-400 text-sm">On t'a envoyé un lien de confirmation sur <span className="text-white font-semibold">{email}</span>. Clique dessus pour activer ton compte.</p>
-          <a href="/login" className="inline-block mt-6 text-green-400 hover:text-green-300 text-sm font-semibold">
-            Retour à la connexion →
+          <h2 className="text-2xl font-black text-white mb-2">Compte créé !</h2>
+          <p className="text-gray-400 text-sm">Ton compte <span className="text-white font-semibold">{email}</span> est prêt. Tu peux te connecter maintenant.</p>
+          <a href="/login" className="inline-block mt-6 px-6 py-3 rounded-xl bg-green-500 hover:bg-green-400 text-black font-black text-sm transition">
+            Se connecter →
           </a>
         </div>
       </div>

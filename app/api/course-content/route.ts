@@ -110,7 +110,7 @@ Chaque question doit tester un concept différent du chapitre. L'explication doi
       { onConflict: "course_id,chapter_id" }
     )
   } catch (e: any) {
-    console.error("Groq error:", e.message)
+    // error silenced in production
     content = `## ${chapter.title}\n\nContenu en cours de chargement. Rafraîchis la page dans quelques instants.`
     quiz = []
   }

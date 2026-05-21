@@ -271,7 +271,7 @@ Règles :
     const prediction = JSON.parse(clean)
     return NextResponse.json(prediction)
   } catch (e) {
-    console.error("Predict error:", e)
+    // error silenced
     return NextResponse.json({ error: "Prediction failed" }, { status: 500 })
   }
 }

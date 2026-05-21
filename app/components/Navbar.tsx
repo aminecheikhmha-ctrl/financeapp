@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { usePathname } from "next/navigation"
 
-const PUBLIC_ROUTES = ["/", "/login", "/signup", "/pricing", "/preuves"]
+const PUBLIC_ROUTES = ["/", "/login", "/signup", "/pricing", "/preuves", "/blog"]
 
 export default function Navbar() {
   const pathname = usePathname()
@@ -36,6 +36,7 @@ export default function Navbar() {
     { href: "/#features", label: "Fonctionnalités" },
     { href: "/pricing", label: "Tarifs" },
     { href: "/apprendre", label: "Académie" },
+    { href: "/blog", label: "Blog" },
     { href: "/signaux", label: "Signaux" },
   ]
 
@@ -45,7 +46,7 @@ export default function Navbar() {
         ? "bg-[#080808]/90 backdrop-blur-xl border-b border-white/5 shadow-xl"
         : "bg-transparent"
     }`}>
-      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
         {/* Logo */}
         <a href="/" className="flex items-center gap-2.5 group flex-shrink-0">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/30">

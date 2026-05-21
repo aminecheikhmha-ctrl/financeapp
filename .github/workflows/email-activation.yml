@@ -1,0 +1,15 @@
+name: Email — Activation J+1
+on:
+  schedule:
+    - cron: "0 10 * * *"  # Every day at 10:00 UTC
+  workflow_dispatch:
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger activation emails
+        run: |
+          curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            "${{ secrets.APP_URL }}/api/cron/emails"

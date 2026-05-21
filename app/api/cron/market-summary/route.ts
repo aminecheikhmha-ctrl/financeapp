@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ ok: true, date: new Date().toISOString(), summaries })
   } catch (err) {
-    console.error("[cron/market-summary]", err)
+    // cron error silenced
     return NextResponse.json({ error: "Internal error" }, { status: 500 })
   }
 }

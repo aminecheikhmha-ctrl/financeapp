@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
+// Routes that require the onboarding_done cookie (soft auth gate)
+// Real auth is enforced client-side via supabase.auth.getUser() in each page.
+// Supabase stores sessions in localStorage (not cookies), so we use onboarding_done
+// as a lightweight gate to avoid flashing protected pages to obviously unauthenticated users.
 const PROTECTED_ROUTES = [
   "/dashboard",
   "/portfolio",
@@ -11,47 +15,27 @@ const PROTECTED_ROUTES = [
   "/profil",
 ]
 
-function isTokenExpired(token: string): boolean {
-  try {
-    const [, payload] = token.split(".")
-    const decoded = JSON.parse(Buffer.from(payload, "base64url").toString())
-    return decoded.exp * 1000 < Date.now()
-  } catch {
-    return true
-  }
-}
-
-function getSupabaseSession(req: NextRequest): boolean {
-  // Supabase stores auth in cookie: sb-<ref>-auth-token
-  const projectRef = "ngybxuseffhpgeiodtwa"
-  const cookieName = `sb-${projectRef}-auth-token`
-
-  const cookie = req.cookies.get(cookieName)?.value
-  if (!cookie) return false
-
-  try {
-    // Cookie value is JSON: { access_token, refresh_token, ... }
-    const parsed = JSON.parse(decodeURIComponent(cookie))
-    const accessToken = parsed?.access_token ?? parsed?.[0]?.access_token
-    if (!accessToken) return false
-    return !isTokenExpired(accessToken)
-  } catch {
-    return false
-  }
-}
+// Public routes that bypass even the soft gate
+const PUBLIC_ROUTES = ["/login", "/signup", "/onboarding", "/auth", "/pricing", "/preuves", "/"]
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // ── Auth protection ────────────────────────────────────────────────────────
+  // ── Soft auth gate (onboarding_done cookie) ────────────────────────────────
   const isProtected = PROTECTED_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(route + "/")
   )
+  const isPublic = PUBLIC_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(route + "/")
+  )
 
-  if (isProtected && !getSupabaseSession(request)) {
-    const loginUrl = new URL("/login", request.url)
-    loginUrl.searchParams.set("redirect", pathname)
-    return NextResponse.redirect(loginUrl)
+  if (isProtected && !isPublic) {
+    const hasSession = request.cookies.get("onboarding_done")?.value === "1"
+    if (!hasSession) {
+      const loginUrl = new URL("/login", request.url)
+      loginUrl.searchParams.set("redirect", pathname)
+      return NextResponse.redirect(loginUrl)
+    }
   }
 
   // ── Security headers ───────────────────────────────────────────────────────

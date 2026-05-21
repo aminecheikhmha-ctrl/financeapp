@@ -118,13 +118,43 @@ async function fetchIndicators(symbol: string) {
   }
 }
 
+// ── Fetch news sentiment (best-effort) ───────────────────────────────────────
+async function fetchNewsSentiment(symbol: string) {
+  try {
+    const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+    const [newsRes, redditRes] = await Promise.allSettled([
+      fetch(`${base}/api/news?symbol=${symbol}&limit=10`, { signal: AbortSignal.timeout(4000) }),
+      fetch(`${base}/api/news/reddit-buzz?symbol=${symbol}`, { signal: AbortSignal.timeout(4000) }),
+    ])
+    const news   = newsRes.status === "fulfilled" && newsRes.value.ok ? await newsRes.value.json() : null
+    const reddit = redditRes.status === "fulfilled" && redditRes.value.ok ? await redditRes.value.json() : null
+
+    if (!news?.articles?.length) return null
+
+    const sentRes = await fetch(`${base}/api/news/sentiment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ articles: news.articles, symbol }),
+      signal: AbortSignal.timeout(8000),
+    })
+    const sentiment = sentRes.ok ? await sentRes.json() : null
+
+    return { sentiment, reddit, articlesCount: news.articles.length }
+  } catch {
+    return null
+  }
+}
+
 // ── Route handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
   const { symbol, name, price, change, high, low, marketCap, volume } = body
 
-  const ind = await fetchIndicators(symbol)
+  const [ind, newsData] = await Promise.all([
+    fetchIndicators(symbol),
+    fetchNewsSentiment(symbol),
+  ])
 
   const technicalBlock = ind
     ? `
@@ -139,6 +169,18 @@ Indicateurs techniques (données temps réel) :
 • Divergence       : ${ind.divergence}
 • Signaux alignés  : ${ind.confirmations.join(", ") || "aucun signal fort"}`
     : "Indicateurs techniques : indisponibles — base l'analyse sur les données prix ci-dessus."
+
+  const newsBlock = newsData?.sentiment
+    ? `
+Contexte actualités récentes (${newsData.articlesCount} articles) :
+• Sentiment général   : ${newsData.sentiment.overall_sentiment} (score: ${newsData.sentiment.sentiment_score}/100)
+• Impact probable     : ${newsData.sentiment.impact_on_price}
+• Thèmes clés         : ${newsData.sentiment.key_themes?.join(", ") || "N/A"}
+• Catalyseurs         : ${newsData.sentiment.catalysts?.join(", ") || "N/A"}
+• Risques identifiés  : ${newsData.sentiment.risks?.join(", ") || "N/A"}
+• Buzz social         : ${newsData.sentiment.social_buzz}${newsData.reddit ? ` — ${newsData.reddit.mentions_24h} mentions Reddit 24h` : ""}
+• Résumé news         : ${newsData.sentiment.summary}`
+    : ""
 
   try {
     const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -168,7 +210,7 @@ Données de marché :
 • Haut / Bas    : $${high} / $${low}
 • Market Cap    : ${marketCap ?? "N/A"}
 • Volume        : ${volume ?? "N/A"}
-${technicalBlock}
+${technicalBlock}${newsBlock}
 
 Rédige une analyse structurée en 4 sections précises :
 

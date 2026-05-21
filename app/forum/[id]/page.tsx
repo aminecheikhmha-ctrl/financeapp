@@ -238,8 +238,8 @@ export default function PostDetail() {
   const AVATAR_COLORS = ["#4ade80", "#60a5fa", "#f472b6", "#a78bfa", "#fb923c", "#34d399", "#facc15"]
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <div className="max-w-3xl mx-auto px-6 py-8">
+    <div className="min-h-screen bg-black text-white overflow-x-hidden">
+      <div className="max-w-3xl mx-auto px-4 md:px-6 py-6 md:py-8">
 
         {/* Back */}
         <button
@@ -270,7 +270,7 @@ export default function PostDetail() {
             </div>
           </div>
 
-          <h1 className="text-xl font-black text-white mb-4 leading-snug">{post.title}</h1>
+          <h1 className="text-lg md:text-xl font-black text-white mb-4 leading-snug">{post.title}</h1>
 
           {/* Symbol price card */}
           {post.symbol && (

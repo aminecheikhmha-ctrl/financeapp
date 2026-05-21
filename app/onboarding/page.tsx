@@ -283,9 +283,9 @@ function Step1({ form, setForm, toggleColor }: {
 /* ---- Step 2: Niveau ---- */
 function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<React.SetStateAction<FormData>> }) {
   const levels = [
-    { icon: "🌱", label: "Débutant", value: "débutant" as const, desc: "Je commence tout juste" },
-    { icon: "📈", label: "Intermédiaire", value: "intermédiaire" as const, desc: "J'ai quelques bases" },
-    { icon: "🎯", label: "Avancé", value: "avancé" as const, desc: "Je trade régulièrement" },
+    { icon: "🌱", label: "Débutant", value: "débutant" as const, desc: "Je commence tout juste", preview: { tab: "Que dit l'IA ? 🤖", hint: "Interface simplifiée avec explications intégrées", color: "text-green-400", badge: "Mode guidé" } },
+    { icon: "📈", label: "Intermédiaire", value: "intermédiaire" as const, desc: "J'ai quelques bases", preview: { tab: "Signaux", hint: "Accès complet avec tooltips explicatifs", color: "text-blue-400", badge: "Mode standard" } },
+    { icon: "🎯", label: "Avancé", value: "avancé" as const, desc: "Je trade régulièrement", preview: { tab: "Indicateurs", hint: "Interface complète sans fioritures", color: "text-purple-400", badge: "Mode expert" } },
   ]
 
   const experiences = [
@@ -295,11 +295,13 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
     { label: "Plus de 3 ans", value: "plus_3_ans" as const },
   ]
 
+  const selectedLevel = levels.find(l => l.value === form.level)
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="text-center">
         <h2 className="text-2xl font-black text-white mb-2">Ton niveau en trading</h2>
-        <p className="text-gray-400">Sois honnête, ça aide à personnaliser ton expérience</p>
+        <p className="text-gray-400">Sois honnête — ça personnalise toute ton expérience</p>
       </div>
 
       <div>
@@ -322,6 +324,47 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
           ))}
         </div>
       </div>
+
+      {/* Live preview */}
+      {selectedLevel && (
+        <div className="rounded-xl border border-white/10 bg-[#0f0f0f] overflow-hidden transition-all duration-300">
+          <div className="px-4 py-2 border-b border-white/5 flex items-center gap-2">
+            <div className="flex gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
+              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
+              <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
+            </div>
+            <span className="text-[10px] text-gray-600 ml-2">Aperçu de ton dashboard</span>
+            <span className={`ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full bg-white/5 ${selectedLevel.preview.color}`}>
+              {selectedLevel.preview.badge}
+            </span>
+          </div>
+          <div className="p-4 space-y-3">
+            {/* Mock tabs */}
+            <div className="flex gap-2 border-b border-white/5 pb-2">
+              {["Signaux", "Indicateurs", "Que dit l'IA ? 🤖"].map(tab => (
+                <span key={tab} className={`text-[10px] font-semibold pb-1.5 border-b-2 transition-all ${
+                  tab === selectedLevel.preview.tab
+                    ? "text-white border-white"
+                    : "text-gray-700 border-transparent"
+                }`}>{tab}</span>
+              ))}
+            </div>
+            {/* Mock KPI */}
+            <div className="flex gap-2">
+              {["Prix", "Variation", "Volume"].slice(0, form.level === "débutant" ? 2 : 3).map(k => (
+                <div key={k} className="flex-1 bg-white/3 rounded-lg p-2">
+                  <div className="text-[8px] text-gray-600 uppercase mb-1">{k}</div>
+                  <div className="h-3 bg-white/10 rounded animate-pulse" />
+                </div>
+              ))}
+            </div>
+            <p className={`text-xs ${selectedLevel.preview.color} font-semibold`}>
+              ✓ {selectedLevel.preview.hint}
+            </p>
+          </div>
+        </div>
+      )}
 
       <div>
         <label className="block text-sm text-gray-400 mb-3 font-semibold">Depuis combien de temps tu trades ?</label>

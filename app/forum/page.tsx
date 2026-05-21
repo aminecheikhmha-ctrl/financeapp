@@ -100,10 +100,12 @@ function PostCard({ post, onClick }: { post: Post; onClick: () => void }) {
         </div>
       )}
       <div className="flex items-start gap-3">
-        <Avatar username={post.username} color={post.avatar_color} size={9} />
+        <a href={`/traders/${post.username}`}>
+          <Avatar username={post.username} color={post.avatar_color} size={9} />
+        </a>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-semibold text-gray-400">{post.username}</span>
+            <a href={`/traders/${post.username}`} className="text-xs font-semibold text-gray-400 hover:text-green-400 transition">{post.username}</a>
             <span className="text-gray-600 text-xs">·</span>
             <span className="text-xs text-gray-600">{timeAgo(post.created_at)}</span>
             <CategoryBadge category={post.category} />
@@ -175,8 +177,8 @@ function NewPostModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="bg-[#111] border border-white/10 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:p-4 bg-black/70 backdrop-blur-sm">
+      <div className="bg-[#111] border border-white/10 rounded-t-2xl sm:rounded-2xl w-full max-w-[95vw] sm:max-w-lg p-5 sm:p-6 shadow-2xl mx-auto">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-bold text-white">Nouveau post</h2>
           <button onClick={onClose} className="text-gray-600 hover:text-white transition text-xl leading-none">×</button>
@@ -219,11 +221,11 @@ function NewPostModal({
             rows={5}
             className="w-full bg-white/5 border border-white/8 text-white px-4 py-3 rounded-xl text-sm placeholder-gray-600 outline-none focus:border-green-500/50 transition resize-none"
           />
-          <div className="flex gap-3">
+          <div className="flex gap-2 flex-wrap">
             <select
               value={category}
               onChange={e => setCategory(e.target.value)}
-              className="flex-1 bg-white/5 border border-white/8 text-white px-3 py-2.5 rounded-xl text-sm outline-none focus:border-green-500/50 transition"
+              className="flex-1 min-w-[120px] bg-white/5 border border-white/8 text-white px-3 py-2.5 rounded-xl text-sm outline-none focus:border-green-500/50 transition"
             >
               {CATEGORIES.filter(c => c.key !== "all").map(c => (
                 <option key={c.key} value={c.key} className="bg-[#111]">{c.icon} {c.label}</option>
@@ -233,7 +235,7 @@ function NewPostModal({
               value={symbol}
               onChange={e => setSymbol(e.target.value.toUpperCase())}
               placeholder="Ticker (ex: AAPL)"
-              className="w-40 bg-white/5 border border-white/8 text-white px-3 py-2.5 rounded-xl text-sm placeholder-gray-600 outline-none focus:border-green-500/50 transition"
+              className="w-full sm:w-36 bg-white/5 border border-white/8 text-white px-3 py-2.5 rounded-xl text-sm placeholder-gray-600 outline-none focus:border-green-500/50 transition"
             />
           </div>
         </div>
@@ -317,15 +319,16 @@ function LeaderboardTab() {
 
       {/* Table */}
       <div className="bg-[#111] border border-white/5 rounded-2xl overflow-hidden">
-        <div className="grid grid-cols-[40px_1fr_120px_120px_80px] gap-0 px-5 py-3 border-b border-white/5">
-          {["#", "Trader", "Portfolio", "Perf.", "Win rate"].map(h => (
+        <div className="overflow-x-auto">
+        <div className="grid grid-cols-[40px_1fr_110px_100px_70px] gap-0 px-4 py-3 border-b border-white/5 min-w-[420px]">
+          {["#", "Trader", "Portfolio", "Perf.", "Win%"].map(h => (
             <span key={h} className="text-[11px] font-bold uppercase tracking-wide text-gray-600">{h}</span>
           ))}
         </div>
         {entries.map((e, i) => (
           <div
             key={e.user_id}
-            className="grid grid-cols-[40px_1fr_120px_120px_80px] gap-0 px-5 py-3.5 border-b border-white/3 hover:bg-white/2 transition items-center"
+            className="grid grid-cols-[40px_1fr_110px_100px_70px] gap-0 px-4 py-3.5 border-b border-white/3 hover:bg-white/2 transition items-center min-w-[420px]"
           >
             <span className="text-sm font-bold text-gray-500">#{i + 1}</span>
             <div className="flex items-center gap-2 min-w-0">
@@ -347,6 +350,7 @@ function LeaderboardTab() {
             <p>Aucun trader classé pour le moment</p>
           </div>
         )}
+        </div>
       </div>
     </div>
   )
@@ -387,7 +391,7 @@ export default function Forum() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen text-white overflow-x-hidden page-enter" style={{ background: "var(--bg-canvas)" }}>
       <div className="flex">
 
         {/* Left sidebar */}
@@ -426,12 +430,12 @@ export default function Forum() {
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 px-6 py-8 max-w-3xl">
+        <main className="flex-1 px-4 md:px-6 py-6 md:py-8 min-w-0 max-w-3xl">
 
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-black text-white">
+              <h1 className="text-xl md:text-2xl font-black text-white">
                 {tab === "leaderboard" ? "🏆 Leaderboard" : "💬 Forum"}
               </h1>
               <p className="text-sm text-gray-500 mt-0.5">
@@ -477,8 +481,8 @@ export default function Forum() {
           ) : (
             <>
               {/* Filters */}
-              <div className="flex gap-3 mb-5">
-                <div className="flex-1 relative">
+              <div className="flex gap-2 mb-5 flex-wrap">
+                <div className="flex-1 min-w-0 relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 text-sm">🔍</span>
                   <input
                     value={search}
@@ -487,12 +491,12 @@ export default function Forum() {
                     className="w-full pl-9 pr-4 py-2.5 bg-white/5 border border-white/8 text-white text-sm rounded-xl placeholder-gray-600 outline-none focus:border-green-500/40 transition"
                   />
                 </div>
-                <div className="flex gap-1.5">
+                <div className="flex gap-1">
                   {SORT_OPTIONS.map(s => (
                     <button
                       key={s.key}
                       onClick={() => setSort(s.key)}
-                      className={`px-3 py-2 rounded-xl text-xs font-semibold transition ${
+                      className={`flex-shrink-0 whitespace-nowrap px-2.5 py-2 rounded-xl text-xs font-semibold transition ${
                         sort === s.key
                           ? "bg-green-500/15 text-green-400 border border-green-500/20"
                           : "text-gray-500 bg-white/5 hover:text-white"
@@ -527,10 +531,16 @@ export default function Forum() {
                   <div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
                 </div>
               ) : posts.length === 0 ? (
-                <div className="text-center py-24 text-gray-600">
-                  <p className="text-4xl mb-4">💬</p>
-                  <p className="text-lg font-semibold mb-1">Aucun post</p>
-                  <p className="text-sm">Sois le premier à publier dans cette catégorie !</p>
+                <div className="text-center py-16">
+                  <div className="text-5xl mb-4">💬</div>
+                  <h3 className="text-white font-bold text-lg mb-2">Le forum est vide</h3>
+                  <p className="text-gray-500 text-sm mb-6">Sois le premier à partager une analyse ou poser une question !</p>
+                  <button
+                    onClick={() => setShowModal(true)}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-500 hover:bg-green-400 text-black font-bold text-sm rounded-xl transition"
+                  >
+                    Créer le premier post →
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-3">
