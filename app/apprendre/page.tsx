@@ -221,6 +221,7 @@ export default function Apprendre() {
   const [challengeDone, setChallengeDone] = useState(false)
   const [totalXP, setTotalXP]             = useState(0)
   const [leaderboard, setLeaderboard]     = useState<{ username: string; xp: number; avatar_color: string }[]>([])
+  const [popularIds, setPopularIds]       = useState<string[]>([])
 
   useEffect(() => {
     async function init() {
@@ -256,6 +257,18 @@ export default function Apprendre() {
           avatar_color: r.avatar_color ?? colors[i],
         })))
       }
+      // Popular courses by global completion count
+      const { data: popData } = await supabase
+        .from("user_progress")
+        .select("course_id")
+        .eq("completed", true)
+      if (popData) {
+        const counts: Record<string, number> = {}
+        for (const r of popData) counts[r.course_id] = (counts[r.course_id] ?? 0) + 1
+        const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([id]) => id)
+        setPopularIds(sorted.slice(0, 3))
+      }
+
       setReady(true)
     }
     init()
@@ -293,6 +306,14 @@ export default function Apprendre() {
     const done = progress[c.id]?.size ?? 0
     return done === c.chapters.length && c.chapters.length > 0
   })
+
+  // Last 3 courses in the array (the newest additions)
+  const newestCourses = COURSES.slice(-3)
+
+  // Popular courses from DB, falling back to first debutant courses
+  const popularCourses = popularIds.length >= 3
+    ? popularIds.map(id => COURSES.find(c => c.id === id)).filter(Boolean) as Course[]
+    : COURSES.filter(c => c.level === "débutant").slice(0, 3)
 
   const inProgress = COURSES.find(c => {
     const done = progress[c.id]?.size ?? 0
@@ -347,14 +368,14 @@ export default function Apprendre() {
                 <span className="text-green-400">comme un professionnel</span>
               </h1>
               <p className="text-white/40 text-sm max-w-md leading-relaxed">
-                15 cours complets · Vidéos · Quiz interactifs · Simulations sur données réelles · Tuteur IA
+                {COURSES.length} cours complets · Vidéos · Quiz interactifs · Simulations sur données réelles · Tuteur IA
               </p>
             </div>
 
             {/* Right: stats */}
             <div className="grid grid-cols-2 gap-3 md:w-64 flex-shrink-0">
               {[
-                { label: "Cours complétés", value: `${completedCourses}/15`, color: "#4ade80" },
+                { label: "Cours complétés", value: `${completedCourses}/${COURSES.length}`, color: "#4ade80" },
                 { label: "XP Total",        value: `⚡ ${totalXP.toLocaleString()}`, color: "#facc15" },
                 { label: "Progression",     value: `${globalPct}%`, color: "#60a5fa" },
                 { label: "Chapitres faits", value: `${completedChapters}/${TOTAL_CHAPTERS}`, color: "#f97316" },
@@ -415,6 +436,64 @@ export default function Apprendre() {
             </motion.div>
           ))}
         </div>
+
+        {/* ── OUTILS D'APPRENTISSAGE ──────────────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.28 }}
+          className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-7">
+          {/* Glossaire */}
+          <motion.div
+            whileHover={{ y: -3, scale: 1.01 }} whileTap={{ scale: 0.99 }}
+            onClick={() => router.push("/apprendre/glossaire")}
+            className="cursor-pointer rounded-2xl p-5 flex items-center gap-5 relative overflow-hidden"
+            style={{ background: "linear-gradient(135deg, #0a1420 0%, #080c08 100%)", border: "1px solid rgba(96,165,250,0.2)" }}>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-6xl opacity-[0.06] select-none pointer-events-none">📖</div>
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+              style={{ background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.2)" }}>
+              📖
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <p className="text-white font-black text-base">Glossaire financier</p>
+                <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md"
+                  style={{ background: "rgba(96,165,250,0.12)", color: "#60a5fa", border: "1px solid rgba(96,165,250,0.2)" }}>
+                  50+ termes
+                </span>
+              </div>
+              <p className="text-[11px] leading-relaxed" style={{ color: "#444" }}>
+                Vocabulaire complet du trading & de l'investissement
+              </p>
+            </div>
+            <span className="text-blue-400/40 text-lg flex-shrink-0">→</span>
+          </motion.div>
+
+          {/* Flashcards */}
+          <motion.div
+            whileHover={{ y: -3, scale: 1.01 }} whileTap={{ scale: 0.99 }}
+            onClick={() => router.push("/apprendre/flashcards")}
+            className="cursor-pointer rounded-2xl p-5 flex items-center gap-5 relative overflow-hidden"
+            style={{ background: "linear-gradient(135deg, #0e0a14 0%, #08080c 100%)", border: "1px solid rgba(167,139,250,0.2)" }}>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-6xl opacity-[0.06] select-none pointer-events-none">🃏</div>
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+              style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.2)" }}>
+              🃏
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <p className="text-white font-black text-base">Flashcards</p>
+                <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md"
+                  style={{ background: "rgba(167,139,250,0.12)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.2)" }}>
+                  Répétition espacée
+                </span>
+              </div>
+              <p className="text-[11px] leading-relaxed" style={{ color: "#444" }}>
+                Mémorise tous les concepts clés de chaque cours
+              </p>
+            </div>
+            <span className="text-purple-400/40 text-lg flex-shrink-0">→</span>
+          </motion.div>
+        </motion.div>
 
         {/* ── CONTINUE BANNER ─────────────────────────────────────────────── */}
         {inProgress && (() => {
@@ -564,6 +643,118 @@ export default function Apprendre() {
             )}
           </motion.div>
         </div>
+
+        {/* ── NOUVEAUX COURS ───────────────────────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45 }}
+          className="mb-7">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-base">🆕</span>
+              <p className="font-black text-white text-sm">Nouveaux cours</p>
+              <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md animate-pulse"
+                style={{ background: "rgba(74,222,128,0.1)", color: "#4ade80", border: "1px solid rgba(74,222,128,0.2)" }}>
+                NOUVEAU
+              </span>
+            </div>
+            <button onClick={() => { setLevel("all"); setType("all"); setStatus("new") }}
+              className="text-[10px] font-bold transition-colors" style={{ color: "#333" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "#666")}
+              onMouseLeave={e => (e.currentTarget.style.color = "#333")}>
+              Voir tous →
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {newestCourses.map((course, index) => {
+              const lc = LEVEL_COLORS[course.level]
+              const { done, total, pct } = getCourseProgress(course, progress)
+              const grad = COURSE_GRADIENTS[course.id] ?? "from-gray-950 to-slate-950"
+              return (
+                <motion.div key={course.id}
+                  initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.48 + index * 0.06 }}
+                  whileHover={{ y: -3, scale: 1.01 }} whileTap={{ scale: 0.99 }}
+                  onClick={() => router.push(`/apprendre/${course.id}`)}
+                  className={`cursor-pointer rounded-2xl p-4 relative overflow-hidden bg-gradient-to-br ${grad}`}
+                  style={{ border: `1px solid ${lc.border}` }}>
+                  <div className="absolute top-2 right-2 text-4xl opacity-[0.07] select-none pointer-events-none leading-none">{course.icon}</div>
+                  <div className="flex items-center gap-2.5 mb-2.5">
+                    <span className="text-xl">{course.icon}</span>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest"
+                      style={{ background: lc.bg, color: lc.text, border: `1px solid ${lc.border}` }}>
+                      {getLevelLabel(course.level)}
+                    </span>
+                  </div>
+                  <p className="text-white font-black text-sm mb-1 leading-snug">{course.title}</p>
+                  <p className="text-[10px] mb-3 line-clamp-2 leading-relaxed" style={{ color: "#555" }}>{course.description}</p>
+                  <div className="flex items-center justify-between text-[10px]" style={{ color: "#444" }}>
+                    <span>⏱ {course.duration}</span>
+                    <span style={{ color: lc.text }}>{pct}% ✓</span>
+                  </div>
+                  <div className="mt-2 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
+                    <div className="h-full rounded-full transition-all"
+                      style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${lc.text}80, ${lc.text})` }} />
+                  </div>
+                </motion.div>
+              )
+            })}
+          </div>
+        </motion.div>
+
+        {/* ── LES PLUS POPULAIRES ──────────────────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.52 }}
+          className="mb-7">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-base">🔥</span>
+              <p className="font-black text-white text-sm">Les plus populaires</p>
+            </div>
+            <button onClick={() => { setLevel("all"); setType("all"); setStatus("all") }}
+              className="text-[10px] font-bold transition-colors" style={{ color: "#333" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "#666")}
+              onMouseLeave={e => (e.currentTarget.style.color = "#333")}>
+              Tous les cours →
+            </button>
+          </div>
+          <div className="flex flex-col gap-2">
+            {popularCourses.map((course, index) => {
+              const lc = LEVEL_COLORS[course.level]
+              const { done, total, pct } = getCourseProgress(course, progress)
+              return (
+                <motion.div key={course.id}
+                  initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.55 + index * 0.06 }}
+                  whileHover={{ x: 4 }} whileTap={{ scale: 0.99 }}
+                  onClick={() => router.push(`/apprendre/${course.id}`)}
+                  className="cursor-pointer rounded-2xl px-5 py-4 flex items-center gap-4"
+                  style={{ background: "#0d0d0d", border: "1px solid #181818" }}>
+                  <span className="text-lg w-6 text-center font-black" style={{ color: index === 0 ? "#facc15" : index === 1 ? "#9ca3af" : "#cd7c2f" }}>
+                    {index === 0 ? "🔥" : index === 1 ? "⚡" : "✨"}
+                  </span>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+                    style={{ background: `${lc.text}10`, border: `1px solid ${lc.border}` }}>
+                    {course.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-black text-sm truncate">{course.title}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md"
+                        style={{ background: lc.bg, color: lc.text }}>{getLevelLabel(course.level)}</span>
+                      <span className="text-[10px]" style={{ color: "#444" }}>{course.chapters.length} chapitres · {course.duration}</span>
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-sm font-black" style={{ color: lc.text }}>{pct}%</p>
+                    <p className="text-[9px]" style={{ color: "#333" }}>{done}/{total}</p>
+                  </div>
+                </motion.div>
+              )
+            })}
+          </div>
+        </motion.div>
 
         {/* ── FILTERS ──────────────────────────────────────────────────────── */}
         <div className="flex gap-2 mb-6 overflow-x-auto pb-1 flex-nowrap md:flex-wrap items-center">

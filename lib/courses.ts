@@ -2115,6 +2115,460 @@ export const COURSES: Course[] = [
       },
     ],
   },
+
+  // ══════════════════════════════════════════════════════════════════
+  // NOUVEAUX COURS — DÉBUTANT (3)
+  // ══════════════════════════════════════════════════════════════════
+
+  {
+    id: "forex-debutant",
+    title: "Le Forex pour débutants",
+    level: "débutant",
+    duration: "1h15",
+    chapters_count: 8,
+    icon: "💱",
+    description: "EUR/USD, paires de devises, pip, lot — tout comprendre sur le marché des devises",
+    video_intro: "https://www.youtube.com/embed/tT5UKz5EXGA",
+    chapters: [
+      { id: 1, type: "video", title: "Qu'est-ce que le Forex ?", duration: "8 min", video_url: "https://www.youtube.com/embed/tT5UKz5EXGA", key_concepts: ["Paire de devises", "EUR/USD", "Pip", "Lot", "Spread"], practical_example: "EUR/USD à 1.0850 : pour chaque euro, tu obtiens 1.085 dollar. Un pip = 0.0001. Sur 1 lot standard (100k unités), 1 pip = $10.", xp_reward: 50 },
+      { id: 2, type: "visualization", title: "Comment fonctionne une paire de devises", duration: "7 min", visualization: { type: "support_resistance", speed_control: true }, key_concepts: ["Devise de base", "Devise de cotation", "Bid/Ask", "Cross rates"], practical_example: "EUR/USD : EUR est la base, USD est la cotation. Si EUR/USD monte, l'euro s'apprécie vs le dollar.", xp_reward: 75 },
+      { id: 3, type: "quiz", title: "Quiz : Les bases du Forex", duration: "5 min", key_concepts: ["Paires majeurs", "Pip", "Spread"], practical_example: "Teste ta compréhension du marché des changes.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Quelle est la paire de devises la plus tradée au monde ?", options: ["GBP/USD", "EUR/USD", "USD/JPY", "AUD/USD"], correct: 1, explanation: "EUR/USD représente environ 24% de tout le volume Forex mondial, soit ~$1.1 trillion par jour." },
+        { id: 2, type: "true_false", question: "Le marché Forex est ouvert 24h/24, 5 jours/7.", options: ["Vrai", "Faux"], correct: 0, explanation: "Le Forex est ouvert en continu du dimanche 22h (ouverture Sydney) au vendredi 22h (fermeture New York), sans interruption." },
+        { id: 3, type: "multiple_choice", question: "Un pip sur EUR/USD représente :", options: ["0.1", "0.01", "0.001", "0.0001"], correct: 3, explanation: "Un pip = 0.0001 sur la plupart des paires. Sur un lot standard (100k), 1 pip = $10." },
+      ]},
+      { id: 4, type: "interactive", title: "Identifie les niveaux clés sur EUR/USD", duration: "8 min", interactive_config: { lesson_mode: "identify_support", symbol: "EURUSD=X", instruction: "Identifie le support principal sur EUR/USD" }, key_concepts: ["Support", "Résistance", "Range Forex"], practical_example: "EUR/USD respecte souvent des niveaux psychologiques ronds (1.05, 1.10, 1.15).", xp_reward: 100 },
+      { id: 5, type: "sandbox", title: "Simulation : EUR/USD sur données réelles", duration: "10 min", sandbox_config: { scenario_id: "aapl_rsi_oversold_2024", symbol: "EURUSD=X", context: "EUR/USD vient de toucher un support majeur à 1.0500 avec RSI à 28.", question: "Que fais-tu ?" }, key_concepts: ["Entry", "TP", "SL", "R/R"], practical_example: "Un trade EUR/USD avec 50 pip de SL et 100 pip de TP = R/R 2:1", xp_reward: 150 },
+      { id: 6, type: "quiz", title: "Levier et gestion du risque au Forex", duration: "7 min", key_concepts: ["Levier", "Marge", "Margin call", "Lot"], practical_example: "Levier 1:30 (max EU) : avec $1000 tu contrôles $30,000. Puissant mais dangereux.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Avec un levier de 1:30 et $1000 de capital, quelle position maximale peux-tu ouvrir ?", options: ["$1,000", "$10,000", "$30,000", "$100,000"], correct: 2, explanation: "Levier 1:30 × $1000 capital = $30,000 de position maximale. En Europe, le levier max sur les majeures Forex est limité à 1:30 pour les particuliers." },
+        { id: 2, type: "true_false", question: "Un margin call signifie que ton broker ferme automatiquement tes positions.", options: ["Vrai", "Faux"], correct: 0, explanation: "Quand ta marge disponible tombe sous un seuil (souvent 50%), le broker ferme automatiquement tes positions pour éviter un solde négatif." },
+      ]},
+      { id: 7, type: "challenge", title: "Défi : Analyse EUR/USD en 90 secondes", duration: "5 min", challenge: { time_limit: 90, task: "Identifie 3 signaux techniques sur EUR/USD", symbol: "EURUSD=X", type: "find_signals" }, key_concepts: ["RSI", "Support", "MACD"], practical_example: "Les traders pros scannent plusieurs paires en quelques secondes.", xp_reward: 200 },
+      { id: 8, type: "quiz", title: "Quiz final — Forex débutant", duration: "5 min", key_concepts: ["Récapitulatif Forex"], practical_example: "Valide ta maîtrise des bases du Forex.", xp_reward: 150, quiz: [
+        { id: 1, type: "multiple_choice", question: "Quelle session Forex a le plus fort volume ?", options: ["Session Sydney", "Session Tokyo", "Session Londres", "Session New York"], correct: 2, explanation: "La session de Londres (8h-17h GMT) génère ~35% du volume Forex mondial. Le chevauchement Londres/New York (13h-17h GMT) est le moment le plus actif." },
+        { id: 2, type: "true_false", question: "Le spread sur EUR/USD est généralement plus large que sur des paires exotiques.", options: ["Vrai", "Faux"], correct: 1, explanation: "C'est le contraire. EUR/USD a le spread le plus serré (souvent 0.1-0.3 pip) car c'est la paire la plus liquide. Les paires exotiques ont des spreads 10-50x plus larges." },
+      ]},
+    ],
+  },
+
+  {
+    id: "investissement-passif",
+    title: "Investissement passif & ETF",
+    level: "débutant",
+    duration: "1h",
+    chapters_count: 7,
+    icon: "📦",
+    description: "Construire un portefeuille passif avec les ETF — la stratégie de Warren Buffett pour les particuliers",
+    video_intro: "https://www.youtube.com/embed/Mc5KV7JKpNY",
+    chapters: [
+      { id: 1, type: "video", title: "Pourquoi les ETF battent 90% des gérants actifs", duration: "10 min", video_url: "https://www.youtube.com/embed/Mc5KV7JKpNY", key_concepts: ["ETF", "Gestion passive", "Frais TER", "Tracking error"], practical_example: "S&P 500 en 20 ans : +660%. 90% des gérants actifs sous-performent l'index après frais. Un simple SPY depuis 2004 : +600%.", xp_reward: 50 },
+      { id: 2, type: "quiz", title: "Choisir ses ETF — les critères clés", duration: "8 min", key_concepts: ["TER", "AUM", "Réplication physique", "Dividendes vs capitalisant"], practical_example: "ETF SP500 : TER 0.07% (Vanguard VOO) vs fonds actif moyen 1.5% = différence de +40% sur 20 ans grâce aux frais seuls.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Quel critère est le plus important pour choisir un ETF sur le long terme ?", options: ["La performance passée", "Le TER (frais annuels)", "Le volume journalier", "Le nom du broker"], correct: 1, explanation: "Le TER est le seul coût certain et récurrent. Une différence de 0.5% de frais = -13% de performance sur 30 ans." },
+        { id: 2, type: "multiple_choice", question: "Un ETF 'capitalisant' est préférable si tu veux :", options: ["Recevoir des revenus réguliers", "Maximiser la croissance long terme", "Réduire le risque", "Trader à court terme"], correct: 1, explanation: "Un ETF capitalisant réinvestit automatiquement les dividendes, maximisant les intérêts composés." },
+      ]},
+      { id: 3, type: "visualization", title: "La magie des intérêts composés", duration: "7 min", visualization: { type: "rsi_calculation", speed_control: true }, key_concepts: ["Intérêts composés", "DCA", "Horizon long terme", "Puissance du temps"], practical_example: "$500/mois dans SPY depuis 2000 = $2.1M aujourd'hui. Sans investir : $144,000. Différence : +$1.95M.", xp_reward: 75 },
+      { id: 4, type: "quiz", title: "Construire un portefeuille ETF simple", duration: "8 min", key_concepts: ["Allocation", "Diversification", "Rebalancing", "All-World ETF"], practical_example: "Portefeuille simple 3 ETF : 60% World (IWDA), 20% Emerging (EIMI), 20% Bonds (AGGH). Rééquilibrage annuel.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Quelle fréquence de rebalancing est recommandée pour un ETF passif ?", options: ["Quotidienne", "Mensuelle", "Trimestrielle ou annuelle", "Jamais"], correct: 2, explanation: "Un rebalancing trop fréquent génère des frais inutiles. Annuel ou quand une classe dépasse 5% de son allocation cible." },
+      ]},
+      { id: 5, type: "sandbox", title: "Simulation : DCA sur S&P 500", duration: "10 min", sandbox_config: { scenario_id: "aapl_rsi_oversold_2024", symbol: "SPY", context: "Nous sommes en mars 2020 — crash COVID. SPY vient de chuter de 35%. Tes $10,000 d'épargne brûlent. Que fais-tu ?", question: "Que fais-tu ?" }, key_concepts: ["DCA", "Buy the dip", "Panic selling"], practical_example: "Investir en mars 2020 au pire moment = +120% en 2 ans. Vendre en panique = perte définitive.", xp_reward: 150 },
+      { id: 6, type: "challenge", title: "Défi : Construis ton portefeuille optimal", duration: "5 min", challenge: { time_limit: 120, task: "Alloue $10,000 entre 4 ETF pour maximiser le Sharpe ratio", symbol: "SPY", type: "identify_patterns" }, key_concepts: ["Allocation", "Sharpe", "Corrélation"], practical_example: "Un bon portefeuille maximise le rendement ajusté au risque.", xp_reward: 200 },
+      { id: 7, type: "quiz", title: "Quiz final — ETF et investissement passif", duration: "5 min", key_concepts: ["Récapitulatif ETF"], practical_example: "Valide ta stratégie d'investissement passif.", xp_reward: 150, quiz: [
+        { id: 1, type: "true_false", question: "Il vaut mieux investir $12,000 en une fois plutôt qu'en 12 versements de $1,000.", options: ["Vrai", "Faux"], correct: 0, explanation: "Statistiquement, investir la somme complète immédiatement (lump sum) surperforme le DCA dans 2/3 des cas sur les marchés actions." },
+      ]},
+    ],
+  },
+
+  {
+    id: "fiscalite-trading",
+    title: "Fiscalité du trading en France",
+    level: "débutant",
+    duration: "45 min",
+    chapters_count: 5,
+    icon: "🏛️",
+    description: "Flat tax, déclaration des plus-values, PEA, compte-titres — tout savoir sur la fiscalité",
+    video_intro: "https://www.youtube.com/embed/ZCFkWDdmXG8",
+    chapters: [
+      { id: 1, type: "video", title: "La flat tax 30% — ce que ça change pour toi", duration: "8 min", video_url: "https://www.youtube.com/embed/ZCFkWDdmXG8", key_concepts: ["Flat tax 30%", "PFU", "Prélèvements sociaux 17.2%", "IR optionnel"], practical_example: "Gain de $10,000 : flat tax = $3,000. Si TMI 11% → option IR = $1,720 + 17.2% PS = $2,440. Comparer avant de choisir.", xp_reward: 50 },
+      { id: 2, type: "quiz", title: "PEA vs Compte-titres — que choisir ?", duration: "8 min", key_concepts: ["PEA", "CTO", "Exonération IR", "Limite PEA 150k"], practical_example: "PEA : exonéré d'IR après 5 ans (seulement 17.2% PS). Idéal pour les ETF européens long terme.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Après combien d'années un PEA est-il exonéré d'impôt sur le revenu ?", options: ["2 ans", "3 ans", "5 ans", "8 ans"], correct: 2, explanation: "Après 5 ans, les gains d'un PEA sont exonérés d'IR. Il reste les prélèvements sociaux (17.2%)." },
+        { id: 2, type: "multiple_choice", question: "Quel est le plafond de versement sur un PEA individuel ?", options: ["75,000€", "100,000€", "150,000€", "200,000€"], correct: 2, explanation: "Le PEA individuel est plafonné à 150,000€ de versements. Les plus-values peuvent dépasser ce plafond." },
+      ]},
+      { id: 3, type: "quiz", title: "Déclarer ses plus-values — formulaire 2074", duration: "8 min", key_concepts: ["Formulaire 2074", "Plus-value nette", "Compensation pertes", "Acompte IR"], practical_example: "Tu peux reporter des moins-values sur 10 ans. $5,000 de pertes en 2024 = $1,500 d'impôts économisés en 2025.", xp_reward: 100, quiz: [
+        { id: 1, type: "true_false", question: "Les moins-values sur actions peuvent être reportées pendant 10 ans.", options: ["Vrai", "Faux"], correct: 0, explanation: "En France, les moins-values sur valeurs mobilières sont reportables sur 10 ans." },
+      ]},
+      { id: 4, type: "quiz", title: "Fiscalité des crypto en France", duration: "7 min", key_concepts: ["Régime BNC", "Flat tax crypto", "Swap taxable", "Seuil 305€"], practical_example: "Swap BTC → ETH est taxable depuis 2023. Sous 305€ de plus-values totales annuelles : exonéré.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "En France, à partir de quel montant de plus-values crypto es-tu imposable ?", options: ["0€", "305€", "1,000€", "5,000€"], correct: 1, explanation: "Seuil d'exonération de 305€ de cessions totales par an. Au-dessus, l'intégralité est taxée à 30%." },
+      ]},
+      { id: 5, type: "quiz", title: "Quiz final — Fiscalité", duration: "5 min", key_concepts: ["Récapitulatif fiscal"], practical_example: "La fiscalité mal gérée peut coûter 30% de tes gains.", xp_reward: 150, quiz: [
+        { id: 1, type: "multiple_choice", question: "Quelle stratégie permet de réduire légalement ta facture fiscale ?", options: ["Ne pas déclarer", "Ouvrir un PEA pour les actions EU", "Transférer à l'étranger", "Trader uniquement en crypto"], correct: 1, explanation: "Le PEA est l'outil légal le plus efficace : exonération IR après 5 ans, idéal pour les ETF world/européens." },
+      ]},
+    ],
+  },
+
+  // ══════════════════════════════════════════════════════════════════
+  // NOUVEAUX COURS — INTERMÉDIAIRE (5)
+  // ══════════════════════════════════════════════════════════════════
+
+  {
+    id: "day-trading",
+    title: "Day Trading — Stratégies intraday",
+    level: "intermédiaire",
+    duration: "2h",
+    chapters_count: 10,
+    icon: "⚡",
+    description: "Scalping, momentum intraday, gap trading — trader les mouvements du jour",
+    video_intro: "https://www.youtube.com/embed/vMzSg1vEJoI",
+    chapters: [
+      { id: 1, type: "video", title: "Qu'est-ce que le day trading vraiment ?", duration: "10 min", video_url: "https://www.youtube.com/embed/vMzSg1vEJoI", key_concepts: ["Day trading", "Scalping", "Margin intraday", "PDT rule"], practical_example: "90% des day traders perdent. Les 10% gagnants ont un edge précis, une discipline de fer, et tradent les 2 premières heures de marché.", xp_reward: 50 },
+      { id: 2, type: "visualization", title: "Lire le carnet d'ordres en temps réel", duration: "9 min", visualization: { type: "support_resistance", speed_control: true }, key_concepts: ["Level 2", "Bid/Ask", "Market depth", "Order flow"], practical_example: "Un gros acheteur caché à $150 sur AAPL qui absorbe toutes les ventes = signal haussier fort pour les day traders.", xp_reward: 75 },
+      { id: 3, type: "interactive", title: "Identifie les setups intraday", duration: "8 min", interactive_config: { lesson_mode: "identify_support", symbol: "AAPL", instruction: "Identifie le niveau de breakout intraday sur ce graphe 5 minutes" }, key_concepts: ["Breakout", "VWAP", "High of day", "Consolidation"], practical_example: "NVDA breakout au-dessus du high pré-market avec volume 3x = setup momentum classique.", xp_reward: 100 },
+      { id: 4, type: "quiz", title: "La stratégie VWAP", duration: "8 min", key_concepts: ["VWAP", "VWAP bounce", "Above/Below VWAP", "Institutional price"], practical_example: "VWAP = prix moyen pondéré par le volume depuis l'ouverture. Les institutionnels s'en servent pour mesurer la qualité de leur exécution.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Que signifie trader 'au-dessus du VWAP' ?", options: ["Le prix est trop cher", "Le marché est en tendance haussière intraday", "Le volume est élevé", "Les institutionnels vendent"], correct: 1, explanation: "Un prix au-dessus du VWAP indique que les acheteurs dominent depuis l'ouverture." },
+      ]},
+      { id: 5, type: "sandbox", title: "Simulation : Gap up sur NVDA", duration: "10 min", sandbox_config: { scenario_id: "nvda_overbought_2024", symbol: "NVDA", context: "NVDA ouvre en gap up de +5% après des résultats record. Volume 4x la normale dans les 30 premières minutes.", question: "Stratégie gap and go ou fade ?" }, key_concepts: ["Gap up", "Gap and go", "Fade", "Pre-market high"], practical_example: "Gaps > 5% avec catalyseur fondamental + volume élevé → 70% continuent.", xp_reward: 150 },
+      { id: 6, type: "quiz", title: "Risk management intraday", duration: "7 min", key_concepts: ["Daily loss limit", "PDT rule", "Risk per trade", "Max positions"], practical_example: "Règle professionnelle : 2% de perte max par jour. Les pros ont des kill switches automatiques.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Quelle est la règle PDT (Pattern Day Trader) aux USA ?", options: ["Maximum 3 trades par jour", "4+ day trades en 5 jours = $25k minimum requis", "Interdit aux débutants", "Seulement pour les pros"], correct: 1, explanation: "Si tu fais 4+ day trades en 5 jours ouvrés sur un compte US < $25,000, tu es 'flaggé PDT' pendant 90 jours." },
+      ]},
+      { id: 7, type: "visualization", title: "Les patterns de chandeliers intraday", duration: "9 min", visualization: { type: "candlestick_explained", speed_control: true }, key_concepts: ["Doji", "Hammer", "Shooting star", "Engulfing"], practical_example: "Un hammer sur le VWAP avec volume élevé = setup achat très fiable en day trading.", xp_reward: 75 },
+      { id: 8, type: "interactive", title: "Exercice : Spot the setup", duration: "8 min", interactive_config: { lesson_mode: "spot_rsi", symbol: "AAPL", instruction: "Sur ce graphe 5 minutes, identifie si le RSI signale surachat ou survente" }, key_concepts: ["RSI intraday", "Divergence", "Momentum"], practical_example: "RSI(14) sur graphe 5 minutes : utilise 80/20 plutôt que 70/30 pour le day trading.", xp_reward: 100 },
+      { id: 9, type: "challenge", title: "Défi : Analyse intraday en 60 secondes", duration: "5 min", challenge: { time_limit: 60, task: "Identifie 2 setups valides sur ce graphe 5 minutes AAPL", symbol: "AAPL", type: "find_signals" }, key_concepts: ["Setup", "Entry", "Stop"], practical_example: "Les meilleurs day traders analysent un setup en moins de 10 secondes.", xp_reward: 250 },
+      { id: 10, type: "quiz", title: "Quiz final — Day Trading", duration: "5 min", key_concepts: ["Récapitulatif day trading"], practical_example: "Le day trading est un métier. Maîtrise les bases avant de risquer de l'argent réel.", xp_reward: 150, quiz: [
+        { id: 1, type: "multiple_choice", question: "Quelle est la session la plus volatile pour le day trading US ?", options: ["9h30-10h30 ET", "12h-13h ET", "14h30-15h30 ET", "15h30-16h ET"], correct: 0, explanation: "La première heure (9h30-10h30 ET) génère 50-60% du volume journalier et les plus grands mouvements." },
+      ]},
+    ],
+  },
+
+  {
+    id: "swing-trading",
+    title: "Swing Trading — Capturer les tendances",
+    level: "intermédiaire",
+    duration: "1h45",
+    chapters_count: 9,
+    icon: "🌊",
+    description: "Tenir des positions plusieurs jours à semaines — la stratégie idéale pour les actifs professionnels",
+    video_intro: "https://www.youtube.com/embed/aYtLl9WDR7o",
+    chapters: [
+      { id: 1, type: "video", title: "Swing trading vs Day trading vs Investissement", duration: "9 min", video_url: "https://www.youtube.com/embed/aYtLl9WDR7o", key_concepts: ["Swing trading", "Timeframe H4/Daily", "Overnight risk", "Work-life balance"], practical_example: "Mark Minervini, champion US du trading : +334% en 1 an avec le swing trading. Il passe 2h par jour à analyser les marchés.", xp_reward: 50 },
+      { id: 2, type: "visualization", title: "Identifier les tendances sur graphe daily", duration: "8 min", visualization: { type: "support_resistance", speed_control: true }, key_concepts: ["Higher highs", "Higher lows", "Trend line", "Stage analysis"], practical_example: "NVDA 2023 : série de HH/HL depuis janvier. Chaque pullback sur la MA21 = opportunité de swing achat.", xp_reward: 75 },
+      { id: 3, type: "interactive", title: "Tracer une trend line correctement", duration: "7 min", interactive_config: { lesson_mode: "identify_resistance", symbol: "NVDA", instruction: "Trace la ligne de tendance haussière sur ce graphe daily NVDA" }, key_concepts: ["Trend line", "2 touches minimum", "Angle", "Break de trend"], practical_example: "Une trend line valide nécessite minimum 2 touches. La 3ème touche est le signal de trading.", xp_reward: 100 },
+      { id: 4, type: "quiz", title: "Le setup Breakout — comment l'identifier", duration: "8 min", key_concepts: ["Breakout", "Consolidation", "Volume confirmation", "False breakout"], practical_example: "AAPL janvier 2024 : consolidation 3 semaines entre $182-$190, breakout à $191 avec volume 2x → TP $205.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Comment confirmer qu'un breakout est valide ?", options: ["Le prix monte juste au-dessus de la résistance", "Volume 1.5x+ la moyenne avec clôture au-dessus", "RSI > 50", "Breakout en pré-market"], correct: 1, explanation: "Un breakout valide nécessite une clôture au-dessus du niveau avec volume significatif. Sans volume, 70% des breakouts échouent." },
+      ]},
+      { id: 5, type: "sandbox", title: "Simulation : Breakout AAPL", duration: "10 min", sandbox_config: { scenario_id: "aapl_rsi_oversold_2024", symbol: "AAPL", context: "AAPL consolide depuis 3 semaines entre $185-$192. Aujourd'hui : breakout à $193 avec volume 2x. RSI(14) = 58.", question: "Tu entres en swing trade ?" }, key_concepts: ["Breakout entry", "TP", "SL"], practical_example: "Entry $193, SL $188, TP1 $205, TP2 $215. R/R = 2.4. Taille position = 2% du capital.", xp_reward: 150 },
+      { id: 6, type: "quiz", title: "Le Pullback — entrer en tendance", duration: "8 min", key_concepts: ["Pullback", "Retracement Fibonacci", "EMA21 bounce", "Flag pattern"], practical_example: "Tesla en forte tendance → pullback sur EMA21 avec RSI revenu à 45 = opportunité swing achat en tendance.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Quelle est la différence entre un pullback et un retournement de tendance ?", options: ["Il n'y en a pas", "Un pullback respecte la structure de tendance (HH/HL), un retournement la casse", "Un pullback dure moins de 3 jours", "Un retournement se passe uniquement en daily"], correct: 1, explanation: "Un pullback est une correction temporaire qui respecte la tendance. Un retournement casse la structure." },
+      ]},
+      { id: 7, type: "visualization", title: "Gérer une position swing sur plusieurs jours", duration: "8 min", visualization: { type: "macd_explained", speed_control: true }, key_concepts: ["Trailing stop", "Partial profits", "Hold through pullback", "Exit signals"], practical_example: "Stratégie pros : vendre 1/3 à TP1, monter le stop au BE, laisser courir 2/3 vers TP2.", xp_reward: 75 },
+      { id: 8, type: "challenge", title: "Défi : Trouve les meilleurs setups swing", duration: "5 min", challenge: { time_limit: 120, task: "Identifie 3 setups swing valides sur ce graphe daily SPY", symbol: "SPY", type: "identify_patterns" }, key_concepts: ["Breakout", "Pullback", "Flag"], practical_example: "Un bon swing trader scanne 50+ actions par soir pour trouver les 3-5 meilleurs setups.", xp_reward: 250 },
+      { id: 9, type: "quiz", title: "Quiz final — Swing Trading", duration: "5 min", key_concepts: ["Récapitulatif swing"], practical_example: "Le swing trading est le meilleur compromis entre effort et rendement.", xp_reward: 150, quiz: [
+        { id: 1, type: "multiple_choice", question: "Quel timeframe est le plus utilisé pour identifier les setups swing ?", options: ["1 minute", "15 minutes", "Daily (1D)", "Monthly"], correct: 2, explanation: "Le graphe daily est le timeframe de référence du swing trader. On descend en H4/H1 pour affiner l'entrée." },
+      ]},
+    ],
+  },
+
+  {
+    id: "crypto-avance",
+    title: "Crypto Trading Avancé",
+    level: "intermédiaire",
+    duration: "2h",
+    chapters_count: 10,
+    icon: "🔗",
+    description: "On-chain analysis, altcoin season, corrélations BTC — trader les crypto comme un pro",
+    video_intro: "https://www.youtube.com/embed/SSo_EIwHSd4",
+    chapters: [
+      { id: 1, type: "video", title: "Les cycles crypto — comprendre les 4 années BTC", duration: "10 min", video_url: "https://www.youtube.com/embed/SSo_EIwHSd4", key_concepts: ["Cycle de 4 ans", "Halving", "Bull/Bear market crypto", "Dominance BTC"], practical_example: "Chaque halving (2012, 2016, 2020, 2024) a précédé un bull market de 12-18 mois.", xp_reward: 50 },
+      { id: 2, type: "visualization", title: "On-chain analysis — lire la blockchain", duration: "9 min", visualization: { type: "rsi_calculation", speed_control: true }, key_concepts: ["MVRV ratio", "NVT ratio", "Whale movements", "Exchange flows"], practical_example: "MVRV > 3.5 = historiquement un top de marché BTC. MVRV < 1 = zone d'accumulation.", xp_reward: 75 },
+      { id: 3, type: "quiz", title: "BTC Dominance et Altcoin Season", duration: "8 min", key_concepts: ["BTC dominance", "Altcoin season", "ETH/BTC ratio", "Rotation"], practical_example: "BTC dominance chute sous 40% = altcoin season. En 2021 Q1 : BTC dominance 70% → Q2 : 40% → altcoins +500%.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Qu'est-ce que 'l'altcoin season' ?", options: ["La saison des ICOs", "Période où les altcoins surperforment massivement Bitcoin", "Le bear market crypto", "La période avant le halving"], correct: 1, explanation: "L'altcoin season survient quand BTC consolide et que les capitaux rotatent vers les altcoins. BTC dominance sous 40% = signal classique." },
+      ]},
+      { id: 4, type: "interactive", title: "Analyse technique sur BTC", duration: "8 min", interactive_config: { lesson_mode: "identify_support", symbol: "BTC-USD", instruction: "Identifie le support clé sur ce graphe BTC weekly" }, key_concepts: ["Support BTC", "200 week MA", "Pi cycle"], practical_example: "La MA200 weekly sur BTC n'a jamais été cassée en clôture hebdomadaire depuis 2011.", xp_reward: 100 },
+      { id: 5, type: "sandbox", title: "Simulation : BTC post-halving 2024", duration: "10 min", sandbox_config: { scenario_id: "btc_breakout_2024", symbol: "BTC-USD", context: "Nous sommes en mai 2024, 1 mois après le halving. BTC consolide entre $58k-$64k depuis 3 mois. Squeeze Bollinger extrême.", question: "Que fais-tu ?" }, key_concepts: ["Post-halving", "Squeeze", "Breakout"], practical_example: "Historiquement, BTC fait son ATH 12-18 mois après le halving.", xp_reward: 150 },
+      { id: 6, type: "quiz", title: "DeFi et rendements crypto", duration: "8 min", key_concepts: ["Staking", "Liquidity mining", "APY réel", "Impermanent loss"], practical_example: "Staking ETH sur Lido : 3.5% APY en ETH. Fournir liquidité ETH/USDC sur Uniswap : 8-15% APY mais avec impermanent loss.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Qu'est-ce que l'impermanent loss ?", options: ["Une perte permanente", "La perte due à la fluctuation des prix dans un pool de liquidité", "Des frais cachés", "Une taxe DeFi"], correct: 1, explanation: "L'impermanent loss survient quand le ratio des prix dans ton pool change. La perte est 'impermanente' si les prix reviennent." },
+      ]},
+      { id: 7, type: "visualization", title: "Corrélations entre crypto et marchés traditionnels", duration: "7 min", visualization: { type: "macd_explained", speed_control: true }, key_concepts: ["Corrélation BTC/SPY", "Risk-on/off", "Dollar index", "Or vs BTC"], practical_example: "En 2022 : corrélation BTC/SPY = 0.85. En 2023-2024 : décorrélation progressive.", xp_reward: 75 },
+      { id: 8, type: "quiz", title: "Sécurité et gestion du risque crypto", duration: "7 min", key_concepts: ["Hardware wallet", "Seed phrase", "Smart contract risk", "Position sizing crypto"], practical_example: "Règle pro : max 5% du portfolio en crypto volatiles. 15% max en BTC/ETH.", xp_reward: 100, quiz: [
+        { id: 1, type: "true_false", question: "Il est sûr de stocker ses crypto sur un exchange centralisé à long terme.", options: ["Vrai", "Faux"], correct: 1, explanation: "FTX, Celsius, BlockFi ont fait faillite. 'Not your keys, not your coins'. Un hardware wallet est indispensable." },
+      ]},
+      { id: 9, type: "challenge", title: "Défi : Analyse BTC en 90 secondes", duration: "5 min", challenge: { time_limit: 90, task: "Identifie le régime de marché BTC actuel et les niveaux clés", symbol: "BTC-USD", type: "read_indicators" }, key_concepts: ["Tendance", "RSI weekly", "Support"], practical_example: "Un trader crypto expert sait en 30 secondes si BTC est en bull/bear market.", xp_reward: 250 },
+      { id: 10, type: "quiz", title: "Quiz final — Crypto avancé", duration: "5 min", key_concepts: ["Récapitulatif crypto avancé"], practical_example: "Le crypto trading demande une compréhension unique des cycles, de la blockchain et de la psychologie de masse.", xp_reward: 150, quiz: [
+        { id: 1, type: "multiple_choice", question: "Quel indicateur on-chain signale historiquement les tops de marché BTC ?", options: ["Hash rate élevé", "MVRV ratio > 3.5", "Volume d'échange élevé", "Nombre de wallets actifs"], correct: 1, explanation: "Le MVRV > 3.5 a signalé chaque top majeur BTC : décembre 2017 (3.98), avril 2021 (3.96), novembre 2021 (3.96)." },
+      ]},
+    ],
+  },
+
+  {
+    id: "trading-matieres-premieres",
+    title: "Trading des matières premières",
+    level: "intermédiaire",
+    duration: "1h30",
+    chapters_count: 8,
+    icon: "🛢️",
+    description: "Or, pétrole, blé — comprendre et trader les commodités qui font le monde",
+    video_intro: "https://www.youtube.com/embed/ZCFkWDdmXG8",
+    chapters: [
+      { id: 1, type: "video", title: "Les marchés de commodités — fonctionnement", duration: "9 min", video_url: "https://www.youtube.com/embed/ZCFkWDdmXG8", key_concepts: ["Spot vs Futures", "Contango", "Backwardation", "Roll yield"], practical_example: "Le pétrole WTI a été négatif en avril 2020 (-$37/baril) : les acheteurs de futures ne voulaient pas de livraison physique.", xp_reward: 50 },
+      { id: 2, type: "visualization", title: "L'or — valeur refuge et corrélations", duration: "8 min", visualization: { type: "bollinger_bands", speed_control: true }, key_concepts: ["Or vs dollar", "Taux réels", "Inflation hedge", "Gold/Silver ratio"], practical_example: "Or et dollar USD : corrélation -0.7 historique. Quand le dollar chute, l'or monte. En 2020 : dollar -10%, or +25%.", xp_reward: 75 },
+      { id: 3, type: "quiz", title: "Pétrole : WTI vs Brent", duration: "7 min", key_concepts: ["WTI", "Brent", "OPEP", "Production shale"], practical_example: "WTI (West Texas Intermediate) = référence US. Brent = référence mondiale. Spread WTI/Brent historique : $2-5.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Pourquoi le pétrole WTI est-il généralement moins cher que le Brent ?", options: ["Il est de moins bonne qualité", "Il y a un excès d'offre aux USA à cause du shale", "Le transport coûte plus cher", "La demande américaine est plus faible"], correct: 1, explanation: "La révolution shale US a créé un surplus d'offre locale. Le WTI ne peut pas facilement être exporté, créant un discount vs Brent." },
+      ]},
+      { id: 4, type: "interactive", title: "Analyse technique sur Or (XAUUSD)", duration: "8 min", interactive_config: { lesson_mode: "identify_support", symbol: "GC=F", instruction: "Identifie les supports majeurs sur le graphe mensuel de l'or" }, key_concepts: ["Support or", "ATH", "Resistance", "Canal"], practical_example: "L'or a cassé son ATH de 2020 ($2089) en 2024 → nouveau ATH à $2450. Nouveau support = ancien ATH.", xp_reward: 100 },
+      { id: 5, type: "sandbox", title: "Simulation : Or pendant crise géopolitique", duration: "10 min", sandbox_config: { scenario_id: "aapl_rsi_oversold_2024", symbol: "GC=F", context: "Tension géopolitique majeure annoncée. Or +2% en pré-market. Marché actions -1.5%. RSI or = 65.", question: "Comment positionnes-tu ton portefeuille ?" }, key_concepts: ["Safe haven", "Corrélation", "Hedging"], practical_example: "En période de crise : or +hedge, actions -reduce, or souvent +5-15% dans les premiers jours.", xp_reward: 150 },
+      { id: 6, type: "quiz", title: "Commodités agricoles — blé, maïs, soja", duration: "7 min", key_concepts: ["Saisonnalité", "Weather risk", "Supply/Demand", "USDA reports"], practical_example: "Rapport USDA mensuel : annonce surprise → blé peut bouger ±5% en secondes. Saisonnalité mars-juillet = période clé.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Quel facteur influence le plus les prix des commodités agricoles ?", options: ["Les taux d'intérêt", "La météo et les conditions de récolte", "Le dollar uniquement", "La bourse de Shanghai"], correct: 1, explanation: "La météo (sécheresse, gel, inondations) est le facteur #1 pour les agri-commodités. Sécheresse dans le Midwest US = prix du maïs explosent." },
+      ]},
+      { id: 7, type: "challenge", title: "Défi : Identifie les drivers de prix en 90s", duration: "5 min", challenge: { time_limit: 90, task: "Pour 3 commodités, identifie leur facteur de prix principal", symbol: "GC=F", type: "read_indicators" }, key_concepts: ["Drivers", "Macro", "Supply chain"], practical_example: "Or → taux réels. Pétrole → OPEP + croissance mondiale. Cuivre → PIB Chine.", xp_reward: 200 },
+      { id: 8, type: "quiz", title: "Quiz final — Matières premières", duration: "5 min", key_concepts: ["Récapitulatif commodités"], practical_example: "Les commodités sont la base de l'économie réelle — une classe d'actifs essentielle.", xp_reward: 150, quiz: [
+        { id: 1, type: "multiple_choice", question: "Le 'contango' sur un marché futures signifie que :", options: ["Le futur est moins cher que le spot", "Le futur est plus cher que le spot", "Le marché est en crise", "L'offre est insuffisante"], correct: 1, explanation: "Contango = futur > spot (normal pour la plupart des commodités car coûts de stockage). Backwardation = futur < spot (souvent lors d'une pénurie)." },
+      ]},
+    ],
+  },
+
+  {
+    id: "indices-mondiaux",
+    title: "Trading des indices mondiaux",
+    level: "intermédiaire",
+    duration: "1h30",
+    chapters_count: 8,
+    icon: "🌐",
+    description: "S&P 500, DAX, Nikkei, CAC 40 — trader les grands indices avec les futures et ETF",
+    video_intro: "https://www.youtube.com/embed/ZCFkWDdmXG8",
+    chapters: [
+      { id: 1, type: "video", title: "Comprendre les grands indices mondiaux", duration: "9 min", video_url: "https://www.youtube.com/embed/ZCFkWDdmXG8", key_concepts: ["S&P 500", "DAX", "Nikkei 225", "CAC 40", "Pondération market cap"], practical_example: "S&P 500 : top 10 actions = 30% du poids total. Apple seule = 7%. Un tweet sur Apple peut faire bouger le S&P.", xp_reward: 50 },
+      { id: 2, type: "visualization", title: "Corrélations entre indices mondiaux", duration: "8 min", visualization: { type: "macd_explained", speed_control: true }, key_concepts: ["Corrélation", "Lead/Lag", "Contagion", "Decoupling"], practical_example: "S&P 500 nuit → DAX jour : corrélation 0.8. Quand le S&P chute, le DAX ouvre en baisse le lendemain dans 80% des cas.", xp_reward: 75 },
+      { id: 3, type: "quiz", title: "Futures sur indices — E-mini S&P 500", duration: "8 min", key_concepts: ["E-mini S&P", "Futures roll", "Fair value", "Multiplier"], practical_example: "E-mini S&P 500 (ES) : 1 contrat = $50 × prix. À 5000 → $250,000 par contrat. Marge : ~$15,000.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Le S&P 500 E-mini futures (ES) a un multiplicateur de :", options: ["$10", "$25", "$50", "$100"], correct: 2, explanation: "ES = $50 × indice S&P 500. À 5000 points → $250,000 par contrat. Micro E-mini (MES) = $5 × indice, plus accessible." },
+      ]},
+      { id: 4, type: "interactive", title: "Niveaux clés sur S&P 500", duration: "8 min", interactive_config: { lesson_mode: "identify_support", symbol: "SPY", instruction: "Identifie les 3 niveaux de support majeurs sur le S&P 500 en weekly" }, key_concepts: ["Support S&P", "200 DMA", "Fibonacci retracement"], practical_example: "La MA200 daily du S&P 500 est testée lors de chaque correction majeure. En 2022 : rebond parfait à -20%.", xp_reward: 100 },
+      { id: 5, type: "sandbox", title: "Simulation : Crash S&P 2022", duration: "10 min", sandbox_config: { scenario_id: "nvda_overbought_2024", symbol: "SPY", context: "Fed annonce une hausse de taux surprise de 75bp. S&P -3% en 30 minutes. VIX monte à 35.", question: "Comment réagis-tu ?" }, key_concepts: ["Fed reaction", "VIX", "Hedging", "Short SPY"], practical_example: "Hausse VIX > 30 = peur extrême. Historiquement, VIX > 40 = proche du bottom. Achat SPY à VIX > 40 : +40% à 1 an.", xp_reward: 150 },
+      { id: 6, type: "quiz", title: "CAC 40 et marchés européens", duration: "7 min", key_concepts: ["CAC 40", "DAX", "Eurostoxx 50", "Secteurs dominants EU"], practical_example: "CAC 40 : dominé par LVMH (15%), TotalEnergies (7%), Hermès (7%). Luxe = +60% du poids top 5.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Quel secteur domine le CAC 40 ?", options: ["Technologie", "Énergie", "Luxe et consommation discrétionnaire", "Banques"], correct: 2, explanation: "LVMH, Hermès, Kering, L'Oréal font du CAC 40 l'indice le plus exposé au luxe mondial. C'est une spécificité française unique." },
+      ]},
+      { id: 7, type: "challenge", title: "Défi : Analyse multi-indices en 2 minutes", duration: "5 min", challenge: { time_limit: 120, task: "Analyse S&P, DAX et Nikkei et identifie lequel est le plus haussier", symbol: "SPY", type: "read_indicators" }, key_concepts: ["Relative strength", "Multi-market", "Best momentum"], practical_example: "Traders pros comparent les indices pour trouver le marché avec le meilleur momentum relatif.", xp_reward: 200 },
+      { id: 8, type: "quiz", title: "Quiz final — Indices mondiaux", duration: "5 min", key_concepts: ["Récapitulatif indices"], practical_example: "Les indices sont le baromètre de l'économie mondiale et le marché le plus suivi.", xp_reward: 150, quiz: [
+        { id: 1, type: "multiple_choice", question: "Quel indice est considéré comme le meilleur baromètre de l'économie US ?", options: ["Dow Jones (DJIA)", "S&P 500", "NASDAQ 100", "Russell 2000"], correct: 1, explanation: "Le S&P 500 (500 plus grandes entreprises US) est considéré comme le meilleur baromètre de l'économie américaine. Le DJIA (30 actions) est trop étroit." },
+      ]},
+    ],
+  },
+
+  // ══════════════════════════════════════════════════════════════════
+  // NOUVEAUX COURS — AVANCÉ (7)
+  // ══════════════════════════════════════════════════════════════════
+
+  {
+    id: "volatility-trading",
+    title: "Trading de la Volatilité",
+    level: "avancé",
+    duration: "2h30",
+    chapters_count: 10,
+    icon: "📉",
+    description: "VIX, options sur volatilité, strategies long/short vol — maîtriser l'asset class la plus complexe",
+    video_intro: "https://www.youtube.com/embed/ZCFkWDdmXG8",
+    chapters: [
+      { id: 1, type: "video", title: "Le VIX — l'indice de la peur expliqué", duration: "10 min", video_url: "https://www.youtube.com/embed/ZCFkWDdmXG8", key_concepts: ["VIX", "Implied volatility", "Realized volatility", "Vol of vol"], practical_example: "VIX > 40 = panique (mars 2020 : VIX = 82). VIX < 12 = complaisance extrême. Acheter des puts quand VIX < 15 = assurance pas chère.", xp_reward: 50 },
+      { id: 2, type: "visualization", title: "Volatilité implicite vs réalisée", duration: "9 min", visualization: { type: "bollinger_bands", speed_control: true }, key_concepts: ["IV vs HV", "Vol premium", "Vol crush", "Earnings vol"], practical_example: "Avant les résultats AAPL : IV monte à 40%. Après : IV crush → 25%. Les vendeurs d'options profitent de ce phénomène systématique.", xp_reward: 75 },
+      { id: 3, type: "quiz", title: "Structures de volatilité — surface de vol", duration: "9 min", key_concepts: ["Vol surface", "Smile de vol", "Term structure", "Skew"], practical_example: "Le skew négatif sur SPX : les puts sont toujours plus chers que les calls. Raison = protection systématique des institutionnels.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Le 'vol smile' désigne :", options: ["Le sourire des traders quand la vol monte", "La forme en U de la volatilité implicite selon les strikes", "La hausse systématique du VIX", "La volatilité des small caps"], correct: 1, explanation: "Le vol smile = IV plus élevée pour les options OTM vs ATM, créant une courbe en U. Sur les indices, c'est plutôt un 'skew' (IV monte côté put)." },
+      ]},
+      { id: 4, type: "quiz", title: "Strategies long volatilité", duration: "9 min", key_concepts: ["Long straddle", "Long strangle", "Long vega", "Gamma scalping"], practical_example: "Long straddle avant résultats AAPL : achat call $190 + put $190. Profite si AAPL bouge > 7% dans n'importe quel sens.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Une stratégie 'long straddle' est profitable si :", options: ["L'action monte fortement", "L'action baisse fortement", "L'action bouge fortement dans n'importe quel sens", "L'action reste stable"], correct: 2, explanation: "Long straddle = achat call + put même strike. Profite si le sous-jacent fait un grand mouvement, peu importe la direction." },
+      ]},
+      { id: 5, type: "sandbox", title: "Simulation : VIX spike inattendu", duration: "10 min", sandbox_config: { scenario_id: "btc_breakout_2024", symbol: "SPY", context: "VIX passe de 14 à 38 en une journée sur annonce surprise. Ton portefeuille SPY est en rouge de -8%.", question: "Comment gères-tu ta position volatilité ?" }, key_concepts: ["Long vol", "Short vol", "Hedge"], practical_example: "VIX > 35 = opportunité de vendre la vol. Historiquement, le VIX revient sous 20 dans les 30 jours suivants dans 85% des cas.", xp_reward: 150 },
+      { id: 6, type: "quiz", title: "Strategies short volatilité", duration: "9 min", key_concepts: ["Iron condor", "Short strangle", "Short vega", "Theta decay"], practical_example: "Short strangle sur SPX : vendre call 5300 + put 4700. Profite si SPX reste dans le range. Theta = +$150/jour. Risque = tail event.", xp_reward: 100, quiz: [
+        { id: 1, type: "true_false", question: "Être 'short volatilité' signifie que tu profites quand les marchés sont calmes.", options: ["Vrai", "Faux"], correct: 0, explanation: "Short vol = vendre des options → encaisser la prime → profiter du theta decay et de la baisse d'IV. Fonctionne en marchés calmes." },
+      ]},
+      { id: 7, type: "visualization", title: "Greeks et sensibilités options", duration: "9 min", visualization: { type: "rsi_divergence", speed_control: true }, key_concepts: ["Delta", "Gamma", "Theta", "Vega", "Rho"], practical_example: "Vega d'un straddle ATM AAPL : +$250 par point de vol. Si IV monte de 30% à 40%, le straddle gagne $2,500.", xp_reward: 75 },
+      { id: 8, type: "interactive", title: "Calibrer son exposure vol", duration: "8 min", interactive_config: { lesson_mode: "spot_rsi", symbol: "SPY", instruction: "Identifie si le VIX actuel signale une opportunité long ou short vol" }, key_concepts: ["VIX percentile", "Vol regime", "Risk-adjusted vol trade"], practical_example: "VIX < 15e percentile historique = trop bon marché pour acheter des puts. VIX > 85e = trop cher pour vendre.", xp_reward: 100 },
+      { id: 9, type: "challenge", title: "Défi : Structure un trade vol", duration: "5 min", challenge: { time_limit: 120, task: "Construis un iron condor sur SPX avec un P&L optimal", symbol: "SPY", type: "identify_patterns" }, key_concepts: ["Iron condor", "Max profit", "Max loss", "Breakeven"], practical_example: "Iron condor parfait : max profit = primes reçues. Max loss = spread - prime. Rentable si sous-jacent reste dans le range.", xp_reward: 300 },
+      { id: 10, type: "quiz", title: "Quiz final — Volatilité", duration: "5 min", key_concepts: ["Récapitulatif vol trading"], practical_example: "Le vol trading est la sophistication ultime — maîtrisé par les meilleurs hedge funds.", xp_reward: 200, quiz: [
+        { id: 1, type: "multiple_choice", question: "Historiquement, vendre de la volatilité (short vol) est une stratégie :", options: ["Toujours perdante", "Gagnante en moyenne mais avec des pertes catastrophiques occasionnelles", "Sans risque", "Seulement pour les marchés crypto"], correct: 1, explanation: "Short vol = Sharpe ratio élevé en régime calme, mais les pertes lors de tail events (2008, 2020) peuvent être dévastatrices. Voir la faillite du VIX ETP en 2018." },
+      ]},
+    ],
+  },
+
+  {
+    id: "statistical-arbitrage",
+    title: "Arbitrage Statistique",
+    level: "avancé",
+    duration: "2h",
+    chapters_count: 9,
+    icon: "🔢",
+    description: "Pairs trading, mean reversion, factor models — les stratégies quantitatives des hedge funds",
+    video_intro: "https://www.youtube.com/embed/ZCFkWDdmXG8",
+    chapters: [
+      { id: 1, type: "video", title: "Qu'est-ce que l'arbitrage statistique ?", duration: "9 min", video_url: "https://www.youtube.com/embed/ZCFkWDdmXG8", key_concepts: ["Stat arb", "Mean reversion", "Cointegration", "Z-score"], practical_example: "Two Sigma, DE Shaw : milliards de profits avec le stat arb. Le spread KO/PEP converge depuis 40 ans → trade longtemps par les quants.", xp_reward: 50 },
+      { id: 2, type: "quiz", title: "Pairs Trading — théorie et pratique", duration: "9 min", key_concepts: ["Paires cointégrées", "Spread", "Z-score", "Half-life"], practical_example: "KO/PEP : spread Z-score > 2 = vendre KO, acheter PEP. Attendre retour à la moyenne. Sharpe historique ~1.2.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Deux actifs sont 'cointégrés' si :", options: ["Ils ont la même capitalisation", "Leur spread est stationnaire (retourne à sa moyenne)", "Ils sont dans le même secteur", "Leur corrélation > 0.9"], correct: 1, explanation: "La cointegration = le spread entre deux actifs est stationnaire (revient à sa moyenne), même si chaque actif est non-stationnaire. Plus robuste que la simple corrélation." },
+      ]},
+      { id: 3, type: "visualization", title: "Mean reversion — quand ça fonctionne", duration: "8 min", visualization: { type: "bollinger_bands", speed_control: true }, key_concepts: ["Stationnarité", "Ornstein-Uhlenbeck", "Half-life", "Hurst exponent"], practical_example: "Half-life d'un spread KO/PEP : ~15 jours. Spread monté à 2 sigmas → en 15 jours, revenu à 0 dans 80% des cas.", xp_reward: 75 },
+      { id: 4, type: "quiz", title: "Factor models — Fama-French à 5 facteurs", duration: "9 min", key_concepts: ["Facteur value", "Momentum", "Quality", "Low vol", "Size"], practical_example: "Portefeuille Long Quality / Short Junk (Cliff Asness, AQR) : Sharpe 0.8 sur 30 ans. Systematic alpha réel.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Quel facteur a historiquement le meilleur Sharpe ratio sur les marchés actions ?", options: ["Value", "Momentum", "Quality", "Low volatility"], correct: 1, explanation: "Le facteur Momentum (acheter les winners récents, vendre les losers) a le Sharpe le plus élevé historiquement (~0.5-0.7), mais aussi le plus de kurtosis (crashes brutaux)." },
+      ]},
+      { id: 5, type: "sandbox", title: "Simulation : Pairs trade MSFT/GOOGL", duration: "10 min", sandbox_config: { scenario_id: "aapl_rsi_oversold_2024", symbol: "MSFT", context: "MSFT/GOOGL spread à +2.5 sigmas — MSFT surperformé vs GOOGL depuis 3 semaines sans raison fondamentale.", question: "Tu lances le pairs trade ?" }, key_concepts: ["Entry z-score", "Position sizing", "Stop loss"], practical_example: "Entry : z-score > 2. Stop : z-score > 3 (spread continue). TP : z-score = 0. Ratio 1:1 long GOOGL / short MSFT.", xp_reward: 150 },
+      { id: 6, type: "quiz", title: "Backtesting et overfitting", duration: "9 min", key_concepts: ["Backtest", "Walk-forward", "Overfitting", "Out-of-sample"], practical_example: "Stratégie avec Sharpe 3.0 en backtest → Sharpe 0.3 live. Raison = overfitting. 'Si vous torturez assez les données, elles avoueront n'importe quoi.'", xp_reward: 100, quiz: [
+        { id: 1, type: "true_false", question: "Un backtest avec 100% de win rate est fiable et indique une excellente stratégie.", options: ["Vrai", "Faux"], correct: 1, explanation: "Un win rate parfait en backtest = red flag d'overfitting massif. Toute vraie stratégie a des drawdowns. Un Sharpe > 2 en backtest mérite d'être remis en question." },
+      ]},
+      { id: 7, type: "interactive", title: "Calcule la cointegration AAPL/MSFT", duration: "8 min", interactive_config: { lesson_mode: "spot_rsi", symbol: "AAPL", instruction: "Identifie si AAPL et MSFT sont actuellement en divergence anormale" }, key_concepts: ["Z-score visuel", "Divergence", "Entry signal"], practical_example: "AAPL/MSFT ratio historique : 0.95-1.05. Quand le ratio sort de cette range → opportunité pairs.", xp_reward: 100 },
+      { id: 8, type: "challenge", title: "Défi : Identifie les meilleures paires", duration: "5 min", challenge: { time_limit: 120, task: "Parmi 4 pairs proposées, identifie celle avec le z-score le plus extrême", symbol: "AAPL", type: "identify_patterns" }, key_concepts: ["Screening", "Z-score", "Opportunité"], practical_example: "Les stat arb pros screenent des milliers de paires chaque jour pour trouver les z-scores > 2.", xp_reward: 300 },
+      { id: 9, type: "quiz", title: "Quiz final — Stat Arb", duration: "5 min", key_concepts: ["Récapitulatif arbitrage statistique"], practical_example: "L'arbitrage stat est le domaine où la rigueur mathématique se rencontre avec le trading.", xp_reward: 200, quiz: [
+        { id: 1, type: "multiple_choice", question: "Le principal risque du pairs trading est :", options: ["Le risque de marché", "Le risque de convergence (spread qui diverge encore plus)", "Le coût des commissions", "La liquidité"], correct: 1, explanation: "Le risque principal du pairs trade = le spread qui continue à diverger (breakdown permanent de la relation). Exemple : NOK/ERICSSON en 2007 — le spread n'est jamais revenu." },
+      ]},
+    ],
+  },
+
+  {
+    id: "portfolio-construction",
+    title: "Construction de Portefeuille",
+    level: "avancé",
+    duration: "2h",
+    chapters_count: 9,
+    icon: "🏗️",
+    description: "Théorie moderne du portefeuille, allocation d'actifs, risk parity — construire un portefeuille professionnel",
+    video_intro: "https://www.youtube.com/embed/ZCFkWDdmXG8",
+    chapters: [
+      { id: 1, type: "video", title: "Markowitz et la frontière efficiente", duration: "9 min", video_url: "https://www.youtube.com/embed/ZCFkWDdmXG8", key_concepts: ["Frontière efficiente", "Sharpe ratio", "Diversification", "Corrélation"], practical_example: "2 actifs non corrélés : même rendement, risque divisé par √2. Portefeuille 60/40 actions/obligations : Sharpe historique 0.75.", xp_reward: 50 },
+      { id: 2, type: "quiz", title: "CAPM et beta — le modèle de base", duration: "8 min", key_concepts: ["CAPM", "Beta", "Alpha", "Systematic risk", "Idiosyncratic risk"], practical_example: "Tesla beta = 2.0 : si S&P +10%, Tesla attend +20%. Si S&P -15%, Tesla attend -30%. Risque amplifié mais récompensé en moyenne.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Un actif avec un beta de 0 :", options: ["Ne bouge jamais", "Est parfaitement corrélé au marché", "N'est pas corrélé au marché", "Est une obligation sans risque"], correct: 2, explanation: "Beta = 0 → pas de corrélation avec le marché. L'actif peut monter ou baisser mais indépendamment du marché global. Exemple : or en certaines périodes." },
+      ]},
+      { id: 3, type: "visualization", title: "La corrélation entre actifs — clé de la diversification", duration: "8 min", visualization: { type: "macd_explained", speed_control: true }, key_concepts: ["Matrice de corrélation", "Diversification maximale", "Corrélation dynamique", "Crisis correlation"], practical_example: "En 2008 : toutes les corrélations sont montées vers 1. La diversification disparaît quand on en a le plus besoin.", xp_reward: 75 },
+      { id: 4, type: "quiz", title: "Risk Parity — l'approche Bridgewater", duration: "9 min", key_concepts: ["Risk parity", "All Weather", "Contribution au risque", "Levier sur obligations"], practical_example: "Bridgewater All Weather : 30% actions, 40% obligations LT, 15% obligations MT, 7.5% or, 7.5% commodités. Sharpe 0.8 depuis 30 ans.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "La Risk Parity alloue le capital selon :", options: ["Les rendements espérés", "La contribution égale au risque de chaque actif", "La capitalisation boursière", "Les recommandations d'analystes"], correct: 1, explanation: "Risk parity = chaque actif contribue également au risque total du portefeuille. Nécessite souvent du levier sur les actifs à faible vol (obligations)." },
+      ]},
+      { id: 5, type: "sandbox", title: "Simulation : Optimiser un portefeuille", duration: "10 min", sandbox_config: { scenario_id: "aapl_rsi_oversold_2024", symbol: "SPY", context: "Tu gères $1M. SPY en position dominante (70%). La corrélation actions/obligations a explosé à +0.6 en 2022. Que changes-tu ?", question: "Comment réalloues-tu ?" }, key_concepts: ["Rebalancing", "Alternative assets", "Corrélation 2022"], practical_example: "2022 : bonds et stocks ont tous deux chuté. Gold +0%, commodities +25% → seule vraie diversification.", xp_reward: 150 },
+      { id: 6, type: "quiz", title: "Smart beta et factor investing", duration: "8 min", key_concepts: ["Smart beta", "Value tilt", "Momentum tilt", "Quality ETF", "Factor timing"], practical_example: "QUAL ETF (iShares MSCI Quality) vs SPY : +1.5% par an sur 10 ans avec moins de volatilité. Smart beta systématique.", xp_reward: 100, quiz: [
+        { id: 1, type: "true_false", question: "Le 'smart beta' est une approche passive car elle suit des règles mécaniques.", options: ["Vrai", "Faux"], correct: 0, explanation: "Smart beta est règle-mécanique (pas de jugement discrétionnaire) mais actif dans son exposition aux facteurs. C'est entre la gestion active et passive traditionnelle." },
+      ]},
+      { id: 7, type: "interactive", title: "Analyse la diversification de ton portefeuille", duration: "8 min", interactive_config: { lesson_mode: "identify_support", symbol: "SPY", instruction: "Identifie les zones où le portefeuille SPY est sur-concentré" }, key_concepts: ["Concentration risk", "Sector allocation", "Geographic diversification"], practical_example: "SPY: top 10 = 30% du poids. Tech = 30% du poids. Vraiment diversifié ? Non. Risque concentration énorme.", xp_reward: 100 },
+      { id: 8, type: "challenge", title: "Défi : Construis le portefeuille optimal", duration: "5 min", challenge: { time_limit: 150, task: "Alloue $1M entre 6 actifs pour maximiser le Sharpe sur 20 ans", symbol: "SPY", type: "identify_patterns" }, key_concepts: ["Optimisation", "Contraintes", "Robustesse"], practical_example: "Le vrai test : est-ce que le portefeuille aurait survécu 2000, 2008, 2020 sans margin call ?", xp_reward: 300 },
+      { id: 9, type: "quiz", title: "Quiz final — Construction de Portefeuille", duration: "5 min", key_concepts: ["Récapitulatif portfolio construction"], practical_example: "La construction de portefeuille est la compétence ultime du gestionnaire professionnel.", xp_reward: 200, quiz: [
+        { id: 1, type: "multiple_choice", question: "La 'frontière efficiente' de Markowitz représente :", options: ["Les meilleurs hedge funds", "L'ensemble des portefeuilles avec le meilleur rendement pour chaque niveau de risque", "Les actions à forte croissance", "Les obligations d'État"], correct: 1, explanation: "La frontière efficiente = ensemble des portefeuilles qui maximisent le rendement espéré pour un niveau de risque donné. Tout portefeuille sous la frontière est sous-optimal." },
+      ]},
+    ],
+  },
+
+  {
+    id: "machine-learning-trading",
+    title: "Machine Learning appliqué au Trading",
+    level: "avancé",
+    duration: "2h30",
+    chapters_count: 10,
+    icon: "🤖",
+    description: "Features engineering, modèles ML, backtesting robuste — construire des stratégies algorithmiques avec l'IA",
+    video_intro: "https://www.youtube.com/embed/ZCFkWDdmXG8",
+    chapters: [
+      { id: 1, type: "video", title: "ML en finance — réalité vs hype", duration: "10 min", video_url: "https://www.youtube.com/embed/ZCFkWDdmXG8", key_concepts: ["Signal vs bruit", "Low SNR", "Overfitting", "Walk-forward"], practical_example: "Renaissance Technologies : Medallion Fund +66%/an sur 30 ans. Utilise du ML depuis 1988. Leurs positions sont secrètes mais leur edge = immense volume de données.", xp_reward: 50 },
+      { id: 2, type: "quiz", title: "Features engineering financières", duration: "9 min", key_concepts: ["Technical features", "Alternative data", "Sentiment NLP", "Cross-sectional features"], practical_example: "Twitter sentiment sur AAPL → alpha de 0.3% par jour (2015-2020). Données satellites Walmart parking → revenus Q4 avant annonce.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Qu'est-ce que les 'alternative data' en finance ?", options: ["Des données boursières alternatives", "Des données non-traditionnelles (satellites, cartes de crédit, NLP) pour prédire la performance", "Des indicateurs techniques alternatifs", "Des données de marchés émergents"], correct: 1, explanation: "Alt data = données satellites (comptage voitures parking), transactions CB (revenus en temps réel), NLP sur earnings calls, données météo, etc. Utilisées par les hedge funds pour avoir l'edge." },
+      ]},
+      { id: 3, type: "visualization", title: "Modèles de prédiction de rendements", duration: "9 min", visualization: { type: "rsi_calculation", speed_control: true }, key_concepts: ["Random forest", "XGBoost", "LSTM", "Linear regression"], practical_example: "XGBoost sur features cross-sectionnelles : IC moyen 0.04. Petit mais multiplié par 100 positions → Sharpe réel.", xp_reward: 75 },
+      { id: 4, type: "quiz", title: "Backtesting rigoureux — éviter les erreurs", duration: "9 min", key_concepts: ["Look-ahead bias", "Survivorship bias", "Transaction costs", "Market impact"], practical_example: "Backtest sans survivorship bias : exclure les actions qui ont fait faillite entre 2000-2010 = performance artificielle de +20%.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Le 'look-ahead bias' dans un backtest signifie :", options: ["Utiliser des données futures pour prendre des décisions passées", "Regarder trop loin en avant dans la prédiction", "Un problème de données manquantes", "Une erreur de code"], correct: 0, explanation: "Look-ahead bias = utiliser accidentellement des données qui n'étaient pas disponibles à ce moment. Ex: utiliser le bilan Q4 publié en février pour des trades d'octobre. Résultat = backtest irréaliste." },
+      ]},
+      { id: 5, type: "sandbox", title: "Simulation : Stratégie ML momentum", duration: "10 min", sandbox_config: { scenario_id: "nvda_overbought_2024", symbol: "AAPL", context: "Ton modèle ML prédit un retour +5.2% pour NVDA les 5 prochains jours avec confiance 72%. Mais NVDA a déjà +30% ce mois.", question: "Tu exécutes le signal ML ?" }, key_concepts: ["Model confidence", "Regime detection", "Override"], practical_example: "Règle pro : ne jamais ignorer un signal de modèle pour une raison subjective. Mais vérifier si le régime de marché correspond au training.", xp_reward: 150 },
+      { id: 6, type: "quiz", title: "NLP et analyse de sentiment", duration: "9 min", key_concepts: ["Earnings call NLP", "News sentiment", "Social media signal", "FinBERT"], practical_example: "FinBERT (BERT fine-tuné sur texte financier) : analyse les earnings calls. Ton dirigeant dit 'challenging' 5x → signal baissier puissant.", xp_reward: 100, quiz: [
+        { id: 1, type: "true_false", question: "Les modèles NLP peuvent lire les earnings calls et prédire la direction de l'action avant le marché.", options: ["Vrai", "Faux"], correct: 0, explanation: "Oui. Les études montrent que les earnings calls contiennent des signaux non-pricés : ton du directeur, vocabulaire utilisé, fréquence de mots négatifs vs positifs prédisent la direction post-earnings." },
+      ]},
+      { id: 7, type: "interactive", title: "Interpréter les signaux d'un modèle", duration: "8 min", interactive_config: { lesson_mode: "spot_rsi", symbol: "AAPL", instruction: "Le modèle donne un score de confiance de 68% pour un achat AAPL. Identifie les facteurs de risque sur le graphe" }, key_concepts: ["Model output", "Feature importance", "Risk factors"], practical_example: "Un modèle à 68% de confiance = correct 68% du temps. Sur 100 trades → 68 gagnants si les gains > pertes = edge réel.", xp_reward: 100 },
+      { id: 8, type: "quiz", title: "Exécution algorithmique et market impact", duration: "8 min", key_concepts: ["TWAP", "VWAP algo", "Market impact", "Slippage"], practical_example: "Acheter $10M d'AAPL d'un coup : impact marché ~$0.05. En VWAP sur 1 journée : $0.01. Économie = $40,000.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Un algorithme TWAP exécute des ordres :", options: ["Au prix de marché instantanément", "En quantités égales sur une période de temps", "Au VWAP de la journée", "Uniquement à l'ouverture"], correct: 1, explanation: "TWAP (Time-Weighted Average Price) = divise l'ordre en tranches égales sur une période. Réduit le market impact pour les gros ordres." },
+      ]},
+      { id: 9, type: "challenge", title: "Défi : Évalue une stratégie ML", duration: "5 min", challenge: { time_limit: 120, task: "Identifie les 3 biais qui invalident cette stratégie backtestée à 200% par an", symbol: "AAPL", type: "find_signals" }, key_concepts: ["Biais", "Validation", "Red flags"], practical_example: "200% par an en backtest = quasi certainement overfittée. Les meilleurs hedge funds font 20-30%.", xp_reward: 300 },
+      { id: 10, type: "quiz", title: "Quiz final — ML Trading", duration: "5 min", key_concepts: ["Récapitulatif ML trading"], practical_example: "Le ML en trading est puissant mais périlleux — la rigueur scientifique est non-négociable.", xp_reward: 200, quiz: [
+        { id: 1, type: "multiple_choice", question: "Quel est le principal défi du ML appliqué aux marchés financiers vs d'autres domaines ?", options: ["Le manque de données", "Le rapport signal/bruit extrêmement faible et la non-stationnarité", "La puissance de calcul insuffisante", "Le coût des données"], correct: 1, explanation: "Les marchés ont un SNR (signal-to-noise ratio) 10-100x plus faible que l'image ou le NLP. De plus, les patterns changent continuellement (non-stationnarité), rendant les modèles vite obsolètes." },
+      ]},
+    ],
+  },
+
+  {
+    id: "derivatives-strategies",
+    title: "Stratégies avec les Dérivés",
+    level: "avancé",
+    duration: "2h15",
+    chapters_count: 10,
+    icon: "🎯",
+    description: "Covered calls, spreads, collars, condors — les stratégies d'options avancées des pros",
+    video_intro: "https://www.youtube.com/embed/ZCFkWDdmXG8",
+    chapters: [
+      { id: 1, type: "video", title: "Architecture des stratégies d'options", duration: "10 min", video_url: "https://www.youtube.com/embed/ZCFkWDdmXG8", key_concepts: ["Payoff diagram", "Covered call", "Protective put", "Collar"], practical_example: "Warren Buffett vend régulièrement des puts sur des actions qu'il veut acheter à un prix donné → encaisse la prime si l'action ne baisse pas assez.", xp_reward: 50 },
+      { id: 2, type: "visualization", title: "Covered Call — générer des revenus sur actions", duration: "9 min", visualization: { type: "bollinger_bands", speed_control: true }, key_concepts: ["Covered call", "Strike selection", "Premium income", "Assignment risk"], practical_example: "100 actions AAPL à $180. Vendre call $190 30 jours : encaisser $200 prime. Si AAPL reste sous $190 → garder les 100 actions + $200. Annualisé = 13% de revenu supplémentaire.", xp_reward: 75 },
+      { id: 3, type: "quiz", title: "Credit Spreads — risque défini", duration: "9 min", key_concepts: ["Bull put spread", "Bear call spread", "Max profit", "Max loss", "ROC"], practical_example: "Bull put spread SPY : vendre put $450, acheter put $445. Prime nette = $1.50. Max profit = $150. Max loss = $350. ROC = 43% si SPY reste au-dessus de $450.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "L'avantage principal d'un credit spread vs une option nue est :", options: ["Profit illimité", "Risque maximal défini et capital réduit", "Pas de commission", "Exercice automatique"], correct: 1, explanation: "Un credit spread (ex: bull put spread) limite la perte maximale au width du spread - prime reçue. L'option nue a un risque théoriquement illimité." },
+      ]},
+      { id: 4, type: "quiz", title: "Iron Condor — stratégie range", duration: "9 min", key_concepts: ["Iron condor", "Short strangle combiné", "Max profit range", "Adjustements"], practical_example: "Iron condor SPX : vendre call 5400 / acheter call 5450 / vendre put 5000 / acheter put 4950. Prime $3. Max profit si SPX entre 5000-5400 à expiration.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Un iron condor est profitable si :", options: ["L'action fait un grand mouvement", "L'action reste dans un range défini", "L'IV augmente fortement", "L'action monte régulièrement"], correct: 1, explanation: "Iron condor = vente de strangle couvert. Max profit si le sous-jacent reste entre les deux short strikes à expiration. Stratégie idéale en faible volatilité." },
+      ]},
+      { id: 5, type: "sandbox", title: "Simulation : Gérer un iron condor", duration: "10 min", sandbox_config: { scenario_id: "aapl_rsi_oversold_2024", symbol: "SPY", context: "Ton iron condor SPY : vendre call $525 / acheter $530 / vendre put $490 / acheter $485. Prime $2.50. SPY vient de monter à $523 — proche du short call.", question: "Que fais-tu ?" }, key_concepts: ["Delta adjustment", "Roll", "Close early"], practical_example: "Règle pro : fermer le condor à 50% du profit max. Rouler le côté menacé si delta > 0.30.", xp_reward: 150 },
+      { id: 6, type: "quiz", title: "LEAPS et positions à long terme", duration: "8 min", key_concepts: ["LEAPS", "Diagonal spread", "Poor man's covered call", "Time decay LEAPS"], practical_example: "Acheter call AAPL $180 LEAPS 2 ans ($30 prime) vs 100 actions AAPL ($18,000). Même exposition, 6x moins de capital. Delta 0.70 = quasi-action.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Un 'Poor Man's Covered Call' consiste à :", options: ["Vendre des calls sans avoir les actions", "Remplacer les 100 actions par un LEAPS deep ITM", "Acheter des puts de protection", "Vendre des calls OTM uniquement"], correct: 1, explanation: "PMCC = acheter un LEAPS deep ITM (delta 0.80+) pour remplacer 100 actions, puis vendre des calls à court terme dessus. Même stratégie covered call avec beaucoup moins de capital." },
+      ]},
+      { id: 7, type: "interactive", title: "Analyse le profil de risque d'une stratégie", duration: "8 min", interactive_config: { lesson_mode: "spot_rsi", symbol: "AAPL", instruction: "Pour ce graphe AAPL, détermine quelle stratégie options est optimale : call spread, put spread, ou condor" }, key_concepts: ["Tendance", "Range", "IV percentile", "Strategy selection"], practical_example: "AAPL en tendance forte + IV basse → call spread (directionnel). Range + IV haute → condor (neutral).", xp_reward: 100 },
+      { id: 8, type: "visualization", title: "Theta decay et gestion temporelle", duration: "8 min", visualization: { type: "rsi_divergence", speed_control: true }, key_concepts: ["Theta curve", "Non-linéarité", "DTE optimal", "Theta farming"], practical_example: "Theta decay s'accélère les 21 derniers jours. Les vendeurs d'options vendent à 45 DTE et ferment à 21 DTE — capture le pic de theta.", xp_reward: 75 },
+      { id: 9, type: "challenge", title: "Défi : Structure la stratégie parfaite", duration: "5 min", challenge: { time_limit: 150, task: "Choisis la stratégie options optimale pour 3 scénarios différents (bull, bear, range)", symbol: "SPY", type: "identify_patterns" }, key_concepts: ["Strategy selection", "Scénario analysis", "Max profit/loss"], practical_example: "Maîtriser la sélection de stratégie selon le scénario = half the battle en options trading.", xp_reward: 300 },
+      { id: 10, type: "quiz", title: "Quiz final — Stratégies Dérivées", duration: "5 min", key_concepts: ["Récapitulatif stratégies options"], practical_example: "Les stratégies d'options permettent de créer n'importe quel profil de risque/rendement imaginable.", xp_reward: 200, quiz: [
+        { id: 1, type: "multiple_choice", question: "Quelle stratégie options a un profit potentiel illimité et une perte limitée ?", options: ["Short call nu", "Long put", "Iron condor", "Long call"], correct: 3, explanation: "Long call = perte limitée à la prime payée, profit théoriquement illimité si l'action monte. C'est l'avantage fondamental de l'achat d'options vs la vente." },
+      ]},
+    ],
+  },
+
+  {
+    id: "macro-global",
+    title: "Macro Trading Global",
+    level: "avancé",
+    duration: "2h",
+    chapters_count: 9,
+    icon: "🌏",
+    description: "Cycles macro, taux d'intérêt, devises, George Soros — trader les grandes tendances mondiales",
+    video_intro: "https://www.youtube.com/embed/ZCFkWDdmXG8",
+    chapters: [
+      { id: 1, type: "video", title: "Qu'est-ce que le Global Macro ?", duration: "10 min", video_url: "https://www.youtube.com/embed/ZCFkWDdmXG8", key_concepts: ["Global macro", "Top-down", "Cycle économique", "Thèse macro"], practical_example: "George Soros 1992 : parie $10Mds contre la livre sterling → +$1Mds en une nuit. Ray Dalio prédit le crash 2008 via sa machine économique.", xp_reward: 50 },
+      { id: 2, type: "visualization", title: "La machine économique de Ray Dalio", duration: "9 min", visualization: { type: "macd_explained", speed_control: true }, key_concepts: ["Cycle court terme", "Cycle long terme", "Désendettement", "Pivot Fed"], practical_example: "Cycle économique US (Dalio) : expansion → pic → contraction → reprise. Durée moyenne : 8-10 ans. Positionnement optimal selon la phase.", xp_reward: 75 },
+      { id: 3, type: "quiz", title: "Cycles de taux et impact sur les actifs", duration: "9 min", key_concepts: ["Courbe des taux", "Inversion", "Real rates", "Duration risk"], practical_example: "Courbe inversée (2s10s < 0) → récession dans 12-18 mois dans 90% des cas historiques. Inversée depuis 2022, récession attendue mais retardée.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Quand la courbe des taux s'inverse (taux courts > taux longs), cela signale généralement :", options: ["Une accélération de la croissance", "Une récession à venir dans 12-18 mois", "Une hausse de l'inflation", "Une force du dollar"], correct: 1, explanation: "L'inversion de la courbe des taux (2Y > 10Y) a précédé chaque récession US depuis 1950. Le délai moyen est de 12-18 mois après l'inversion." },
+      ]},
+      { id: 4, type: "quiz", title: "Dollar Index (DXY) et marchés mondiaux", duration: "8 min", key_concepts: ["DXY", "Dollar fort", "Marchés émergents", "Carry trade"], practical_example: "Dollar fort → Émergents sous pression (dette USD). DXY +10% en 2022 → EM -30%. Carry trade JPY : emprunter à 0%, investir à 5% → risque de débouclage brutal.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Pourquoi un dollar fort est-il négatif pour les marchés émergents ?", options: ["Le commerce diminue", "Leur dette libellée en USD devient plus chère à rembourser", "Le tourisme baisse", "Les matières premières chutent"], correct: 1, explanation: "La plupart des EM empruntent en USD. Un dollar fort = remboursement plus coûteux en devise locale. De plus, les capitaux fuient vers les USA (rendements USD attractifs)." },
+      ]},
+      { id: 5, type: "sandbox", title: "Simulation : Trade macro Yen en 2022", duration: "10 min", sandbox_config: { scenario_id: "aapl_rsi_oversold_2024", symbol: "USDJPY=X", context: "Janvier 2022 : Fed annonce 7 hausses de taux. BOJ maintient taux à 0%. USD/JPY à 115. L'écart de taux va exploser.", question: "Construis ta thèse macro" }, key_concepts: ["Rate differential", "Carry trade", "USD/JPY"], practical_example: "USD/JPY de 115 à 152 en 2022 : +32%. Thèse macro simple : fed hawkish vs BOJ dovish → acheter USD, vendre JPY.", xp_reward: 150 },
+      { id: 6, type: "quiz", title: "Inflation et positionnement de portefeuille", duration: "8 min", key_concepts: ["Inflation assets", "TIPS", "Real assets", "Stagflation"], practical_example: "Portefeuille optimal en inflation : TIPS + Or + Pétrole + Actions value (pricing power). Technologie = pire allocation en inflation high.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Quel actif performe le mieux en période de forte inflation ?", options: ["Obligations nominales", "Actions croissance (growth)", "Commodités et actifs réels", "Cash"], correct: 2, explanation: "En inflation haute : commodités (pétrole, or, matières premières) surperforment car leurs prix s'ajustent à l'inflation. Les obligations nominales et les growth stocks souffrent le plus." },
+      ]},
+      { id: 7, type: "interactive", title: "Lire les indicateurs macro avancés", duration: "8 min", interactive_config: { lesson_mode: "identify_support", symbol: "SPY", instruction: "Identifie dans quelle phase du cycle économique nous sommes et le positionnement optimal" }, key_concepts: ["PMI", "Leading indicators", "Yield curve", "Credit spreads"], practical_example: "PMI < 50 + courbe inversée + crédit spreads qui s'écartent → fin de cycle. Réduire risque, augmenter cash/or.", xp_reward: 100 },
+      { id: 8, type: "challenge", title: "Défi : Construis une thèse macro en 2 minutes", duration: "5 min", challenge: { time_limit: 120, task: "Sur la base de 3 indicateurs macro donnés, construis une thèse d'investissement cohérente", symbol: "SPY", type: "read_indicators" }, key_concepts: ["Thèse macro", "Scénario", "Positionnement"], practical_example: "Les meilleurs macro traders ont une thèse claire en 60 secondes pour n'importe quel scénario.", xp_reward: 300 },
+      { id: 9, type: "quiz", title: "Quiz final — Macro Trading", duration: "5 min", key_concepts: ["Récapitulatif macro trading"], practical_example: "Le macro trading demande une compréhension globale de l'économie mondiale — la dimension la plus noble du trading.", xp_reward: 200, quiz: [
+        { id: 1, type: "multiple_choice", question: "George Soros a 'cassé la Bank of England' en 1992 en pariant contre :", options: ["Le franc français", "La livre sterling", "Le mark allemand", "La lire italienne"], correct: 1, explanation: "Soros a parié $10Mds contre la livre sterling, forcée à quitter le Mécanisme de Change Européen. Profit de +$1Mds en une nuit. Le 'Black Wednesday' du 16 septembre 1992." },
+      ]},
+    ],
+  },
+
+  {
+    id: "risk-parity-avance",
+    title: "Risk Parity et Gestion Quantitative",
+    level: "avancé",
+    duration: "2h",
+    chapters_count: 9,
+    icon: "⚖️",
+    description: "All Weather, Permanent Portfolio, gestion des drawdowns — les techniques des meilleurs allocateurs",
+    video_intro: "https://www.youtube.com/embed/ZCFkWDdmXG8",
+    chapters: [
+      { id: 1, type: "video", title: "L'All Weather Portfolio de Bridgewater", duration: "10 min", video_url: "https://www.youtube.com/embed/ZCFkWDdmXG8", key_concepts: ["All Weather", "4 environnements", "Risk parity", "Ray Dalio"], practical_example: "All Weather en 2008 : -3.9% vs S&P -38%. En 2022 : -21% vs S&P -19% (obligations ont failli). Solide mais pas parfait.", xp_reward: 50 },
+      { id: 2, type: "visualization", title: "Les 4 environnements de marché", duration: "8 min", visualization: { type: "support_resistance", speed_control: true }, key_concepts: ["Croissance/inflation high/low", "Actifs par régime", "Regime detection", "Transition"], practical_example: "Croissance haute + inflation basse (goldilocks) : meilleur régime pour actions. Croissance basse + inflation haute (stagflation) : pire pour tout sauf or/commodités.", xp_reward: 75 },
+      { id: 3, type: "quiz", title: "Mesures de risque avancées", duration: "9 min", key_concepts: ["Sharpe ratio", "Sortino ratio", "Calmar ratio", "Max drawdown", "Ulcer index"], practical_example: "Calmar ratio = rendement annualisé / max drawdown. Bridgewater All Weather : Calmar ~0.8. SPY : Calmar ~0.5. La Calmar pénalise les grosses pertes.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Le Sortino ratio améliore le Sharpe ratio en :", options: ["Utilisant seulement la volatilité à la baisse (downside deviation)", "Incluant le levier", "Excluant les frais", "Utilisant la médiane plutôt que la moyenne"], correct: 0, explanation: "Sortino = rendement / downside deviation. Ne pénalise pas la volatilité à la hausse (bonne volatilité). Plus pertinent que Sharpe pour évaluer un gestionnaire." },
+      ]},
+      { id: 4, type: "quiz", title: "Gestion des drawdowns — protection du capital", duration: "9 min", key_concepts: ["Max drawdown", "Recovery time", "Stop systématique", "Volatility targeting"], practical_example: "Renaissance Medallion : max drawdown jamais dépassé -5%. SPY : -57% en 2009. La limitation des drawdowns est la vraie edge des meilleurs.", xp_reward: 100, quiz: [
+        { id: 1, type: "true_false", question: "Un drawdown de 50% nécessite un gain de 100% pour revenir au breakeven.", options: ["Vrai", "Faux"], correct: 0, explanation: "Si -50% : $100 → $50. Pour revenir à $100 depuis $50, il faut +100%. C'est pourquoi limiter les drawdowns est crucial — les pertes ne sont pas symétriques." },
+      ]},
+      { id: 5, type: "sandbox", title: "Simulation : Rebalancing en crise", duration: "10 min", sandbox_config: { scenario_id: "aapl_rsi_oversold_2024", symbol: "SPY", context: "Mars 2020 : ton portefeuille All Weather perd -15%. Actions -35%, or +5%, obligations +8%. Allocation déviée de la cible.", question: "Tu rebalances ou tu attends ?" }, key_concepts: ["Rebalancing mécanique", "Discipline", "Volatility timing"], practical_example: "Rebalancing mécanique mars 2020 = acheter des actions à -35%. À 1 an : +80%. Discipline beats emotion.", xp_reward: 150 },
+      { id: 6, type: "quiz", title: "Volatility targeting et position sizing dynamique", duration: "9 min", key_concepts: ["Vol targeting", "Position sizing dynamique", "Risk budget", "Leverage adjustment"], practical_example: "Vol targeting : si la vol du portefeuille double (ex VIX 12 → 25), on réduit la position de moitié pour maintenir le risk budget constant.", xp_reward: 100, quiz: [
+        { id: 1, type: "multiple_choice", question: "Le 'volatility targeting' consiste à :", options: ["Trader uniquement les actifs volatils", "Ajuster la taille des positions pour maintenir un niveau de risque constant", "Acheter des options de vol", "Éviter les marchés volatils"], correct: 1, explanation: "Vol targeting = réduire les positions quand la vol monte, augmenter quand elle baisse. Maintient un risk budget constant. Utilisé par Bridgewater, AQR." },
+      ]},
+      { id: 7, type: "interactive", title: "Analyse ton propre drawdown", duration: "8 min", interactive_config: { lesson_mode: "identify_support", symbol: "SPY", instruction: "Identifie les périodes de drawdown max sur le graphe SPY et leur durée de recovery" }, key_concepts: ["Drawdown visualization", "Recovery periods", "Historical context"], practical_example: "SPY 2000-2002 : -49% sur 2.5 ans, recovery 4 ans. 2008-2009 : -57%, recovery 4 ans. Patience requise.", xp_reward: 100 },
+      { id: 8, type: "challenge", title: "Défi : Optimise le Calmar ratio", duration: "5 min", challenge: { time_limit: 150, task: "Alloue $1M pour maximiser le Calmar ratio (rendement/max drawdown)", symbol: "SPY", type: "identify_patterns" }, key_concepts: ["Calmar", "Allocation", "Drawdown budget"], practical_example: "Le vrai objectif pro : pas maximiser le rendement, mais maximiser le rendement ajusté aux drawdowns.", xp_reward: 300 },
+      { id: 9, type: "quiz", title: "Quiz final — Risk Parity", duration: "5 min", key_concepts: ["Récapitulatif risk parity"], practical_example: "La gestion quantitative du risque sépare les amateurs des professionnels.", xp_reward: 200, quiz: [
+        { id: 1, type: "multiple_choice", question: "Quel est le principal avantage du Risk Parity vs une allocation traditionnelle 60/40 ?", options: ["Rendements plus élevés", "Risque mieux diversifié — chaque actif contribue également au risque total", "Frais plus bas", "Moins de rebalancing"], correct: 1, explanation: "Risk Parity alloue le risque, pas le capital. Dans un 60/40 traditionnel, les actions représentent 90%+ du risque malgré 60% du capital. Risk Parity corrige ce déséquilibre." },
+      ]},
+    ],
+  },
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
