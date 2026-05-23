@@ -242,14 +242,18 @@ export default function Apprendre() {
         .then(d => { if (d.id) setDailyChallenge(d) }).catch(() => {})
 
       const { data: lb } = await supabase
-        .from("user_progress").select("user_id, xp_earned").not("xp_earned", "is", null)
+        .from("user_profiles")
+        .select("username, xp, avatar_color")
+        .not("xp", "is", null)
+        .gt("xp", 0)
+        .order("xp", { ascending: false })
+        .limit(5)
       if (lb) {
-        const byUser: Record<string, number> = {}
-        for (const r of lb) byUser[r.user_id] = (byUser[r.user_id] ?? 0) + (r.xp_earned ?? 0)
-        const sorted = Object.entries(byUser).sort((a, b) => b[1] - a[1]).slice(0, 5)
-        setLeaderboard(sorted.map(([, xp], i) => ({
-          username: `Trader #${i + 1}`, xp,
-          avatar_color: ["#4ade80","#60a5fa","#a78bfa","#f97316","#facc15"][i],
+        const colors = ["#4ade80","#60a5fa","#a78bfa","#f97316","#facc15"]
+        setLeaderboard(lb.map((r: any, i: number) => ({
+          username: r.username ?? `Trader #${i + 1}`,
+          xp: r.xp ?? 0,
+          avatar_color: r.avatar_color ?? colors[i],
         })))
       }
       setReady(true)
