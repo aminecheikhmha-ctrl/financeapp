@@ -7,7 +7,6 @@ import { getCourse, LEVEL_COLORS, getChapterXP, type Chapter } from "@/lib/cours
 import confetti from "canvas-confetti"
 import { motion, AnimatePresence } from "framer-motion"
 
-// ── Academy components ────────────────────────────────────────────────────────
 import AnimatedVisualization from "@/app/components/academy/AnimatedVisualization"
 import QuizGame               from "@/app/components/academy/QuizGame"
 import TradingSandbox         from "@/app/components/academy/TradingSandbox"
@@ -17,9 +16,8 @@ import AITutor                from "@/app/components/academy/AITutor"
 import LivePractice           from "@/app/components/academy/LivePractice"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type QuizQuestion = { question: string; options: string[]; correct: number; explanation: string }
+type QuizQuestion  = { question: string; options: string[]; correct: number; explanation: string }
 type ChapterContent = { content: string; quiz: QuizQuestion[] }
-type ChatMessage = { role: "user" | "assistant"; content: string }
 
 // ─── Levels ───────────────────────────────────────────────────────────────────
 const LEVELS = [
@@ -32,6 +30,25 @@ const LEVELS = [
 ]
 function getLevelForXP(xp: number) {
   return [...LEVELS].reverse().find(l => xp >= l.min) ?? LEVELS[0]
+}
+
+// ─── Chapter type config ──────────────────────────────────────────────────────
+const TYPE_ICONS: Record<string, string> = {
+  video: "🎬", visualization: "🎨", interactive: "🎯",
+  sandbox: "🏦", quiz: "❓", challenge: "⚡", lecture: "📖", quiz_only: "🎯",
+}
+const TYPE_STYLES: Record<string, { bg: string; color: string; border: string; label: string }> = {
+  video:         { bg: "rgba(96,165,250,0.12)",  color: "#60a5fa", border: "rgba(96,165,250,0.25)",  label: "Vidéo"       },
+  visualization: { bg: "rgba(167,139,250,0.12)", color: "#a78bfa", border: "rgba(167,139,250,0.25)", label: "Animation"   },
+  interactive:   { bg: "rgba(249,115,22,0.12)",  color: "#f97316", border: "rgba(249,115,22,0.25)",  label: "Interactif"  },
+  sandbox:       { bg: "rgba(74,222,128,0.12)",  color: "#4ade80", border: "rgba(74,222,128,0.25)",  label: "Simulation"  },
+  quiz:          { bg: "rgba(250,204,21,0.12)",  color: "#facc15", border: "rgba(250,204,21,0.25)",  label: "Quiz"        },
+  quiz_only:     { bg: "rgba(250,204,21,0.12)",  color: "#facc15", border: "rgba(250,204,21,0.25)",  label: "Quiz"        },
+  challenge:     { bg: "rgba(239,68,68,0.12)",   color: "#ef4444", border: "rgba(239,68,68,0.25)",   label: "Défi"        },
+  lecture:       { bg: "rgba(148,163,184,0.12)", color: "#94a3b8", border: "rgba(148,163,184,0.25)", label: "Lecture"     },
+}
+function getTypeStyle(t: string) {
+  return TYPE_STYLES[t] ?? { bg: "rgba(255,255,255,0.06)", color: "#666", border: "rgba(255,255,255,0.1)", label: t }
 }
 
 // ─── Markdown renderer ────────────────────────────────────────────────────────
@@ -60,21 +77,7 @@ function Skeleton({ h = "h-4", w = "w-full" }: { h?: string; w?: string }) {
   return <div className={`${h} ${w} rounded-lg animate-pulse`} style={{ background: "#151515" }} />
 }
 
-function chapterTypeLabel(type: string) {
-  switch (type) {
-    case "video":         return { icon: "📹", label: "Vidéo",       color: "#60a5fa" }
-    case "lecture":       return { icon: "📖", label: "Lecture",     color: "#94a3b8" }
-    case "interactive":   return { icon: "🎮", label: "Interactif",  color: "#a78bfa" }
-    case "quiz_only":
-    case "quiz":          return { icon: "🎯", label: "Quiz",        color: "#facc15" }
-    case "visualization": return { icon: "✨", label: "Animation",   color: "#f97316" }
-    case "sandbox":       return { icon: "🏦", label: "Simulation",  color: "#4ade80" }
-    case "challenge":     return { icon: "⚡", label: "Défi",        color: "#ef4444" }
-    default:              return { icon: "📄", label: type,          color: "#666"    }
-  }
-}
-
-// ─── XP Toast (center) ────────────────────────────────────────────────────────
+// ─── XP Toast ─────────────────────────────────────────────────────────────────
 function XPToast({ xp, onDone }: { xp: number; onDone: () => void }) {
   useEffect(() => { const t = setTimeout(onDone, 2600); return () => clearTimeout(t) }, [onDone])
   return (
@@ -84,7 +87,7 @@ function XPToast({ xp, onDone }: { xp: number; onDone: () => void }) {
       exit={{ scale: 0.8, opacity: 0, y: -30 }}
       transition={{ type: "spring", stiffness: 400, damping: 20 }}
       className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-3.5 rounded-2xl shadow-2xl"
-      style={{ background: "linear-gradient(135deg,#1a1a1a,#111)", border: "1px solid rgba(74,222,128,0.4)" }}>
+      style={{ background: "linear-gradient(135deg,#111,#0d0d0d)", border: "1px solid rgba(74,222,128,0.4)" }}>
       <span className="text-2xl">⚡</span>
       <div>
         <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">XP Gagné</p>
@@ -106,7 +109,7 @@ function ChallengeBlock({ challenge, onComplete }: {
   useEffect(() => {
     if (!started || done) return
     if (timeLeft <= 0) { setDone(true); return }
-    const t = setTimeout(() => setTimeLeft(t => t - 1), 1000)
+    const t = setTimeout(() => setTimeLeft(v => v - 1), 1000)
     return () => clearTimeout(t)
   }, [started, timeLeft, done])
 
@@ -121,9 +124,7 @@ function ChallengeBlock({ challenge, onComplete }: {
           <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: "#ef4444" }}>Défi chronométré</p>
           <p className="text-white font-black text-lg leading-snug">{challenge.task}</p>
         </div>
-        <div className="text-center">
-          <p className="text-3xl font-black" style={{ color }}>{timeLeft}s</p>
-        </div>
+        <p className="text-3xl font-black" style={{ color }}>{timeLeft}s</p>
       </div>
       <div className="h-2 rounded-full overflow-hidden" style={{ background: "#1a1a1a" }}>
         <motion.div className="h-full rounded-full" animate={{ width: `${pct}%` }}
@@ -147,7 +148,7 @@ function ChallengeBlock({ challenge, onComplete }: {
   )
 }
 
-// ─── Legacy Quiz (for course-content API) ────────────────────────────────────
+// ─── Legacy Quiz ──────────────────────────────────────────────────────────────
 function LegacyQuizBlock({ quiz, onComplete }: { quiz: QuizQuestion[]; onComplete: (score: number) => void }) {
   const [current,  setCurrent]  = useState(0)
   const [selected, setSelected] = useState<number | null>(null)
@@ -173,10 +174,13 @@ function LegacyQuizBlock({ quiz, onComplete }: { quiz: QuizQuestion[]; onComplet
         <p className="text-white font-black text-xl mb-4">{score}/{quiz.length} correctes</p>
         <div className="space-y-2 text-left">{quiz.map((q, i) => {
           const correct = answers[i] === q.correct
-          return (<div key={i} className="rounded-xl p-3" style={{ background: correct ? "rgba(74,222,128,0.06)" : "rgba(248,113,113,0.06)", border: `1px solid ${correct ? "rgba(74,222,128,0.15)" : "rgba(248,113,113,0.12)"}` }}>
-            <p className="text-xs font-bold mb-1" style={{ color: correct ? "#4ade80" : "#f87171" }}>{correct ? "✓" : "✗"} {q.question}</p>
-            <p className="text-[11px]" style={{ color: "#888" }}>{q.explanation}</p>
-          </div>)
+          return (
+            <div key={i} className="rounded-xl p-3"
+              style={{ background: correct ? "rgba(74,222,128,0.06)" : "rgba(248,113,113,0.06)", border: `1px solid ${correct ? "rgba(74,222,128,0.15)" : "rgba(248,113,113,0.12)"}` }}>
+              <p className="text-xs font-bold mb-1" style={{ color: correct ? "#4ade80" : "#f87171" }}>{correct ? "✓" : "✗"} {q.question}</p>
+              <p className="text-[11px]" style={{ color: "#888" }}>{q.explanation}</p>
+            </div>
+          )
         })}</div>
       </div>
     )
@@ -195,7 +199,8 @@ function LegacyQuizBlock({ quiz, onComplete }: { quiz: QuizQuestion[]; onComplet
           else if (idx === selected) { bg = "rgba(248,113,113,0.1)"; border = "rgba(248,113,113,0.3)"; color = "#f87171" }
         }
         return (
-          <button key={idx} onClick={() => handleSelect(idx)} className="w-full text-left px-4 py-3 rounded-xl text-sm transition-all"
+          <button key={idx} onClick={() => handleSelect(idx)}
+            className="w-full text-left px-4 py-3 rounded-xl text-sm transition-all"
             style={{ background: bg, border: `1px solid ${border}`, color }}>
             <span className="font-bold mr-2">{String.fromCharCode(65 + idx)}.</span>{opt}
           </button>
@@ -207,55 +212,48 @@ function LegacyQuizBlock({ quiz, onComplete }: { quiz: QuizQuestion[]; onComplet
   )
 }
 
-// ─── Course Completion Screen ─────────────────────────────────────────────────
+// ─── Course Complete ──────────────────────────────────────────────────────────
 function CourseComplete({ course, progress, totalXP, timeSpent, onContinue }: {
   course: any; progress: Set<number>; totalXP: number; timeSpent: number; onContinue: () => void
 }) {
   useEffect(() => {
     confetti({ particleCount: 200, spread: 90, origin: { y: 0.4 }, colors: ["#4ade80","#22c55e","#60a5fa","#a78bfa","#facc15"] })
-    setTimeout(() => confetti({ particleCount: 100, angle: 60, spread: 70, origin: { x: 0, y: 0.5 } }), 600)
+    setTimeout(() => confetti({ particleCount: 100, angle: 60,  spread: 70, origin: { x: 0, y: 0.5 } }), 600)
     setTimeout(() => confetti({ particleCount: 100, angle: 120, spread: 70, origin: { x: 1, y: 0.5 } }), 1000)
   }, [])
-
-  const hours   = Math.floor(timeSpent / 3600)
-  const minutes = Math.floor((timeSpent % 3600) / 60)
-
+  const hours = Math.floor(timeSpent / 3600)
+  const mins  = Math.floor((timeSpent % 3600) / 60)
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
+      initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}>
+      style={{ background: "rgba(0,0,0,0.88)", backdropFilter: "blur(10px)" }}>
       <div className="max-w-md w-full rounded-3xl p-8 text-center space-y-6"
-        style={{ background: "#0d0d0d", border: "1px solid rgba(74,222,128,0.3)" }}>
-        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", delay: 0.2 }} className="text-7xl">
-          🏆
-        </motion.div>
+        style={{ background: "#0a0a0a", border: "1px solid rgba(74,222,128,0.3)" }}>
+        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", delay: 0.2 }}
+          className="text-7xl">🏆</motion.div>
         <div>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
             className="text-2xl font-black text-white mb-1">Cours Complété !</motion.p>
           <p className="font-bold" style={{ color: "#4ade80" }}>{course.title}</p>
         </div>
-        {/* Stats */}
         <div className="grid grid-cols-3 gap-3">
           {[
             { label: "Chapitres", value: `${progress.size}/${course.chapters.length}`, color: "#60a5fa" },
             { label: "XP Gagnés", value: `⚡ ${totalXP}`, color: "#facc15" },
-            { label: "Temps",     value: hours > 0 ? `${hours}h${minutes}m` : `${minutes}min`, color: "#a78bfa" },
+            { label: "Temps",     value: hours > 0 ? `${hours}h${mins}m` : `${mins}min`, color: "#a78bfa" },
           ].map(s => (
             <div key={s.label} className="rounded-xl p-3" style={{ background: "#111", border: "1px solid #1a1a1a" }}>
-              <p className="text-[9px] uppercase tracking-widest font-bold mb-1" style={{ color: "#555" }}>{s.label}</p>
+              <p className="text-[9px] uppercase tracking-widest font-bold mb-1" style={{ color: "#444" }}>{s.label}</p>
               <p className="font-black text-lg" style={{ color: s.color }}>{s.value}</p>
             </div>
           ))}
         </div>
-        <div className="space-y-2">
-          <button onClick={onContinue}
-            className="w-full py-3.5 rounded-xl font-black text-sm transition-all"
-            style={{ background: "rgba(74,222,128,0.15)", color: "#4ade80", border: "1px solid rgba(74,222,128,0.3)" }}>
-            ← Retour à l'Académie
-          </button>
-        </div>
+        <button onClick={onContinue}
+          className="w-full py-3.5 rounded-xl font-black text-sm transition-all"
+          style={{ background: "rgba(74,222,128,0.15)", color: "#4ade80", border: "1px solid rgba(74,222,128,0.3)" }}>
+          ← Retour à l'Académie
+        </button>
       </div>
     </motion.div>
   )
@@ -275,25 +273,24 @@ export default function CoursePage() {
   const [progress,       setProgress]       = useState<Set<number>>(new Set())
   const [quizDone,       setQuizDone]       = useState<Set<number>>(new Set())
   const [startTime,      setStartTime]      = useState(Date.now())
-  const [courseStartTime] = useState(Date.now())
+  const [courseStartTime]                   = useState(Date.now())
   const [xpToast,        setXpToast]        = useState<number | null>(null)
   const [levelUpToast,   setLevelUpToast]   = useState<{ name: string; icon: string } | null>(null)
   const [totalXP,        setTotalXP]        = useState(0)
   const [lessonMode,     setLessonMode]     = useState<string | null>(null)
   const [showComplete,   setShowComplete]   = useState(false)
-  const [tutorOpen,      setTutorOpen]      = useState(false) // mobile
+  const [tutorOpen,      setTutorOpen]      = useState(false)
+  const [saving,         setSaving]         = useState(false)
 
   const lc = course ? LEVEL_COLORS[course.level] : LEVEL_COLORS["débutant"]
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search)
-      const lesson = params.get("lesson")
+      const lesson = new URLSearchParams(window.location.search).get("lesson")
       if (lesson) setLessonMode(lesson)
     }
   }, [])
 
-  // ── Auth ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) { router.push("/login"); return }
@@ -316,7 +313,6 @@ export default function CoursePage() {
     if (data) setProgress(new Set(data.map((r: any) => r.chapter_id)))
   }
 
-  // ── Load chapter content ───────────────────────────────────────────────────
   const loadChapterContent = useCallback(async (chapterId: number) => {
     if (!course) return
     const ch = course.chapters.find(c => c.id === chapterId)
@@ -341,7 +337,6 @@ export default function CoursePage() {
     if (course) loadChapterContent(course.chapters[activeIdx]?.id)
   }, [activeIdx, course])
 
-  // ── Mark complete ──────────────────────────────────────────────────────────
   async function markComplete(chapterId: number, quizScore?: number, xpOverride?: number) {
     if (!course) return
     const newProgress = new Set(progress)
@@ -359,6 +354,7 @@ export default function CoursePage() {
     }
 
     if (token) {
+      setSaving(true)
       const timeSpent = Math.round((Date.now() - startTime) / 1000)
       try {
         const res  = await fetch("/api/course-content", {
@@ -373,14 +369,13 @@ export default function CoursePage() {
         }
         if (data.new_xp != null) {
           setTotalXP(data.new_xp)
-          if (typeof window !== "undefined") {
+          if (typeof window !== "undefined")
             window.dispatchEvent(new CustomEvent("xp-updated", { detail: { xp: data.new_xp } }))
-          }
         }
       } catch {}
+      setSaving(false)
     }
 
-    // Course complete?
     if (newProgress.size === course.chapters.length) {
       setTimeout(() => setShowComplete(true), 800)
     }
@@ -400,8 +395,8 @@ export default function CoursePage() {
   const activeChapter = course.chapters[activeIdx]
   const donePct       = Math.round((progress.size / course.chapters.length) * 100)
   const isChapterDone = progress.has(activeChapter.id)
-  const typeInfo      = chapterTypeLabel(activeChapter.type)
-  const isFullWidth   = ["visualization","sandbox","quiz","quiz_only","challenge"].includes(activeChapter.type)
+  const ts            = getTypeStyle(activeChapter.type)
+  const canProceed    = isChapterDone
 
   function navigate(dir: 1 | -1) {
     const next = activeIdx + dir
@@ -416,13 +411,12 @@ export default function CoursePage() {
   }
 
   return (
-    <div className="min-h-screen text-white" style={{ background: "#080808" }}>
+    <div className="min-h-screen text-white flex flex-col" style={{ background: "#080808" }}>
 
-      {/* ── Toasts ───────────────────────────────────────────────────────── */}
+      {/* ── Toasts ─────────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {xpToast !== null && <XPToast xp={xpToast} onDone={() => setXpToast(null)} />}
       </AnimatePresence>
-
       <AnimatePresence>
         {levelUpToast && (
           <motion.div
@@ -441,42 +435,21 @@ export default function CoursePage() {
         )}
       </AnimatePresence>
 
-      {/* Floating XP (bottom-right) */}
-      <AnimatePresence>
-        {xpToast !== null && (
-          <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.8 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="fixed bottom-20 right-8 z-50">
-            <div className="px-4 py-2 rounded-xl font-black text-lg shadow-lg"
-              style={{ background: "#facc15", color: "#000" }}>
-              ⚡ +{xpToast} XP
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Course completion overlay */}
       {showComplete && (
-        <CourseComplete
-          course={course}
-          progress={progress}
-          totalXP={totalXP}
+        <CourseComplete course={course} progress={progress} totalXP={totalXP}
           timeSpent={Math.round((Date.now() - courseStartTime) / 1000)}
-          onContinue={() => router.push("/apprendre")}
-        />
+          onContinue={() => router.push("/apprendre")} />
       )}
 
-      {/* ── Mobile AI Tutor Button ────────────────────────────────────────── */}
-      <button
+      {/* ── Mobile AI Tutor ─────────────────────────────────────────────────── */}
+      <motion.button
+        whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
         onClick={() => setTutorOpen(true)}
         className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl xl:hidden"
         style={{ background: "linear-gradient(135deg,#1a1a2e,#0d1a1a)", border: "1px solid rgba(167,139,250,0.4)" }}>
         <span className="text-2xl">🧠</span>
-      </button>
+      </motion.button>
 
-      {/* Mobile AI Tutor Modal */}
       <AnimatePresence>
         {tutorOpen && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -491,358 +464,385 @@ export default function CoursePage() {
               onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "#1a1a1a" }}>
                 <p className="font-black text-white">🧠 Tuteur IA</p>
-                <button onClick={() => setTutorOpen(false)} className="text-white/30 hover:text-white/60 text-xl">✕</button>
+                <button onClick={() => setTutorOpen(false)} className="text-white/30 hover:text-white text-xl">✕</button>
               </div>
               <div className="h-[calc(75vh-52px)]">
-                <AITutor
-                  courseTitle={course.title}
-                  chapterTitle={activeChapter.title}
-                  courseId={course.id}
-                  chapterId={activeChapter.id}
-                  keyConcepts={activeChapter.key_concepts}
-                />
+                <AITutor courseTitle={course.title} chapterTitle={activeChapter.title}
+                  courseId={course.id} chapterId={activeChapter.id} keyConcepts={activeChapter.key_concepts} />
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="max-w-[1440px] mx-auto px-4 py-5">
-
-        {/* ── Header ────────────────────────────────────────────────────────── */}
-        <div className="flex items-center gap-3 mb-5 flex-wrap">
-          {lessonMode && (
-            <button onClick={() => router.back()}
-              className="flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg"
-              style={{ background: "rgba(74,222,128,0.08)", color: "#4ade80", border: "1px solid rgba(74,222,128,0.2)" }}>
-              ← Dashboard
-            </button>
-          )}
+      {/* ── HEADER ──────────────────────────────────────────────────────────── */}
+      <div className="flex-shrink-0 border-b" style={{ borderColor: "#111", background: "rgba(8,8,8,0.97)", backdropFilter: "blur(12px)" }}>
+        <div className="max-w-[1440px] mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
           <button onClick={() => router.push("/apprendre")}
-            className="text-sm transition hover:text-white" style={{ color: "#555" }}>
+            className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-all hover:text-white"
+            style={{ color: "#555", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
             ← Académie
           </button>
-          <div className="h-4 w-px" style={{ background: "#222" }} />
+          <div className="h-4 w-px hidden sm:block" style={{ background: "#222" }} />
           <span className="text-xl">{course.icon}</span>
-          <h1 className="text-white font-black text-base truncate flex-1 max-w-[300px]">{course.title}</h1>
-          {/* Global progress */}
-          <div className="flex items-center gap-2">
-            <div className="w-28 h-1.5 rounded-full overflow-hidden hidden sm:block" style={{ background: "#1a1a1a" }}>
-              <motion.div className="h-full rounded-full" animate={{ width: `${donePct}%` }} transition={{ duration: 0.6 }}
-                style={{ background: `linear-gradient(90deg,${lc.text}99,${lc.text})` }} />
-            </div>
-            <span className="text-xs font-black" style={{ color: lc.text }}>{donePct}%</span>
-          </div>
-          {/* XP counter */}
-          <motion.div
-            key={totalXP}
-            animate={{ scale: [1, 1.1, 1] }}
-            transition={{ duration: 0.3 }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
-            style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
-            <span className="text-sm">⚡</span>
-            <span className="text-sm font-black" style={{ color: "#facc15" }}>{totalXP.toLocaleString()} XP</span>
-          </motion.div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+          <h1 className="text-white font-black text-sm md:text-base truncate max-w-[200px] md:max-w-xs">{course.title}</h1>
+          <span className="text-[10px] font-black px-2 py-0.5 rounded-full hidden sm:inline"
             style={{ background: lc.bg, color: lc.text, border: `1px solid ${lc.border}` }}>
             {course.level}
           </span>
+
+          {/* Progress */}
+          <div className="flex items-center gap-2 ml-auto">
+            <span className="text-[11px] hidden sm:inline" style={{ color: "#444" }}>
+              {progress.size}/{course.chapters.length} chapitres
+            </span>
+            <div className="w-24 h-1.5 rounded-full overflow-hidden hidden sm:block" style={{ background: "#1a1a1a" }}>
+              <motion.div className="h-full rounded-full" animate={{ width: `${donePct}%` }}
+                transition={{ duration: 0.6 }} style={{ background: `linear-gradient(90deg,${lc.text}88,${lc.text})` }} />
+            </div>
+            <span className="text-xs font-black" style={{ color: lc.text }}>{donePct}%</span>
+          </div>
+
+          {/* XP */}
+          <motion.div key={totalXP} animate={{ scale: [1, 1.12, 1] }} transition={{ duration: 0.3 }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
+            style={{ background: "#111", border: "1px solid #1a1a1a" }}>
+            <span className="text-sm">⚡</span>
+            <span className="text-sm font-black" style={{ color: "#facc15" }}>{totalXP.toLocaleString()}</span>
+          </motion.div>
         </div>
 
-        {/* ── 3-Column Layout ───────────────────────────────────────────────── */}
-        <div className="flex gap-5 items-start">
+        {/* Progress bar under header — full width */}
+        <div className="h-0.5 w-full" style={{ background: "#111" }}>
+          <motion.div className="h-full" animate={{ width: `${donePct}%` }} transition={{ duration: 0.6 }}
+            style={{ background: `linear-gradient(90deg,${lc.text}60,${lc.text})` }} />
+        </div>
+      </div>
 
-          {/* ── LEFT Sidebar: Chapter list ────────────────────────────────── */}
-          <div className="w-64 flex-shrink-0 sticky top-4 hidden lg:block">
-            <div className="rounded-2xl overflow-hidden" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
-              {/* Progress bar */}
-              <div className="px-4 py-3 border-b" style={{ borderColor: "#1a1a1a" }}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#555" }}>Progression</p>
-                  <p className="text-xs font-black" style={{ color: lc.text }}>{donePct}%</p>
-                </div>
-                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#1a1a1a" }}>
-                  <motion.div className="h-full rounded-full" animate={{ width: `${donePct}%` }}
-                    transition={{ duration: 0.6 }} style={{ background: `linear-gradient(90deg,${lc.text}99,${lc.text})` }} />
-                </div>
-                <p className="text-[10px] mt-1" style={{ color: "#444" }}>{progress.size}/{course.chapters.length} chapitres</p>
+      {/* ── 3-COLUMN LAYOUT ─────────────────────────────────────────────────── */}
+      <div className="flex flex-1 max-w-[1440px] mx-auto w-full px-4 gap-5 py-5">
+
+        {/* ── LEFT SIDEBAR ────────────────────────────────────────────────── */}
+        <div className="w-[280px] flex-shrink-0 sticky top-5 self-start hidden lg:block"
+          style={{ maxHeight: "calc(100vh - 80px)" }}>
+          <div className="rounded-2xl overflow-hidden h-full flex flex-col"
+            style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
+
+            {/* Mini progress card */}
+            <div className="px-4 py-4 border-b flex-shrink-0" style={{ borderColor: "#111" }}>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#444" }}>Progression</p>
+                <p className="text-xs font-black" style={{ color: lc.text }}>{donePct}%</p>
               </div>
+              <div className="h-2 rounded-full overflow-hidden mb-2" style={{ background: "#111" }}>
+                <motion.div className="h-full rounded-full" animate={{ width: `${donePct}%` }}
+                  transition={{ duration: 0.6 }} style={{ background: `linear-gradient(90deg,${lc.text}80,${lc.text})` }} />
+              </div>
+              <p className="text-[10px]" style={{ color: "#333" }}>{progress.size}/{course.chapters.length} chapitres complétés</p>
+            </div>
 
-              {/* Chapter list */}
-              <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 220px)" }}>
-                {course.chapters.map((ch, idx) => {
-                  const done   = progress.has(ch.id)
-                  const active = idx === activeIdx
-                  const ti     = chapterTypeLabel(ch.type)
-                  return (
-                    <button key={ch.id} onClick={() => setActiveIdx(idx)}
-                      className="w-full text-left px-3 py-2.5 transition-all flex items-start gap-2.5 border-b"
+            {/* Chapter list */}
+            <div className="overflow-y-auto flex-1" style={{ scrollbarWidth: "thin" }}>
+              {course.chapters.map((ch, idx) => {
+                const done   = progress.has(ch.id)
+                const active = idx === activeIdx
+                const ts     = getTypeStyle(ch.type)
+                return (
+                  <button key={ch.id} onClick={() => setActiveIdx(idx)}
+                    className="w-full text-left px-3 py-3 transition-all flex items-center gap-3 border-b"
+                    style={{
+                      borderColor: "#0a0a0a",
+                      background: active ? "rgba(255,255,255,0.05)" : "transparent",
+                      borderLeft: active ? `2px solid ${lc.text}` : "2px solid transparent",
+                    }}>
+                    {/* Icon */}
+                    <div className="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center text-sm transition-all"
                       style={{
-                        borderColor: "#0f0f0f",
-                        background: active ? `${lc.text}10` : "transparent",
-                        borderLeft: active ? `2px solid ${lc.text}` : "2px solid transparent",
+                        background: done ? "#22c55e" : active ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.04)",
+                        color: done ? "white" : active ? "white" : "#444",
+                        border: done ? "none" : `1px solid ${active ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.06)"}`,
                       }}>
-                      <div className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] mt-0.5"
-                        style={{
-                          background: done ? lc.text : active ? `${lc.text}20` : "#1a1a1a",
-                          color: done ? "#000" : active ? lc.text : "#555",
-                          border: done ? "none" : `1px solid ${active ? lc.border : "#222"}`,
-                        }}>
-                        {done ? "✓" : ch.id}
+                      {done ? "✓" : TYPE_ICONS[ch.type] ?? ch.id}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs font-semibold truncate ${active ? "text-white" : done ? "text-white/50" : "text-white/30"}`}>
+                        {ch.title}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[9px]" style={{ color: "#333" }}>{ch.duration}</span>
+                        <span className="text-[9px] font-bold" style={{ color: done ? "#4ade80" : "rgba(250,204,21,0.4)" }}>
+                          ⚡+{ch.xp_reward ?? getChapterXP(ch)}
+                        </span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-[11px] font-bold leading-snug truncate ${active ? "text-white" : "text-white/40"}`}>{ch.title}</p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-[9px]" style={{ color: "#444" }}>⏱ {ch.duration}</span>
-                          <span className="text-[9px]" title={ti.label}>{ti.icon}</span>
-                          {(ch.xp_reward || getChapterXP(ch)) > 0 && (
-                            <span className="text-[9px] font-bold" style={{ color: done ? "#4ade80" : "#facc1570" }}>
-                              +{ch.xp_reward ?? getChapterXP(ch)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
+                    </div>
+                    {active && <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse flex-shrink-0" />}
+                  </button>
+                )
+              })}
             </div>
           </div>
+        </div>
 
-          {/* ── CENTER: Main content ──────────────────────────────────────── */}
-          <div className="flex-1 min-w-0">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeIdx}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.22 }}
-                className="space-y-4">
+        {/* ── CENTER CONTENT ──────────────────────────────────────────────── */}
+        <div className="flex-1 min-w-0 flex flex-col">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeIdx}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2 }}
+              className="flex-1 space-y-4">
 
-                {/* Chapter header */}
-                <div className="rounded-2xl p-5" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
-                  <div className="flex items-start justify-between gap-4 mb-3 flex-wrap">
-                    <div>
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase"
-                          style={{ background: "#111", color: "#555", border: "1px solid #222" }}>
-                          {activeChapter.id}/{course.chapters.length}
-                        </span>
-                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase"
-                          style={{ background: `${typeInfo.color}12`, color: typeInfo.color, border: `1px solid ${typeInfo.color}25` }}>
-                          {typeInfo.icon} {typeInfo.label}
-                        </span>
-                        <span className="text-[9px]" style={{ color: "#444" }}>⏱ {activeChapter.duration}</span>
-                        <span className="text-[9px] font-bold" style={{ color: "#facc15" }}>
-                          ⚡ +{activeChapter.xp_reward ?? getChapterXP(activeChapter)} XP
-                        </span>
-                      </div>
-                      <h2 className="text-white font-black text-xl leading-tight">{activeChapter.title}</h2>
-                    </div>
-                    {isChapterDone && (
-                      <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
-                        transition={{ type: "spring", stiffness: 500 }}
-                        className="flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-xl"
-                        style={{ background: "rgba(74,222,128,0.1)", color: "#4ade80", border: "1px solid rgba(74,222,128,0.2)" }}>
-                        ✅ Complété
-                      </motion.span>
-                    )}
-                  </div>
-
-                  {/* Video player (premium) */}
-                  {activeChapter.video_url && (
-                    <VideoPlayer
-                      url={activeChapter.video_url}
-                      title={activeChapter.title}
-                      courseId={course.id}
-                      chapterId={activeChapter.id}
-                      onWatched={() => !isChapterDone && markComplete(activeChapter.id)}
-                    />
-                  )}
-
-                  {/* Text content */}
-                  {(activeChapter.type === "video" || activeChapter.type === "lecture") && !activeChapter.video_url && (
-                    <div className="text-sm leading-relaxed space-y-1">
-                      {loadingContent ? (
-                        <div className="space-y-3">{[...Array(5)].map((_, i) => <Skeleton key={i} h="h-4" w={i % 2 === 0 ? "w-full" : "w-4/5"} />)}</div>
-                      ) : chapterContent?.content ? renderMd(chapterContent.content) : null}
-                    </div>
+              {/* Chapter header card */}
+              <div className="rounded-2xl p-5" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
+                {/* Type badge + meta */}
+                <div className="flex items-center gap-2 mb-4 flex-wrap">
+                  <motion.span
+                    initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                    className="px-3 py-1 rounded-xl text-xs font-black uppercase tracking-widest"
+                    style={{ background: ts.bg, color: ts.color, border: `1px solid ${ts.border}` }}>
+                    {TYPE_ICONS[activeChapter.type] ?? "📄"} {ts.label}
+                  </motion.span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full"
+                    style={{ background: "rgba(255,255,255,0.04)", color: "#444", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    {activeIdx + 1}/{course.chapters.length}
+                  </span>
+                  <span className="text-[10px]" style={{ color: "#444" }}>⏱ {activeChapter.duration}</span>
+                  <span className="ml-auto text-sm font-black" style={{ color: "#facc15" }}>
+                    ⚡ +{activeChapter.xp_reward ?? getChapterXP(activeChapter)} XP
+                  </span>
+                  {isChapterDone && (
+                    <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 500 }}
+                      className="text-xs font-bold px-3 py-1 rounded-xl"
+                      style={{ background: "rgba(74,222,128,0.1)", color: "#4ade80", border: "1px solid rgba(74,222,128,0.2)" }}>
+                      ✅ Complété
+                    </motion.span>
                   )}
                 </div>
 
-                {/* ── Type-specific content ─────────────────────────────── */}
+                <h2 className="text-xl md:text-2xl font-black text-white mb-4 leading-tight">{activeChapter.title}</h2>
 
-                {/* VISUALIZATION */}
-                {activeChapter.type === "visualization" && activeChapter.visualization && (
-                  <div className="rounded-2xl overflow-hidden">
-                    <AnimatedVisualization
-                      type={activeChapter.visualization.type}
-                      onComplete={() => !isChapterDone && markComplete(activeChapter.id)}
-                    />
+                {/* Video player */}
+                {activeChapter.video_url && (
+                  <VideoPlayer url={activeChapter.video_url} title={activeChapter.title}
+                    courseId={course.id} chapterId={activeChapter.id}
+                    onWatched={() => !isChapterDone && markComplete(activeChapter.id)} />
+                )}
+
+                {/* Text content */}
+                {(activeChapter.type === "video" || activeChapter.type === "lecture") && !activeChapter.video_url && (
+                  <div className="text-sm leading-relaxed space-y-1">
+                    {loadingContent ? (
+                      <div className="space-y-3">{[...Array(5)].map((_, i) => <Skeleton key={i} h="h-4" w={i % 2 === 0 ? "w-full" : "w-4/5"} />)}</div>
+                    ) : chapterContent?.content ? renderMd(chapterContent.content) : null}
                   </div>
                 )}
+              </div>
 
-                {/* SANDBOX */}
-                {activeChapter.type === "sandbox" && (
-                  <TradingSandbox
-                    scenarioId={activeChapter.sandbox_config?.scenario_id}
-                    live={activeChapter.sandbox_config?.live}
-                    symbol={activeChapter.sandbox_config?.symbol ?? "AAPL"}
-                    context={activeChapter.sandbox_config?.context}
-                    question={activeChapter.sandbox_config?.question}
-                    onComplete={({ decision, correct, xp }) => {
-                      if (!isChapterDone) markComplete(activeChapter.id, undefined, xp)
-                    }}
-                  />
-                )}
+              {/* ── Type-specific content ──────────────────────────────────── */}
 
-                {/* INTERACTIVE */}
-                {activeChapter.type === "interactive" && activeChapter.interactive_config && (
-                  <InteractiveChart
-                    lessonMode={activeChapter.interactive_config.lesson_mode as any}
-                    symbol={activeChapter.interactive_config.symbol ?? "AAPL"}
-                    instruction={activeChapter.interactive_config.instruction}
-                    hint={activeChapter.interactive_config.hint}
-                    onCorrect={(xp) => !isChapterDone && markComplete(activeChapter.id, undefined, xp)}
-                    onComplete={() => {}}
-                  />
-                )}
+              {activeChapter.type === "visualization" && activeChapter.visualization && (
+                <div className="rounded-2xl overflow-hidden">
+                  <AnimatedVisualization type={activeChapter.visualization.type}
+                    onComplete={() => !isChapterDone && markComplete(activeChapter.id)} />
+                </div>
+              )}
 
-                {/* QUIZ */}
-                {activeChapter.type === "quiz" && activeChapter.quiz && !quizDone.has(activeChapter.id) && (
-                  <QuizGame
-                    questions={activeChapter.quiz as any}
-                    title={activeChapter.title}
-                    onComplete={({ score, xp, grade }) => handleQuizComplete(score, activeChapter.id)}
-                  />
-                )}
-                {activeChapter.type === "quiz" && quizDone.has(activeChapter.id) && (
-                  <div className="rounded-2xl p-6 text-center" style={{ background: "rgba(74,222,128,0.05)", border: "1px solid rgba(74,222,128,0.2)" }}>
-                    <p className="text-3xl mb-2">🎉</p>
-                    <p className="text-white font-black text-lg">Quiz complété !</p>
-                    <p className="text-white/40 text-sm mt-1">Passe au chapitre suivant</p>
+              {activeChapter.type === "sandbox" && (
+                <TradingSandbox
+                  scenarioId={activeChapter.sandbox_config?.scenario_id}
+                  live={activeChapter.sandbox_config?.live}
+                  symbol={activeChapter.sandbox_config?.symbol ?? "AAPL"}
+                  context={activeChapter.sandbox_config?.context}
+                  question={activeChapter.sandbox_config?.question}
+                  onComplete={({ xp }) => { if (!isChapterDone) markComplete(activeChapter.id, undefined, xp) }}
+                />
+              )}
+
+              {activeChapter.type === "interactive" && activeChapter.interactive_config && (
+                <InteractiveChart
+                  lessonMode={activeChapter.interactive_config.lesson_mode as any}
+                  symbol={activeChapter.interactive_config.symbol ?? "AAPL"}
+                  instruction={activeChapter.interactive_config.instruction}
+                  hint={activeChapter.interactive_config.hint}
+                  onCorrect={(xp) => !isChapterDone && markComplete(activeChapter.id, undefined, xp)}
+                  onComplete={() => {}}
+                />
+              )}
+
+              {activeChapter.type === "quiz" && activeChapter.quiz && !quizDone.has(activeChapter.id) && (
+                <QuizGame questions={activeChapter.quiz as any} title={activeChapter.title}
+                  onComplete={({ score, xp }) => handleQuizComplete(score, activeChapter.id)} />
+              )}
+              {activeChapter.type === "quiz" && quizDone.has(activeChapter.id) && (
+                <div className="rounded-2xl p-6 text-center"
+                  style={{ background: "rgba(74,222,128,0.05)", border: "1px solid rgba(74,222,128,0.2)" }}>
+                  <p className="text-3xl mb-2">🎉</p>
+                  <p className="text-white font-black text-lg">Quiz complété !</p>
+                  <p className="text-white/40 text-sm mt-1">Passe au chapitre suivant</p>
+                </div>
+              )}
+
+              {activeChapter.type === "challenge" && activeChapter.challenge && (
+                isChapterDone ? (
+                  <div className="rounded-2xl p-6 text-center"
+                    style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                    <p className="text-3xl mb-2">⚡</p>
+                    <p className="text-white font-black text-lg">Défi relevé !</p>
                   </div>
-                )}
+                ) : (
+                  <ChallengeBlock challenge={activeChapter.challenge}
+                    onComplete={() => markComplete(activeChapter.id)} />
+                )
+              )}
 
-                {/* CHALLENGE */}
-                {activeChapter.type === "challenge" && activeChapter.challenge && (
-                  isChapterDone ? (
-                    <div className="rounded-2xl p-6 text-center" style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.2)" }}>
-                      <p className="text-3xl mb-2">⚡</p>
-                      <p className="text-white font-black text-lg">Défi relevé !</p>
+              {activeChapter.type === "quiz_only" && (
+                chapterContent?.quiz?.length ? (
+                  quizDone.has(activeChapter.id) ? (
+                    <div className="rounded-2xl p-6 text-center"
+                      style={{ background: "rgba(74,222,128,0.05)", border: "1px solid rgba(74,222,128,0.2)" }}>
+                      <p className="text-3xl mb-2">✅</p><p className="text-white font-black">Quiz complété</p>
                     </div>
                   ) : (
-                    <ChallengeBlock challenge={activeChapter.challenge} onComplete={() => markComplete(activeChapter.id)} />
+                    <LegacyQuizBlock quiz={chapterContent.quiz}
+                      onComplete={score => handleQuizComplete(score, activeChapter.id)} />
                   )
-                )}
+                ) : loadingContent ? (
+                  <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} h="h-12" />)}</div>
+                ) : null
+              )}
 
-                {/* QUIZ_ONLY (legacy) */}
-                {activeChapter.type === "quiz_only" && (
-                  chapterContent?.quiz?.length ? (
-                    quizDone.has(activeChapter.id) ? (
-                      <div className="rounded-2xl p-6 text-center" style={{ background: "rgba(74,222,128,0.05)", border: "1px solid rgba(74,222,128,0.2)" }}>
-                        <p className="text-3xl mb-2">✅</p><p className="text-white font-black">Quiz complété</p>
-                      </div>
-                    ) : (
-                      <LegacyQuizBlock quiz={chapterContent.quiz} onComplete={score => handleQuizComplete(score, activeChapter.id)} />
-                    )
-                  ) : loadingContent ? (
-                    <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} h="h-12" />)}</div>
-                  ) : null
-                )}
+              {/* Key concepts */}
+              {activeChapter.key_concepts?.length > 0 && !loadingContent && (
+                <div className="rounded-xl p-4" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
+                  <p className="text-[10px] font-black uppercase tracking-widest mb-3" style={{ color: "#444" }}>🔑 Concepts clés</p>
+                  <div className="flex flex-wrap gap-2">
+                    {activeChapter.key_concepts.map(kc => (
+                      <span key={kc} className="text-[11px] font-semibold px-3 py-1 rounded-full"
+                        style={{ background: `${lc.text}10`, color: lc.text, border: `1px solid ${lc.border}` }}>
+                        {kc}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-                {/* Key concepts */}
-                {activeChapter.key_concepts?.length > 0 && !loadingContent && (
-                  <div className="rounded-xl p-4" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
-                    <p className="text-[10px] font-black uppercase tracking-widest mb-3" style={{ color: "#555" }}>🔑 Concepts clés</p>
-                    <div className="flex flex-wrap gap-2">
-                      {activeChapter.key_concepts.map(kc => (
-                        <span key={kc} className="text-[11px] font-semibold px-3 py-1 rounded-full"
-                          style={{ background: `${lc.text}10`, color: lc.text, border: `1px solid ${lc.border}` }}>
-                          {kc}
-                        </span>
-                      ))}
+              {/* Legacy quiz for video/lecture */}
+              {(activeChapter.type === "video" || activeChapter.type === "lecture") && chapterContent?.quiz?.length ? (
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: "#444" }}>🎯 Quiz du chapitre</p>
+                  {quizDone.has(activeChapter.id) ? (
+                    <div className="rounded-xl p-4 text-center"
+                      style={{ background: "rgba(74,222,128,0.06)", border: "1px solid rgba(74,222,128,0.15)" }}>
+                      <p className="text-green-400 font-bold">✓ Quiz déjà complété</p>
                     </div>
-                  </div>
-                )}
-
-                {/* Legacy API quiz (for video/lecture) */}
-                {(activeChapter.type === "video" || activeChapter.type === "lecture") && chapterContent?.quiz?.length ? (
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: "#555" }}>🎯 Quiz du chapitre</p>
-                    {quizDone.has(activeChapter.id) ? (
-                      <div className="rounded-xl p-4 text-center" style={{ background: "rgba(74,222,128,0.06)", border: "1px solid rgba(74,222,128,0.15)" }}>
-                        <p className="text-green-400 font-bold">✓ Quiz déjà complété</p>
-                      </div>
-                    ) : (
-                      <LegacyQuizBlock quiz={chapterContent.quiz} onComplete={score => handleQuizComplete(score, activeChapter.id)} />
-                    )}
-                  </div>
-                ) : null}
-
-                {/* Connect to real chart */}
-                {!lessonMode && (activeChapter.type === "visualization" || activeChapter.type === "interactive") && (
-                  <button onClick={() => router.push(`/dashboard?symbol=AAPL&lesson=${activeChapter.interactive_config?.lesson_mode ?? activeChapter.visualization?.type ?? "general"}`)}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all hover:opacity-80"
-                    style={{ background: "#0d1117", color: "#60a5fa", border: "1px solid rgba(96,165,250,0.2)" }}>
-                    📈 Voir cet indicateur sur un vrai graphe AAPL →
-                  </button>
-                )}
-
-                {/* ── Navigation Footer ──────────────────────────────────── */}
-                <div className="flex items-center justify-between pt-2 pb-6">
-                  <button onClick={() => navigate(-1)} disabled={activeIdx === 0}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-20"
-                    style={{ background: "#111", border: "1px solid #222", color: "#888" }}>
-                    ← Précédent
-                  </button>
-
-                  {/* Mark complete for text chapters */}
-                  {!isChapterDone && !loadingContent && (activeChapter.type === "video" || activeChapter.type === "lecture") && !activeChapter.video_url && !chapterContent?.quiz?.length && (
-                    <button onClick={() => markComplete(activeChapter.id)}
-                      className="px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
-                      style={{ background: "rgba(74,222,128,0.12)", color: "#4ade80", border: "1px solid rgba(74,222,128,0.2)" }}>
-                      ✓ J'ai compris
-                    </button>
-                  )}
-
-                  {/* For video with URL: handled by VideoPlayer onWatched */}
-                  {(activeChapter.type === "video" || activeChapter.type === "lecture") && activeIdx < course.chapters.length - 1 && !activeChapter.video_url && (
-                    <button onClick={completeAndNavigate}
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-80"
-                      style={{ background: `${lc.text}18`, border: `1px solid ${lc.border}`, color: lc.text }}>
-                      Continuer →
-                    </button>
-                  )}
-
-                  {/* For non-video chapters */}
-                  {activeChapter.type !== "video" && activeChapter.type !== "lecture" && (
-                    <button onClick={() => navigate(1)} disabled={activeIdx === course.chapters.length - 1}
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-20"
-                      style={{ background: `${lc.text}18`, border: `1px solid ${lc.border}`, color: lc.text }}>
-                      Suivant →
-                    </button>
+                  ) : (
+                    <LegacyQuizBlock quiz={chapterContent.quiz}
+                      onComplete={score => handleQuizComplete(score, activeChapter.id)} />
                   )}
                 </div>
+              ) : null}
 
-              </motion.div>
-            </AnimatePresence>
-          </div>
+              {/* Real chart button */}
+              {!lessonMode && (activeChapter.type === "visualization" || activeChapter.type === "interactive") && (
+                <button
+                  onClick={() => router.push(`/dashboard?symbol=AAPL&lesson=${activeChapter.interactive_config?.lesson_mode ?? activeChapter.visualization?.type ?? "general"}`)}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all hover:opacity-80"
+                  style={{ background: "#0d1117", color: "#60a5fa", border: "1px solid rgba(96,165,250,0.2)" }}>
+                  📈 Voir cet indicateur sur un vrai graphe AAPL →
+                </button>
+              )}
 
-          {/* ── RIGHT: AI Tutor ────────────────────────────────────────────── */}
-          <div className="w-72 flex-shrink-0 sticky top-4 hidden xl:flex flex-col"
-            style={{ height: "calc(100vh - 80px)" }}>
-            <AITutor
-              courseTitle={course.title}
-              chapterTitle={activeChapter.title}
-              courseId={course.id}
-              chapterId={activeChapter.id}
-              keyConcepts={activeChapter.key_concepts}
-            />
-          </div>
+              {/* ── STICKY FOOTER NAV ──────────────────────────────────────── */}
+              <div className="sticky bottom-0 flex items-center justify-between px-2 py-4 -mx-2 border-t"
+                style={{ borderColor: "rgba(255,255,255,0.05)", background: "rgba(8,8,8,0.97)", backdropFilter: "blur(12px)" }}>
 
+                {/* Prev */}
+                <motion.button
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => navigate(-1)} disabled={activeIdx === 0}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-20"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#666" }}>
+                  ← Précédent
+                </motion.button>
+
+                {/* Center dots */}
+                <div className="flex items-center gap-1.5 flex-1 justify-center mx-4 overflow-hidden">
+                  {course.chapters.map((c, i) => (
+                    <motion.button key={i}
+                      onClick={() => setActiveIdx(i)}
+                      animate={{ scale: i === activeIdx ? 1.3 : 1 }}
+                      className="rounded-full transition-all flex-shrink-0"
+                      style={{
+                        width: i === activeIdx ? 24 : 6,
+                        height: 6,
+                        background: progress.has(c.id) ? "#22c55e" : i === activeIdx ? lc.text : "rgba(255,255,255,0.1)",
+                      }}
+                    />
+                  ))}
+                </div>
+
+                {/* Mark complete for text chapters */}
+                {!isChapterDone && !loadingContent &&
+                  (activeChapter.type === "video" || activeChapter.type === "lecture") &&
+                  !activeChapter.video_url && !chapterContent?.quiz?.length && (
+                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                    onClick={() => markComplete(activeChapter.id)}
+                    className="px-4 py-2.5 rounded-xl text-sm font-black"
+                    style={{ background: "rgba(74,222,128,0.12)", color: "#4ade80", border: "1px solid rgba(74,222,128,0.2)" }}>
+                    ✓ J'ai compris
+                  </motion.button>
+                )}
+
+                {/* Continuer for video without URL */}
+                {(activeChapter.type === "video" || activeChapter.type === "lecture") &&
+                  activeIdx < course.chapters.length - 1 && !activeChapter.video_url && (
+                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                    onClick={completeAndNavigate}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black"
+                    style={{ background: `${lc.text}18`, border: `1px solid ${lc.border}`, color: lc.text }}>
+                    {saving && <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+                    Continuer →
+                  </motion.button>
+                )}
+
+                {/* Next for non-video chapters */}
+                {activeChapter.type !== "video" && activeChapter.type !== "lecture" && (
+                  <motion.button
+                    whileHover={{ scale: canProceed ? 1.02 : 1 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => navigate(1)}
+                    disabled={activeIdx === course.chapters.length - 1}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black transition-all disabled:opacity-20"
+                    style={{
+                      background: canProceed ? "#22c55e" : `${lc.text}15`,
+                      color: canProceed ? "black" : lc.text,
+                      border: `1px solid ${canProceed ? "#22c55e" : lc.border}`,
+                    }}>
+                    {saving && <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+                    Suivant {canProceed && activeChapter.xp_reward ? `(+${activeChapter.xp_reward} XP)` : ""} →
+                  </motion.button>
+                )}
+              </div>
+
+            </motion.div>
+          </AnimatePresence>
         </div>
+
+        {/* ── RIGHT AI TUTOR ──────────────────────────────────────────────── */}
+        <div className="w-[300px] flex-shrink-0 sticky top-5 self-start hidden xl:flex flex-col"
+          style={{ height: "calc(100vh - 100px)" }}>
+          <AITutor
+            courseTitle={course.title}
+            chapterTitle={activeChapter.title}
+            courseId={course.id}
+            chapterId={activeChapter.id}
+            keyConcepts={activeChapter.key_concepts}
+          />
+        </div>
+
       </div>
     </div>
   )
