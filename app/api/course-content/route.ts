@@ -118,7 +118,20 @@ Chaque question doit tester un concept différent du chapitre. L'explication doi
   return NextResponse.json({ content, quiz })
 }
 
-// ─── POST — save user progress ────────────────────────────────────────────────
+// ─── Levels system ────────────────────────────────────────────────────────────
+const LEVELS = [
+  { min: 0,     name: "Novice",    icon: "🌱" },
+  { min: 500,   name: "Apprenti",  icon: "📈" },
+  { min: 1500,  name: "Trader",    icon: "💹" },
+  { min: 3000,  name: "Expert",    icon: "🎯" },
+  { min: 6000,  name: "Master",    icon: "🏆" },
+  { min: 10000, name: "Légende",   icon: "👑" },
+]
+function getLevelForXP(xp: number) {
+  return [...LEVELS].reverse().find(l => xp >= l.min) ?? LEVELS[0]
+}
+
+// ─── POST — save user progress + update XP ───────────────────────────────────
 
 export async function POST(req: NextRequest) {
   const token = req.headers.get("authorization")?.replace("Bearer ", "")
@@ -127,21 +140,48 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser(token)
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const { course_id, chapter_id, quiz_score, time_spent } = await req.json()
+  const { course_id, chapter_id, quiz_score, time_spent, xp_earned = 0 } = await req.json()
 
-  const { error } = await supabase.from("user_progress").upsert(
+  // 1. Save progress row
+  const { error: progressError } = await supabase.from("user_progress").upsert(
     {
-      user_id: user.id,
+      user_id:      user.id,
       course_id,
       chapter_id,
-      completed: true,
-      quiz_score: quiz_score ?? null,
-      time_spent: time_spent ?? null,
+      completed:    true,
+      xp_earned:    xp_earned,
+      quiz_score:   quiz_score ?? null,
+      time_spent:   time_spent ?? null,
       completed_at: new Date().toISOString(),
     },
     { onConflict: "user_id,course_id,chapter_id" }
   )
+  if (progressError) return NextResponse.json({ error: progressError.message }, { status: 500 })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ success: true })
+  // 2. Fetch current XP + level from user_profiles
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("xp, level_name")
+    .eq("id", user.id)
+    .single()
+
+  const oldXP        = profile?.xp ?? 0
+  const oldLevelName = profile?.level_name ?? "Novice"
+  const newXP        = oldXP + xp_earned
+  const newLevel     = getLevelForXP(newXP)
+  const leveledUp    = newLevel.name !== oldLevelName
+
+  // 3. Update user_profiles with new XP + level
+  await supabase.from("user_profiles").update({
+    xp:         newXP,
+    level_name: newLevel.name,
+  }).eq("id", user.id)
+
+  return NextResponse.json({
+    success:    true,
+    new_xp:     newXP,
+    new_level:  newLevel.name,
+    level_icon: newLevel.icon,
+    leveled_up: leveledUp,
+  })
 }

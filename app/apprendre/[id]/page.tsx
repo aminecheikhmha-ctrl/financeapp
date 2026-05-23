@@ -19,6 +19,19 @@ type QuizQuestion = { question: string; options: string[]; correct: number; expl
 type ChapterContent = { content: string; quiz: QuizQuestion[] }
 type ChatMessage = { role: "user" | "assistant"; content: string }
 
+// ─── Levels ───────────────────────────────────────────────────────────────────
+const LEVELS = [
+  { min: 0,     name: "Novice",    icon: "🌱" },
+  { min: 500,   name: "Apprenti",  icon: "📈" },
+  { min: 1500,  name: "Trader",    icon: "💹" },
+  { min: 3000,  name: "Expert",    icon: "🎯" },
+  { min: 6000,  name: "Master",    icon: "🏆" },
+  { min: 10000, name: "Légende",   icon: "👑" },
+]
+function getLevelForXP(xp: number) {
+  return [...LEVELS].reverse().find(l => xp >= l.min) ?? LEVELS[0]
+}
+
 // ─── Markdown renderer ────────────────────────────────────────────────────────
 function renderMd(text: string) {
   return text.split("\n").map((line, i) => {
@@ -299,6 +312,7 @@ export default function CoursePage() {
   const [quizDone,       setQuizDone]       = useState<Set<number>>(new Set())
   const [startTime,      setStartTime]      = useState(Date.now())
   const [xpToast,        setXpToast]        = useState<number | null>(null)
+  const [levelUpToast,   setLevelUpToast]   = useState<{ name: string; icon: string } | null>(null)
   const [totalXP,        setTotalXP]        = useState(0)
   const [lessonMode,     setLessonMode]     = useState<string | null>(null)
 
@@ -370,22 +384,56 @@ export default function CoursePage() {
 
   // ── Mark complete ──────────────────────────────────────────────────────────
   async function markComplete(chapterId: number, quizScore?: number, xpOverride?: number) {
-    if (!token || !course) return
-    const timeSpent = Math.round((Date.now() - startTime) / 1000)
-    const chapter = course.chapters.find(c => c.id === chapterId)
-    const xpEarned = xpOverride ?? getChapterXP(chapter!)
-
-    await fetch("/api/course-content", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ course_id: course.id, chapter_id: chapterId, quiz_score: quizScore, time_spent: timeSpent }),
-    })
-
+    if (!course) return
+    // Optimistically update local state immediately (fast UX)
     const newProgress = new Set(progress)
+    if (newProgress.has(chapterId)) return // already done, skip
     newProgress.add(chapterId)
+    const chapter   = course.chapters.find(c => c.id === chapterId)
+    const xpEarned  = xpOverride ?? getChapterXP(chapter!)
+    const newTotalXP = totalXP + xpEarned
+
     setProgress(newProgress)
-    setTotalXP(prev => prev + xpEarned)
+    setTotalXP(newTotalXP)
     setXpToast(xpEarned)
+
+    // Dispatch event so sidebar updates immediately
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("xp-updated", { detail: { xp: newTotalXP } }))
+    }
+
+    // Persist to Supabase via API (includes XP update in user_profiles)
+    if (token) {
+      const timeSpent = Math.round((Date.now() - startTime) / 1000)
+      try {
+        const res = await fetch("/api/course-content", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            course_id:   course.id,
+            chapter_id:  chapterId,
+            quiz_score:  quizScore ?? null,
+            time_spent:  timeSpent,
+            xp_earned:   xpEarned,
+          }),
+        })
+        const data = await res.json()
+        // Show level-up notification if applicable
+        if (data.leveled_up && data.new_level) {
+          setLevelUpToast({ name: data.new_level, icon: data.level_icon ?? "🏆" })
+          setTimeout(() => setLevelUpToast(null), 4000)
+        }
+        // Sync actual XP from server (in case of discrepancy)
+        if (data.new_xp != null) {
+          setTotalXP(data.new_xp)
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("xp-updated", { detail: { xp: data.new_xp } }))
+          }
+        }
+      } catch {
+        // Optimistic update already applied — silent fail is ok
+      }
+    }
 
     // Course complete confetti
     if (newProgress.size === course.chapters.length) {
@@ -421,11 +469,57 @@ export default function CoursePage() {
     setActiveIdx(next)
   }
 
+  // Mark current chapter complete then go to next
+  async function completeAndNavigate() {
+    const ch = course!.chapters[activeIdx]
+    if (!progress.has(ch.id)) {
+      await markComplete(ch.id)
+    }
+    navigate(1)
+  }
+
   return (
     <div className="min-h-screen text-white" style={{ background: "#080808" }}>
       {/* XP Toast */}
       <AnimatePresence>
         {xpToast !== null && <XPToast xp={xpToast} onDone={() => setXpToast(null)} />}
+      </AnimatePresence>
+
+      {/* Level-up Toast */}
+      <AnimatePresence>
+        {levelUpToast && (
+          <motion.div
+            initial={{ scale: 0.5, opacity: 0, y: 40 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.8, opacity: 0, y: -20 }}
+            transition={{ type: "spring", stiffness: 350, damping: 18 }}
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl"
+            style={{ background: "linear-gradient(135deg,#1a0a2e,#0d1a1a)", border: "1px solid rgba(167,139,250,0.5)" }}
+          >
+            <span className="text-3xl">{levelUpToast.icon}</span>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#a78bfa" }}>Level Up !</p>
+              <p className="text-xl font-black text-white">Tu es maintenant {levelUpToast.name}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating XP badge (bottom-right) */}
+      <AnimatePresence>
+        {xpToast !== null && (
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed bottom-20 right-8 z-50"
+          >
+            <div className="px-4 py-2 rounded-xl font-black text-lg shadow-lg"
+              style={{ background: "#facc15", color: "#000" }}>
+              ⚡ +{xpToast} XP
+            </div>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       <div className="max-w-[1400px] mx-auto px-4 py-5">
@@ -716,20 +810,33 @@ export default function CoursePage() {
                     ← Précédent
                   </button>
 
-                  {/* Mark complete for non-interactive types */}
+                  {/* Mark complete for video chapters without a quiz */}
                   {!isChapterDone && !loadingContent && (activeChapter.type === "video" || activeChapter.type === "lecture") && !chapterContent?.quiz?.length && (
                     <button onClick={() => markComplete(activeChapter.id)}
                       className="px-4 py-2.5 rounded-xl text-sm font-bold transition"
                       style={{ background: "rgba(74,222,128,0.15)", color: "#4ade80", border: "1px solid rgba(74,222,128,0.25)" }}>
-                      ✓ Marquer comme complété
+                      ✓ J'ai compris, continuer
                     </button>
                   )}
 
-                  <button onClick={() => navigate(1)} disabled={activeIdx === course.chapters.length - 1}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition disabled:opacity-20"
-                    style={{ background: `${lc.text}18`, border: `1px solid ${lc.border}`, color: lc.text }}>
-                    Suivant →
-                  </button>
+                  {/* For video chapters: "Continuer →" marks complete + navigates */}
+                  {(activeChapter.type === "video" || activeChapter.type === "lecture") && activeIdx < course.chapters.length - 1 && (
+                    <button
+                      onClick={completeAndNavigate}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition"
+                      style={{ background: `${lc.text}18`, border: `1px solid ${lc.border}`, color: lc.text }}>
+                      Continuer →
+                    </button>
+                  )}
+
+                  {/* For other chapter types: plain Suivant */}
+                  {activeChapter.type !== "video" && activeChapter.type !== "lecture" && (
+                    <button onClick={() => navigate(1)} disabled={activeIdx === course.chapters.length - 1}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition disabled:opacity-20"
+                      style={{ background: `${lc.text}18`, border: `1px solid ${lc.border}`, color: lc.text }}>
+                      Suivant →
+                    </button>
+                  )}
                 </div>
 
               </motion.div>

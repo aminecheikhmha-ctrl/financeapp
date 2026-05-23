@@ -177,6 +177,38 @@ export default function Sidebar() {
     return () => listener.subscription.unsubscribe()
   }, [])
 
+  // Window event listener for same-tab XP sync
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (detail?.xp != null) setXp(detail.xp)
+    }
+    window.addEventListener("xp-updated", handler)
+    return () => window.removeEventListener("xp-updated", handler)
+  }, [])
+
+  // Supabase realtime subscription for cross-tab XP sync
+  useEffect(() => {
+    if (!user) return
+    const channel = supabase
+      .channel("xp-updates")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "user_profiles",
+          filter: `id=eq.${user.id}`,
+        },
+        (payload: any) => {
+          if (payload.new?.xp != null)        setXp(payload.new.xp)
+          if (payload.new?.level_name)         setLevelName(payload.new.level_name)
+        }
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [user])
+
   async function handleLogout() {
     await supabase.auth.signOut()
     document.cookie = "onboarding_done=; path=/; max-age=0"
