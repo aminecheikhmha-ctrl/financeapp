@@ -405,7 +405,7 @@ export default function Apprendre() {
               <div>
                 <p className="text-sm font-black text-white">{b.label}</p>
                 <p className="text-[10px] font-bold" style={{ color: b.unlocked ? b.color : "#444" }}>
-                  {b.unlocked ? "✓ Complété" : "🔒 Verrouillé"}
+                  {b.unlocked ? "✓ Complété" : "À compléter"}
                 </p>
               </div>
             </motion.div>
