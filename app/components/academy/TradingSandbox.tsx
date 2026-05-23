@@ -1,6 +1,7 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
+import confetti from "canvas-confetti"
 
 interface Props {
   scenarioId?: string
@@ -13,6 +14,7 @@ interface Props {
 
 interface Scenario {
   symbol: string
+  date: string
   context: string
   question: string
   correct_action: "buy" | "sell" | "wait"
@@ -20,455 +22,459 @@ interface Scenario {
   explanation: string
   indicators: { rsi: number; trend: string; volume: string }
   mood: "bullish" | "bearish" | "neutral"
+  portfolio: number
 }
 
-// ── SVG path helpers ──────────────────────────────────────────────────────────
+// ─── SVG helpers ──────────────────────────────────────────────────────────────
+const W = 520, H = 130, PAD = 18
 
-const W = 300
-const H = 120
-const PAD = 16
-
-function pointsToPath(pts: [number, number][]): string {
-  return pts.map(([x, y], i) => `${i === 0 ? "M" : "L"} ${x} ${y}`).join(" ")
-}
-
-function buildPreChart(mood: "bullish" | "bearish" | "neutral"): [number, number][] {
-  const xs = Array.from({ length: 9 }, (_, i) => PAD + (i * (W - PAD * 2)) / 8)
-  const baseY = H / 2
-  if (mood === "bullish") {
-    // price goes down then stabilises — oversold setup
-    const ys = [baseY - 10, baseY + 5, baseY + 22, baseY + 35, baseY + 40, baseY + 38, baseY + 35, baseY + 36, baseY + 34]
-    return xs.map((x, i) => [x, ys[i]])
+function buildPre(mood: "bullish" | "bearish" | "neutral"): [number, number][] {
+  const xs = Array.from({ length: 10 }, (_, i) => PAD + (i * (W - PAD * 2)) / 9)
+  const mid = H / 2
+  const ys: Record<string, number[]> = {
+    bullish: [mid - 14, mid + 2, mid + 18, mid + 30, mid + 38, mid + 40, mid + 37, mid + 35, mid + 36, mid + 34],
+    bearish: [mid + 26, mid + 12, mid - 4,  mid - 22, mid - 36, mid - 44, mid - 46, mid - 44, mid - 42, mid - 40],
+    neutral: [mid + 4,  mid - 2,  mid + 8,  mid + 3,  mid - 4,  mid + 6,  mid + 2,  mid - 14, mid - 26, mid - 32],
   }
-  if (mood === "bearish") {
-    // price goes up aggressively then flattens — overbought setup
-    const ys = [baseY + 30, baseY + 15, baseY - 5, baseY - 28, baseY - 42, baseY - 50, baseY - 52, baseY - 50, baseY - 48]
-    return xs.map((x, i) => [x, ys[i]])
-  }
-  // neutral — consolidation then breakout
-  const ys = [baseY + 5, baseY - 2, baseY + 8, baseY + 3, baseY - 4, baseY + 6, baseY + 2, baseY - 15, baseY - 30]
-  return xs.map((x, i) => [x, ys[i]])
+  return xs.map((x, i) => [x, ys[mood][i]])
 }
 
-function buildPostPoints(lastPt: [number, number], resultPositive: boolean): [number, number][] {
-  const postW = W - PAD * 2
-  const [lx, ly] = lastPt
-  const step = (W - lx) / 5
-  return Array.from({ length: 5 }, (_, i) => {
+function buildPost(last: [number, number], isPos: boolean): [number, number][] {
+  const [lx, ly] = last
+  const step = (W - lx) / 6
+  return Array.from({ length: 6 }, (_, i) => {
     const x = lx + step * (i + 1)
-    const dir = resultPositive ? -1 : 1
-    const y = ly + dir * (10 + i * 8) + (Math.sin(i * 1.3) * 4)
+    const y = ly + (isPos ? -1 : 1) * (8 + i * 9) + Math.sin(i * 1.5) * 4
     return [x, Math.max(PAD, Math.min(H - PAD, y))]
   })
 }
 
-// ── Mini frozen chart ─────────────────────────────────────────────────────────
+function toPath(pts: [number, number][]) {
+  return pts.map(([x, y], i) => `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`).join(" ")
+}
 
-function FrozenChart({ mood }: { mood: "bullish" | "bearish" | "neutral" }) {
-  const pts = buildPreChart(mood)
-  const path = pointsToPath(pts)
-  const areaPath = path + ` L ${pts[pts.length - 1][0]} ${H} L ${pts[0][0]} ${H} Z`
-  const color = mood === "bullish" ? "#4ade80" : mood === "bearish" ? "#f87171" : "#60a5fa"
+// ─── Pre Chart ────────────────────────────────────────────────────────────────
+function PreChart({ mood }: { mood: "bullish" | "bearish" | "neutral" }) {
+  const pts  = buildPre(mood)
+  const path = toPath(pts)
+  const area = path + ` L ${pts[pts.length - 1][0]} ${H} L ${pts[0][0]} ${H} Z`
+  const col  = mood === "bullish" ? "#4ade80" : mood === "bearish" ? "#f87171" : "#60a5fa"
+  const lastX = pts[pts.length - 1][0]
 
   return (
-    <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 120 }}>
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: H }}>
       <defs>
-        <linearGradient id={`grad-pre-${mood}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
-          <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+        <linearGradient id={`pg-${mood}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={col} stopOpacity="0.25" />
+          <stop offset="100%" stopColor={col} stopOpacity="0.02" />
         </linearGradient>
       </defs>
-      <path d={areaPath} fill={`url(#grad-pre-${mood})`} />
-      <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      {pts.map(([x, y], i) => (
-        <circle key={i} cx={x} cy={y} r={i === pts.length - 1 ? 4 : 2} fill={color} opacity={i === pts.length - 1 ? 1 : 0.4} />
-      ))}
+      <path d={area} fill={`url(#pg-${mood})`} />
+      <motion.path d={path} fill="none" stroke={col} strokeWidth="2.5" strokeLinecap="round"
+        initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.8, ease: "easeInOut" }} />
+      {/* "NOW" marker */}
+      <line x1={lastX} y1={PAD} x2={lastX} y2={H - PAD} stroke="#ffffff25" strokeWidth={1} strokeDasharray="4 3" />
+      <motion.text x={lastX + 6} y={PAD + 10} fill="#ffffff40" fontSize={9} fontWeight="bold"
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>
+        MAINTENANT →
+      </motion.text>
+      {/* Last price dot */}
+      <motion.circle cx={pts[pts.length - 1][0]} cy={pts[pts.length - 1][1]} r={5} fill={col}
+        animate={{ r: [4, 7, 4] }} transition={{ duration: 1.2, repeat: Infinity }} />
     </svg>
   )
 }
 
-// ── Post-reveal animated chart ────────────────────────────────────────────────
-
-function RevealChart({ mood, resultPositive, userCorrect }: { mood: "bullish" | "bearish" | "neutral"; resultPositive: boolean; userCorrect: boolean }) {
-  const [visiblePost, setVisiblePost] = useState(0)
-  const prePts = buildPreChart(mood)
-  const postPts = buildPostPoints(prePts[prePts.length - 1], resultPositive)
+// ─── Post Reveal Chart ────────────────────────────────────────────────────────
+function PostChart({ mood, resultPos }: { mood: "bullish" | "bearish" | "neutral"; resultPos: boolean }) {
+  const prePts  = buildPre(mood)
+  const postPts = buildPost(prePts[prePts.length - 1], resultPos)
+  const [visible, setVisible] = useState(0)
 
   useEffect(() => {
     const id = setInterval(() => {
-      setVisiblePost(v => {
-        if (v >= postPts.length) { clearInterval(id); return v }
-        return v + 1
-      })
-    }, 300)
+      setVisible(v => { if (v >= postPts.length) { clearInterval(id); return v }; return v + 1 })
+    }, 280)
     return () => clearInterval(id)
   }, [postPts.length])
 
-  const preColor = mood === "bullish" ? "#4ade80" : mood === "bearish" ? "#f87171" : "#60a5fa"
-  const postColor = resultPositive ? "#4ade80" : "#f87171"
-  const allPts = [...prePts, ...postPts.slice(0, visiblePost)]
-  const fullPath = pointsToPath(allPts)
-  const areaPath = fullPath + ` L ${allPts[allPts.length - 1][0]} ${H} L ${allPts[0][0]} ${H} Z`
-
-  // freeze vertical line
+  const preCol  = mood === "bullish" ? "#4ade80" : mood === "bearish" ? "#f87171" : "#60a5fa"
+  const postCol = resultPos ? "#4ade80" : "#f87171"
   const freezeX = prePts[prePts.length - 1][0]
 
+  const allPts  = [...prePts, ...postPts.slice(0, visible)]
+  const allPath = toPath(allPts)
+
   return (
-    <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 130 }}>
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: H }}>
       <defs>
-        <linearGradient id="grad-post" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={postColor} stopOpacity="0.2" />
-          <stop offset="100%" stopColor={postColor} stopOpacity="0.02" />
+        <linearGradient id="post-grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={postCol} stopOpacity="0.2" />
+          <stop offset="100%" stopColor={postCol} stopOpacity="0.01" />
         </linearGradient>
       </defs>
-      {/* pre-period */}
-      <path d={pointsToPath(prePts) + ` L ${prePts[prePts.length-1][0]} ${H} L ${prePts[0][0]} ${H} Z`} fill={`url(#grad-post)`} opacity="0.3" />
-      <path d={pointsToPath(prePts)} fill="none" stroke={preColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4 2" />
-      {/* freeze line */}
-      <line x1={freezeX} y1={PAD} x2={freezeX} y2={H - PAD} stroke="#ffffff30" strokeWidth="1" strokeDasharray="3 3" />
-      <text x={freezeX + 4} y={PAD + 10} fill="#ffffff40" fontSize="9">NOW</text>
-      {/* post period */}
-      {visiblePost > 0 && (
+
+      {/* Pre path (dashed) */}
+      <path d={toPath(prePts)} fill="none" stroke={preCol} strokeWidth={2} strokeLinecap="round" strokeDasharray="4 2" opacity={0.5} />
+
+      {/* Freeze line */}
+      <line x1={freezeX} y1={PAD} x2={freezeX} y2={H - PAD} stroke="#ffffff30" strokeWidth={1} strokeDasharray="4 3" />
+      <text x={freezeX + 5} y={PAD + 9} fill="#ffffff40" fontSize={8}>DÉCISION</text>
+
+      {/* Post path revealed */}
+      {visible > 0 && (
         <>
           <path
-            d={pointsToPath([prePts[prePts.length - 1], ...postPts.slice(0, visiblePost)]) + ` L ${postPts[visiblePost - 1][0]} ${H} L ${freezeX} ${H} Z`}
-            fill={`url(#grad-post)`}
-          />
-          <path
-            d={pointsToPath([prePts[prePts.length - 1], ...postPts.slice(0, visiblePost)])}
-            fill="none"
-            stroke={postColor}
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          {postPts.slice(0, visiblePost).map(([x, y], i) => (
-            <motion.circle
-              key={i}
-              cx={x}
-              cy={y}
-              r={3}
-              fill={postColor}
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-            />
-          ))}
+            d={toPath([prePts[prePts.length - 1], ...postPts.slice(0, visible)]) + ` L ${postPts[visible - 1][0]} ${H} L ${freezeX} ${H} Z`}
+            fill="url(#post-grad)" />
+          <motion.path
+            d={toPath([prePts[prePts.length - 1], ...postPts.slice(0, visible)])}
+            fill="none" stroke={postCol} strokeWidth={3} strokeLinecap="round" />
         </>
       )}
     </svg>
   )
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
-
-const FALLBACK_SCENARIO: Scenario = {
-  symbol: "AAPL",
-  context: "Nous sommes en janvier 2024. AAPL a corrigé de 18% depuis ses plus hauts. Le RSI sur le graphique journalier est à 27, en zone de survente extrême. Les volumes sont faibles, indiquant un manque de vendeurs supplémentaires.",
-  question: "Que décidez-vous ?",
-  correct_action: "buy",
-  result_30d: 14.8,
-  explanation: "Le RSI à 27 indiquait une survente extrême. Les acheteurs institutionnels ont profité de ce niveau pour accumuler. AAPL a rallié +14.8% dans les 30 jours suivants.",
-  indicators: { rsi: 27, trend: "Correction (-18%)", volume: "Faible" },
-  mood: "bullish",
-}
-
-const SCENARIO_MAP: Record<string, Scenario> = {
-  "aapl_rsi_oversold_2024": {
-    symbol: "AAPL",
-    context: "Nous sommes en janvier 2024. AAPL a corrigé de 18% depuis ses plus hauts de décembre 2023. Le RSI(14) est à 27 — une survente rare sur ce titre. Les volumes sont en dessous de la moyenne sur les 5 dernières séances.",
-    question: "Le RSI est à 27 et le prix est sur un support mensuel. Que faites-vous ?",
-    correct_action: "buy",
-    result_30d: 14.8,
-    explanation: "La survente extrême (RSI 27) combinée au support mensuel était un signal d'entrée classique. AAPL a rallié +14.8% dans les 30 jours suivants grâce aux rachats institutionnels.",
-    indicators: { rsi: 27, trend: "Correction (-18%)", volume: "Faible — pas de vendeurs" },
+// ─── Scenarios ────────────────────────────────────────────────────────────────
+const SCENARIOS: Record<string, Scenario> = {
+  aapl_rsi_oversold_2024: {
+    symbol: "AAPL", date: "Janvier 2024", portfolio: 100_000,
+    context: "AAPL a corrigé de 18% depuis ses plus hauts de décembre 2023. Le RSI(14) est à 27 — une survente rare sur ce titre. Les volumes sont en dessous de la moyenne : peu de vendeurs restants.",
+    question: "Le RSI est à 27 et le prix est sur un support mensuel. Que fais-tu ?",
+    correct_action: "buy", result_30d: 14.8,
+    explanation: "La survente extrême (RSI 27) sur un support mensuel était un setup d'entrée classique. Les institutionnels ont accumulé discrètement. AAPL a rallié +14.8% dans les 30 jours.",
+    indicators: { rsi: 27, trend: "Correction -18%", volume: "Faible ↓" },
     mood: "bullish",
   },
-  "nvda_overbought_2024": {
-    symbol: "NVDA",
-    context: "Nous sommes en mars 2024. NVDA a explosé de +220% en 6 mois grâce à l'engouement IA. Le RSI(14) est à 84 — en surachat extrême. Les volumes ont commencé à diminuer malgré la hausse continue du prix : divergence baissière.",
-    question: "NVDA a doublé en 6 mois, RSI à 84, volumes qui baissent. Que faites-vous ?",
-    correct_action: "sell",
-    result_30d: -12.4,
-    explanation: "La divergence baissière (prix monte, volumes baissent) combinée au RSI 84 signalait un épuisement des acheteurs. NVDA a corrigé de -12.4% dans les 30 jours suivants avant de reprendre sa hausse.",
-    indicators: { rsi: 84, trend: "Hausse explosive (+220%)", volume: "Divergence baissière" },
+  nvda_overbought_2024: {
+    symbol: "NVDA", date: "Mars 2024", portfolio: 100_000,
+    context: "NVDA a explosé de +220% en 6 mois grâce à l'engouement IA. Le RSI(14) est à 84 — surachat extrême. Les volumes commencent à diminuer malgré la hausse : divergence baissière en cours.",
+    question: "NVDA a doublé en 6 mois, RSI 84, volumes qui baissent. Que fais-tu ?",
+    correct_action: "sell", result_30d: -12.4,
+    explanation: "La divergence baissière (prix monte, volumes baissent) + RSI 84 signalait un épuisement des acheteurs. NVDA a corrigé -12.4% avant de reprendre sa hausse 6 semaines plus tard.",
+    indicators: { rsi: 84, trend: "Hausse +220%", volume: "Divergence ↓" },
     mood: "bearish",
   },
-  "btc_breakout_2024": {
-    symbol: "BTC",
-    context: "Nous sommes en octobre 2024. Bitcoin consolide depuis 3 mois dans une fourchette étroite entre $58k et $64k. Le RSI est à 52 — neutre. Les bandes de Bollinger se contractent fortement : squeeze en cours. Le halving a eu lieu 6 mois plus tôt.",
-    question: "Bitcoin consolide depuis 90 jours, squeeze Bollinger, RSI neutre. Que faites-vous ?",
-    correct_action: "buy",
-    result_30d: 31.2,
-    explanation: "Le squeeze Bollinger post-halving était un signal classique d'accumulation institutionnelle. La compression a précédé un breakout majeur. BTC a rallié +31.2% dans les 30 jours pour atteindre $84k.",
-    indicators: { rsi: 52, trend: "Consolidation (3 mois)", volume: "Neutre — compression" },
+  btc_breakout_2024: {
+    symbol: "BTC", date: "Octobre 2024", portfolio: 100_000,
+    context: "Bitcoin consolide depuis 3 mois dans une fourchette $58k–$64k. RSI neutre à 52. Les Bandes de Bollinger se contractent fortement : squeeze détecté. Le halving a eu lieu 6 mois plus tôt.",
+    question: "BTC consolide depuis 90 jours, squeeze Bollinger, RSI neutre. Que fais-tu ?",
+    correct_action: "buy", result_30d: 31.2,
+    explanation: "Le squeeze Bollinger post-halving était un signal d'accumulation institutionnelle classique. BTC a breaké à la hausse avec violence, ralliant +31% en 30 jours vers $84k.",
+    indicators: { rsi: 52, trend: "Consolidation 3 mois", volume: "Compression" },
     mood: "neutral",
   },
 }
 
-export default function TradingSandbox({ scenarioId, live = false, symbol, context, question, onComplete }: Props) {
-  const [scenario, setScenario] = useState<Scenario | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [decision, setDecision] = useState<string | null>(null)
-  const [phase, setPhase] = useState<"decide" | "waiting" | "reveal">("decide")
-  const [xpEarned, setXpEarned] = useState(0)
+const FALLBACK: Scenario = SCENARIOS.aapl_rsi_oversold_2024
+
+// ─── Context Reveal Lines ─────────────────────────────────────────────────────
+function ContextReveal({ scenario, onReady }: { scenario: Scenario; onReady: () => void }) {
+  const [lineIdx, setLineIdx] = useState(0)
+  const lines = [
+    `📅 ${scenario.date}`,
+    `${scenario.symbol} — ${scenario.indicators.trend}`,
+    `RSI(14) : ${scenario.indicators.rsi}`,
+    `Volume : ${scenario.indicators.volume}`,
+    `💼 Tu gères $${scenario.portfolio.toLocaleString()}`,
+    `Que décides-tu ?`,
+  ]
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true)
-      try {
-        if (scenarioId && SCENARIO_MAP[scenarioId]) {
-          setScenario(SCENARIO_MAP[scenarioId])
-        } else if (scenarioId) {
-          const res = await fetch(`/api/academy/scenario?id=${scenarioId}`)
-          if (res.ok) {
-            const data = await res.json()
-            setScenario(data)
-          } else {
-            setScenario(FALLBACK_SCENARIO)
-          }
-        } else {
-          setScenario({
-            ...FALLBACK_SCENARIO,
-            symbol: symbol ?? FALLBACK_SCENARIO.symbol,
-            context: context ?? FALLBACK_SCENARIO.context,
-            question: question ?? FALLBACK_SCENARIO.question,
-          })
-        }
-      } catch {
-        setScenario(FALLBACK_SCENARIO)
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
+    if (lineIdx >= lines.length) { setTimeout(onReady, 400); return }
+    const t = setTimeout(() => setLineIdx(i => i + 1), 650)
+    return () => clearTimeout(t)
+  }, [lineIdx, lines.length, onReady])
+
+  return (
+    <div className="flex flex-col items-center justify-center gap-4 py-12 min-h-[240px]">
+      {lines.slice(0, lineIdx).map((line, i) => (
+        <motion.p key={i}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
+          className="text-center font-black"
+          style={{
+            color: i === lines.length - 1 ? "#facc15" : i === 0 ? "#60a5fa" : "#ffffff",
+            fontSize: i === 0 ? 13 : i === lines.length - 1 ? 18 : 15,
+            letterSpacing: i === 0 ? "0.1em" : "normal",
+            opacity: i < lineIdx - 2 ? 0.5 : 1,
+          }}>
+          {line}
+        </motion.p>
+      ))}
+      {lineIdx < lines.length && (
+        <motion.div className="flex gap-1" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity }}>
+          {[0, 1, 2].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full bg-white/30" />)}
+        </motion.div>
+      )}
+    </div>
+  )
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+export default function TradingSandbox({ scenarioId, live = false, symbol, context, question, onComplete }: Props) {
+  const [scenario, setScenario] = useState<Scenario | null>(null)
+  const [loading,  setLoading]  = useState(true)
+  const [cinemaReady, setCinemaReady] = useState(false)
+  const [decision, setDecision] = useState<string | null>(null)
+  const [phase,    setPhase]    = useState<"cinema" | "decide" | "waiting" | "reveal">("cinema")
+  const [xpEarned, setXpEarned] = useState(0)
+  const [countdown, setCountdown] = useState(30)
+  const cdRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    setLoading(true)
+    const sc = scenarioId && SCENARIOS[scenarioId]
+      ? SCENARIOS[scenarioId]
+      : scenarioId
+      ? { ...FALLBACK, symbol: symbol ?? FALLBACK.symbol, context: context ?? FALLBACK.context, question: question ?? FALLBACK.question }
+      : { ...FALLBACK, symbol: symbol ?? FALLBACK.symbol, context: context ?? FALLBACK.context, question: question ?? FALLBACK.question }
+    setScenario(sc)
+    setLoading(false)
   }, [scenarioId, symbol, context, question])
+
+  // Optional countdown during decision phase
+  useEffect(() => {
+    if (phase !== "decide") return
+    setCountdown(30)
+    cdRef.current = setInterval(() => {
+      setCountdown(c => { if (c <= 1) { clearInterval(cdRef.current!); return 0 }; return c - 1 })
+    }, 1000)
+    return () => { if (cdRef.current) clearInterval(cdRef.current) }
+  }, [phase])
 
   const handleDecision = (d: string) => {
     if (!scenario || phase !== "decide") return
+    if (cdRef.current) clearInterval(cdRef.current)
     setDecision(d)
     setPhase("waiting")
     setTimeout(() => {
-      setPhase("reveal")
       const correct = d === scenario.correct_action
-      const xp = correct ? 200 : 50
+      const xp = correct ? 200 : 60
       setXpEarned(xp)
+      setPhase("reveal")
+      if (correct) {
+        confetti({ particleCount: 80, spread: 70, origin: { y: 0.4 }, colors: ["#4ade80", "#facc15", "#60a5fa"] })
+      }
       onComplete?.({ decision: d, correct, xp })
-    }, 2200)
+    }, 2400)
   }
 
   if (loading || !scenario) {
     return (
-      <div className="flex items-center justify-center h-48">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full"
-        />
+      <div className="flex items-center justify-center h-48 rounded-2xl" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
+        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          className="w-8 h-8 rounded-full border-2 border-t-transparent" style={{ borderColor: "#4ade80" }} />
       </div>
     )
   }
 
-  const isCorrect = decision === scenario.correct_action
-  const resultPositive = scenario.result_30d > 0
-  const userBenefited =
-    (decision === "buy" && resultPositive) ||
-    (decision === "sell" && !resultPositive) ||
-    (decision === "wait" && Math.abs(scenario.result_30d) < 5)
+  const isCorrect  = decision === scenario.correct_action
+  const resultPos  = scenario.result_30d > 0
+  const gain       = Math.abs(Math.round(scenario.portfolio * scenario.result_30d / 100))
 
   return (
-    <div className="rounded-xl border border-white/10 bg-[#0d1117] overflow-hidden">
+    <div className="rounded-2xl overflow-hidden" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-white/[0.02]">
+      <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "#111" }}>
         <div className="flex items-center gap-2">
-          <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+          <span className="px-2 py-0.5 rounded-full text-xs font-black"
+            style={{ background: "rgba(96,165,250,0.15)", color: "#60a5fa", border: "1px solid rgba(96,165,250,0.25)" }}>
             {scenario.symbol}
           </span>
-          <span className="text-xs text-white/40">Simulateur historique</span>
+          <span className="text-xs font-bold" style={{ color: "#555" }}>Simulateur historique</span>
         </div>
         {live && (
-          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-500/20 text-red-400 border border-red-500/30">
+          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold"
+            style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }}>
             <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
             Mode Live
           </span>
         )}
       </div>
 
-      <div className="p-4 space-y-4">
-        {/* Context */}
-        <div className="rounded-lg bg-white/[0.03] border border-white/[0.07] p-3">
-          <p className="text-sm text-white/75 leading-relaxed">{scenario.context}</p>
-        </div>
-
-        {/* Indicators */}
-        <div className="grid grid-cols-3 gap-2">
-          {Object.entries(scenario.indicators).map(([key, val]) => {
-            const label = key === "rsi" ? "RSI(14)" : key === "trend" ? "Tendance" : "Volume"
-            const rsiNum = key === "rsi" ? Number(val) : null
-            const color = rsiNum !== null
-              ? rsiNum > 70 ? "text-red-400 border-red-500/30 bg-red-500/10"
-              : rsiNum < 30 ? "text-green-400 border-green-500/30 bg-green-500/10"
-              : "text-yellow-400 border-yellow-500/30 bg-yellow-500/10"
-              : "text-white/60 border-white/10 bg-white/[0.03]"
-            return (
-              <div key={key} className={`rounded-lg border p-2 text-center ${color}`}>
-                <div className="text-[10px] uppercase tracking-wide opacity-70 mb-0.5">{label}</div>
-                <div className="text-sm font-bold">{String(val)}</div>
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Mini chart */}
-        <div className="rounded-lg bg-black/40 border border-white/[0.06] px-2 pt-2 pb-1">
-          <div className="text-[10px] text-white/30 mb-1 px-1">Graphique 30 derniers jours — zone de décision ▼</div>
-          <FrozenChart mood={scenario.mood} />
-        </div>
-
-        {/* Question */}
-        <p className="text-sm font-medium text-white/90 text-center">{scenario.question}</p>
-
-        {/* Decisions */}
+      <div className="p-4">
         <AnimatePresence mode="wait">
-          {phase === "decide" && (
-            <motion.div
-              key="buttons"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              className="grid grid-cols-3 gap-3"
-            >
-              <button
-                onClick={() => handleDecision("buy")}
-                className="flex flex-col items-center gap-1 py-3 px-2 rounded-xl border border-green-500/40 bg-green-500/10 text-green-400 hover:bg-green-500/20 hover:border-green-400/60 transition-all font-bold text-sm"
-              >
-                <span className="text-xl">📈</span>
-                ACHETER
-              </button>
-              <button
-                onClick={() => handleDecision("sell")}
-                className="flex flex-col items-center gap-1 py-3 px-2 rounded-xl border border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:border-red-400/60 transition-all font-bold text-sm"
-              >
-                <span className="text-xl">📉</span>
-                VENDRE
-              </button>
-              <button
-                onClick={() => handleDecision("wait")}
-                className="flex flex-col items-center gap-1 py-3 px-2 rounded-xl border border-yellow-500/40 bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20 hover:border-yellow-400/60 transition-all font-bold text-sm"
-              >
-                <span className="text-xl">⏸️</span>
-                ATTENDRE
-              </button>
+
+          {/* Phase: Cinema */}
+          {phase === "cinema" && (
+            <motion.div key="cinema" exit={{ opacity: 0 }}>
+              <ContextReveal scenario={scenario} onReady={() => { setCinemaReady(true); setPhase("decide") }} />
             </motion.div>
           )}
 
+          {/* Phase: Decide */}
+          {phase === "decide" && (
+            <motion.div key="decide" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+              {/* Context */}
+              <div className="rounded-xl px-4 py-3 text-sm leading-relaxed"
+                style={{ background: "#111", border: "1px solid #1a1a1a", color: "#ccc" }}>
+                {scenario.context}
+              </div>
+
+              {/* Indicators */}
+              <div className="grid grid-cols-3 gap-2">
+                {Object.entries(scenario.indicators).map(([key, val]) => {
+                  const label    = key === "rsi" ? "RSI(14)" : key === "trend" ? "Tendance" : "Volume"
+                  const rsiNum   = key === "rsi" ? Number(val) : null
+                  const isHot    = rsiNum !== null && rsiNum > 70
+                  const isCold   = rsiNum !== null && rsiNum < 30
+                  const col      = isHot ? "#f87171" : isCold ? "#4ade80" : "#60a5fa"
+                  return (
+                    <div key={key} className="rounded-xl p-2.5 text-center"
+                      style={{ background: `${col}10`, border: `1px solid ${col}30` }}>
+                      <div className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: `${col}99` }}>{label}</div>
+                      <div className="text-sm font-black" style={{ color: col }}>{String(val)}</div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Chart */}
+              <div className="rounded-xl overflow-hidden" style={{ background: "#0a0a0a", border: "1px solid #111" }}>
+                <div className="text-[9px] px-3 pt-2 pb-0 font-bold uppercase tracking-widest" style={{ color: "#444" }}>
+                  Graphique — 30 derniers jours
+                </div>
+                <PreChart mood={scenario.mood} />
+              </div>
+
+              {/* Countdown */}
+              {countdown > 0 && countdown < 25 && (
+                <div className="flex justify-center">
+                  <span className="text-xs font-bold" style={{ color: countdown < 10 ? "#f87171" : "#555" }}>
+                    ⏱ {countdown}s pour décider
+                  </span>
+                </div>
+              )}
+
+              {/* Decision buttons */}
+              <p className="text-sm font-black text-white text-center">{scenario.question}</p>
+              <div className="grid grid-cols-3 gap-3">
+                {([
+                  { d: "buy",  label: "ACHETER",  icon: "📈", col: "#4ade80" },
+                  { d: "sell", label: "VENDRE",   icon: "📉", col: "#f87171" },
+                  { d: "wait", label: "ATTENDRE", icon: "⏸️", col: "#facc15" },
+                ] as const).map(({ d, label, icon, col }) => (
+                  <motion.button key={d} onClick={() => handleDecision(d)}
+                    whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.95 }}
+                    className="flex flex-col items-center gap-2 py-4 rounded-xl font-black text-sm transition-all"
+                    style={{ background: `${col}10`, border: `2px solid ${col}35`, color: col }}>
+                    <span className="text-2xl">{icon}</span>
+                    {label}
+                  </motion.button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Phase: Waiting */}
           {phase === "waiting" && (
-            <motion.div
-              key="waiting"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex flex-col items-center gap-3 py-6"
-            >
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                className="text-3xl"
-              >
+            <motion.div key="waiting"
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col items-center gap-5 py-14">
+              <motion.div className="text-5xl"
+                animate={{ rotate: [0, 15, -15, 0], scale: [1, 1.1, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}>
                 ⏳
               </motion.div>
-              <p className="text-white/60 text-sm font-medium">Le temps passe...</p>
-              <div className="w-32 h-1 rounded-full bg-white/10 overflow-hidden">
-                <motion.div
-                  initial={{ width: "0%" }}
-                  animate={{ width: "100%" }}
-                  transition={{ duration: 2.1 }}
-                  className="h-full bg-blue-400 rounded-full"
-                />
+              <div className="text-center">
+                <p className="text-white font-black text-lg">Le temps passe…</p>
+                <p className="text-white/30 text-sm mt-1">30 jours s'écoulent</p>
               </div>
-              <p className="text-white/30 text-xs">30 jours s&apos;écoulent...</p>
+              <div className="w-48 h-1.5 rounded-full overflow-hidden" style={{ background: "#1a1a1a" }}>
+                <motion.div className="h-full rounded-full"
+                  style={{ background: "linear-gradient(90deg,#60a5fa,#4ade80)" }}
+                  initial={{ width: "0%" }} animate={{ width: "100%" }}
+                  transition={{ duration: 2.3, ease: "easeInOut" }} />
+              </div>
+              {/* Calendar days counting */}
+              {[5, 10, 15, 20, 25, 30].map((day, i) => (
+                <motion.span key={day} className="absolute text-white/10 text-xs font-bold"
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: [0, 0.5, 0], scale: [0.5, 1, 0.8] }}
+                  transition={{ delay: i * 0.35, duration: 0.6 }}
+                  style={{ left: `${15 + i * 13}%`, top: "50%" }}>
+                  J+{day}
+                </motion.span>
+              ))}
             </motion.div>
           )}
 
-          {phase === "reveal" && (
-            <motion.div
-              key="reveal"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
+          {/* Phase: Reveal */}
+          {phase === "reveal" && decision !== null && (
+            <motion.div key="reveal"
+              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
               transition={{ type: "spring", bounce: 0.3 }}
-              className="space-y-4"
-            >
-              {/* Big result number */}
+              className="space-y-4">
+
+              {/* Big result */}
               <div className="flex flex-col items-center gap-2 py-4">
                 <motion.div
                   initial={{ scale: 0.5, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.1, type: "spring", bounce: 0.5 }}
-                  className={`text-5xl font-black ${resultPositive ? "text-green-400" : "text-red-400"}`}
-                >
-                  {resultPositive ? "+" : ""}{scenario.result_30d}%
+                  transition={{ delay: 0.1, type: "spring", stiffness: 280, damping: 18 }}
+                  className="text-6xl font-black"
+                  style={{ color: resultPos ? "#4ade80" : "#f87171" }}>
+                  {resultPos ? "+" : ""}{scenario.result_30d}%
                 </motion.div>
-                <p className="text-white/50 text-xs">Performance à 30 jours</p>
+                <p className="text-white/40 text-xs">Performance à 30 jours</p>
+
+                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.3, type: "spring" }}
+                  className="font-black text-lg"
+                  style={{ color: resultPos ? "#4ade80" : "#f87171" }}>
+                  {resultPos ? `+$${gain.toLocaleString()}` : `-$${gain.toLocaleString()}`}
+                </motion.div>
               </div>
 
               {/* Verdict */}
               <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className={`rounded-xl border p-4 text-center ${
-                  isCorrect
-                    ? "border-green-500/40 bg-green-500/10"
-                    : "border-red-500/30 bg-red-500/[0.07]"
-                }`}
-              >
-                <div className="text-2xl mb-1">{isCorrect ? "🎯" : "😬"}</div>
-                <p className={`text-lg font-bold mb-1 ${isCorrect ? "text-green-400" : "text-red-400"}`}>
-                  {isCorrect ? "Parfait !" : "Pas cette fois..."}
+                initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="rounded-2xl p-4 text-center"
+                style={{
+                  background: isCorrect ? "rgba(74,222,128,0.07)" : "rgba(248,113,113,0.07)",
+                  border: `1px solid ${isCorrect ? "rgba(74,222,128,0.25)" : "rgba(248,113,113,0.2)"}`,
+                }}>
+                <div className="text-3xl mb-2">{isCorrect ? "🎯" : "😬"}</div>
+                <p className="font-black text-lg mb-2" style={{ color: isCorrect ? "#4ade80" : "#f87171" }}>
+                  {isCorrect ? "Excellent jugement !" : "Pas cette fois…"}
                 </p>
-                {isCorrect && (
-                  <div className="flex justify-center gap-1 mb-2 text-lg">
-                    {"🎉✨🏆🎊⭐".split("").map((e, i) => (
-                      <motion.span
-                        key={i}
-                        initial={{ y: 0, opacity: 0 }}
-                        animate={{ y: [-8, 0], opacity: 1 }}
-                        transition={{ delay: 0.4 + i * 0.08 }}
-                      >
-                        {e}
-                      </motion.span>
-                    ))}
-                  </div>
-                )}
-                <p className="text-sm text-white/70 leading-relaxed">{scenario.explanation}</p>
+                <p className="text-sm leading-relaxed" style={{ color: "#aaa" }}>{scenario.explanation}</p>
               </motion.div>
 
               {/* Post chart */}
-              <div className="rounded-lg bg-black/40 border border-white/[0.06] px-2 pt-2 pb-1">
-                <div className="text-[10px] text-white/30 mb-1 px-1">Évolution sur les 30 jours suivants ▼</div>
-                <RevealChart mood={scenario.mood} resultPositive={resultPositive} userCorrect={isCorrect} />
+              <div className="rounded-xl overflow-hidden" style={{ background: "#0a0a0a", border: "1px solid #111" }}>
+                <div className="text-[9px] px-3 pt-2 font-bold uppercase tracking-widest" style={{ color: "#444" }}>
+                  Évolution sur les 30 jours suivants
+                </div>
+                <PostChart mood={scenario.mood} resultPos={resultPos} />
               </div>
 
-              {/* XP badge */}
+              {/* XP */}
               <motion.div
-                initial={{ scale: 0, rotate: -15 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ delay: 0.5, type: "spring", bounce: 0.6 }}
-                className="flex justify-center"
-              >
-                <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-yellow-500/40 bg-yellow-500/10">
-                  <span className="text-yellow-400 font-black text-lg">+{xpEarned} XP</span>
-                  <span className="text-yellow-400 text-sm">gagnés</span>
+                initial={{ scale: 0, rotate: -12 }} animate={{ scale: 1, rotate: 0 }}
+                transition={{ delay: 0.5, type: "spring", stiffness: 300 }}
+                className="flex justify-center">
+                <div className="flex items-center gap-2.5 px-6 py-3 rounded-2xl"
+                  style={{ background: "rgba(250,204,21,0.1)", border: "1px solid rgba(250,204,21,0.3)" }}>
+                  <span className="text-2xl">⚡</span>
+                  <span className="text-xl font-black" style={{ color: "#facc15" }}>+{xpEarned} XP</span>
+                  <span className="text-sm text-white/40">gagnés</span>
                 </div>
               </motion.div>
 
-              {/* Live mode simplified note */}
-              {live && (
-                <p className="text-center text-xs text-white/30">
-                  Mode Live — résultat simulé basé sur les conditions actuelles
-                </p>
+              {!isCorrect && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}
+                  className="rounded-xl px-4 py-3 text-sm text-center"
+                  style={{ background: "rgba(96,165,250,0.06)", border: "1px solid rgba(96,165,250,0.15)", color: "#60a5fa" }}>
+                  💡 L'échec est la meilleure école — tu gardes les XP pour avoir essayé !
+                </motion.div>
               )}
             </motion.div>
           )}
+
         </AnimatePresence>
       </div>
     </div>

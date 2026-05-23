@@ -16,6 +16,7 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 export async function GET(req: NextRequest) {
   const course_id   = req.nextUrl.searchParams.get("course_id")
   const chapter_id  = Number(req.nextUrl.searchParams.get("chapter_id"))
+  const type        = req.nextUrl.searchParams.get("type") // "summary" | "content" | undefined
 
   if (!course_id || !chapter_id) {
     return NextResponse.json({ error: "course_id and chapter_id required" }, { status: 400 })
@@ -26,6 +27,39 @@ export async function GET(req: NextRequest) {
 
   if (!course || !chapter) {
     return NextResponse.json({ error: "Course or chapter not found" }, { status: 404 })
+  }
+
+  // ── type=summary: return 5 key points for VideoPlayer ──────────────────────
+  if (type === "summary") {
+    try {
+      const completion = await groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        max_tokens: 400,
+        temperature: 0.3,
+        messages: [{
+          role: "user",
+          content: `Tu es un tuteur expert en finance/trading. Génère exactement 5 points clés (1 phrase chacun, max 15 mots) pour ce chapitre.
+
+Cours : ${course.title}
+Chapitre : "${chapter.title}"
+Concepts : ${chapter.key_concepts.join(", ")}
+
+Réponds UNIQUEMENT avec un JSON array de 5 strings, sans markdown ni explication :
+["Point 1","Point 2","Point 3","Point 4","Point 5"]`,
+        }],
+      })
+      const raw = completion.choices[0]?.message?.content ?? ""
+      const match = raw.match(/\[[\s\S]*?\]/)
+      if (match) {
+        const summary = JSON.parse(match[0]) as string[]
+        return NextResponse.json({ summary: summary.slice(0, 5) })
+      }
+    } catch {}
+    // Fallback summary from key concepts
+    const summary = chapter.key_concepts.slice(0, 5).map(k =>
+      `Maîtrisez le concept de ${k} pour ce chapitre.`
+    )
+    return NextResponse.json({ summary })
   }
 
   // Check Supabase cache first
