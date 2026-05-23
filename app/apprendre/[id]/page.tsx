@@ -104,6 +104,55 @@ function VideoPlayer({ url, title }: { url: string; title: string }) {
   )
 }
 
+// ─── Challenge Block ──────────────────────────────────────────────────────────
+function ChallengeBlock({ challenge, onComplete }: { challenge: { time_limit: number; task: string; symbol: string; type: string }; onComplete: () => void }) {
+  const [timeLeft, setTimeLeft] = useState(challenge.time_limit)
+  const [started, setStarted] = useState(false)
+  const [done, setDone] = useState(false)
+
+  useEffect(() => {
+    if (!started || done) return
+    if (timeLeft <= 0) { setDone(true); return }
+    const t = setTimeout(() => setTimeLeft(t => t - 1), 1000)
+    return () => clearTimeout(t)
+  }, [started, timeLeft, done])
+
+  const pct = (timeLeft / challenge.time_limit) * 100
+  const color = pct > 50 ? "#4ade80" : pct > 20 ? "#facc15" : "#ef4444"
+
+  return (
+    <div className="rounded-2xl p-6 space-y-4" style={{ background: "#0d0d0d", border: "1px solid rgba(239,68,68,0.3)" }}>
+      <div className="flex items-center gap-3">
+        <span className="text-2xl">⚡</span>
+        <div>
+          <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "#ef4444" }}>Défi chronométré</p>
+          <p className="text-white font-black text-lg">{challenge.task}</p>
+        </div>
+        <div className="ml-auto text-center">
+          <p className="text-3xl font-black" style={{ color }}>{timeLeft}s</p>
+        </div>
+      </div>
+      <div className="h-2 rounded-full overflow-hidden" style={{ background: "#1a1a1a" }}>
+        <motion.div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
+      </div>
+      <div className="rounded-xl p-3 text-sm" style={{ background: "#111", border: "1px solid #1a1a1a" }}>
+        <p style={{ color: "#aaa" }}>📊 Actif : <span className="text-white font-bold">{challenge.symbol}</span></p>
+      </div>
+      {!started ? (
+        <button onClick={() => setStarted(true)} className="w-full py-3 rounded-xl font-black text-sm"
+          style={{ background: "rgba(239,68,68,0.15)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)" }}>
+          ⚡ Lancer le défi →
+        </button>
+      ) : (
+        <button onClick={() => { onComplete() }} className="w-full py-3 rounded-xl font-black text-sm"
+          style={{ background: "rgba(74,222,128,0.15)", color: "#4ade80", border: "1px solid rgba(74,222,128,0.3)" }}>
+          ✅ J'ai terminé !
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ─── Legacy Quiz Block (for course-content API quizzes) ───────────────────────
 function LegacyQuizBlock({ quiz, onComplete }: { quiz: QuizQuestion[]; onComplete: (score: number) => void }) {
   const [current, setCurrent] = useState(0)
@@ -583,6 +632,18 @@ export default function CoursePage() {
                     <p className="text-white font-black text-lg">Quiz complété !</p>
                     <p className="text-gray-500 text-sm mt-1">Passe au chapitre suivant</p>
                   </div>
+                )}
+
+                {/* CHALLENGE */}
+                {activeChapter.type === "challenge" && activeChapter.challenge && (
+                  isChapterDone ? (
+                    <div className="rounded-2xl p-6 text-center" style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                      <p className="text-3xl mb-2">⚡</p>
+                      <p className="text-white font-black text-lg">Défi relevé !</p>
+                    </div>
+                  ) : (
+                    <ChallengeBlock challenge={activeChapter.challenge} onComplete={() => markComplete(activeChapter.id)} />
+                  )
                 )}
 
                 {/* QUIZ_ONLY (legacy API quiz) */}
