@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
+// Routes that require hard auth (cookie-based redirect)
+const HARD_PROTECTED = ["/portfolio", "/reports", "/profil", "/parametres", "/coach"]
+
 // Routes that require the onboarding_done cookie (soft auth gate)
 // Real auth is enforced client-side via supabase.auth.getUser() in each page.
 // Supabase stores sessions in localStorage (not cookies), so we use onboarding_done
 // as a lightweight gate to avoid flashing protected pages to obviously unauthenticated users.
+// NOTE: /dashboard, /signaux, /analyses, /apprendre are now accessible in demo mode (no gate)
 const PROTECTED_ROUTES = [
-  "/dashboard",
   "/portfolio",
   "/signaux",
   "/analyses",
@@ -16,10 +19,22 @@ const PROTECTED_ROUTES = [
 ]
 
 // Public routes that bypass even the soft gate
-const PUBLIC_ROUTES = ["/login", "/signup", "/onboarding", "/auth", "/pricing", "/preuves", "/"]
+const PUBLIC_ROUTES = ["/login", "/signup", "/onboarding", "/auth", "/pricing", "/preuves", "/", "/dashboard"]
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // ── Hard auth gate for sensitive routes ────────────────────────────────────
+  const isHardProtected = HARD_PROTECTED.some(
+    (route) => pathname === route || pathname.startsWith(route + "/")
+  )
+  if (isHardProtected) {
+    const token = request.cookies.get("sb-access-token")?.value
+      || request.cookies.get("supabase-auth-token")?.value
+    if (!token) {
+      return NextResponse.redirect(new URL("/login", request.url))
+    }
+  }
 
   // ── Soft auth gate (onboarding_done cookie) ────────────────────────────────
   const isProtected = PROTECTED_ROUTES.some(

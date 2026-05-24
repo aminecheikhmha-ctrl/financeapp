@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import Groq from "groq-sdk"
 import { createClient } from "@supabase/supabase-js"
+import { rateLimit, getClientIP } from "@/lib/rate-limit"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -771,7 +772,16 @@ async function processAsset(asset: Asset): Promise<SignalResult | null> {
 
 // ─── Route handler ─────────────────────────────────────────────────────────────
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const ip = getClientIP(req as any)
+  const rl = rateLimit(`signals:${ip}`, 20, 60_000)
+  if (!rl.success) {
+    return NextResponse.json({ error: "Trop de requêtes. Réessaie dans une minute." }, {
+      status: 429,
+      headers: { "Retry-After": "60", "X-RateLimit-Remaining": "0" },
+    })
+  }
+
   // Check Supabase cache (10 min)
   try {
     const { data: cached } = await supabase

@@ -93,6 +93,9 @@ export default function Dashboard() {
   const [analyticsOpen, setAnalyticsOpen] = useState(false)
   const [perfSnapshots, setPerfSnapshots] = useState<{ date: string; daily_pnl: number; daily_pnl_pct: number; portfolio_value: number }[]>([])
   const [perfAlerts, setPerfAlerts] = useState<string[]>([])
+  const [isDemo, setIsDemo] = useState(false)
+  const [demoLoaded, setDemoLoaded] = useState(false)
+  const [showSignupModal, setShowSignupModal] = useState(false)
 
   const searchTimeout = useRef<any>(null)
 
@@ -101,10 +104,29 @@ export default function Dashboard() {
     return data.session?.access_token
   }
 
+  async function loadDemoData() {
+    try {
+      const [quoteRes, signalsRes] = await Promise.all([
+        fetch("/api/quote?symbol=AAPL"),
+        fetch("/api/signals"),
+      ])
+      if (quoteRes.ok) {
+        const quoteData = await quoteRes.json()
+        if (!quoteData.error) setActiveData(quoteData)
+      }
+    } catch {}
+    setDemoLoaded(true)
+  }
+
   // Auth
   useEffect(() => {
     supabase.auth.getSession().then(({ data: session }) => {
-      if (session.session?.access_token) setToken(session.session.access_token)
+      if (session.session?.access_token) {
+        setToken(session.session.access_token)
+      } else {
+        setIsDemo(true)
+        loadDemoData()
+      }
     })
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) return
@@ -461,6 +483,56 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen page-enter" style={{ background: "var(--bg-canvas)" }}>
 
+      {/* ── Demo banner ──────────────────────────────────────────────────── */}
+      {isDemo && (
+        <div style={{ background: "linear-gradient(135deg, #0a1628, #0d1f0d)", borderBottom: "1px solid rgba(34,197,94,0.15)" }} className="relative">
+          {/* Animated particles */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="absolute w-1 h-1 rounded-full bg-green-400/20 animate-pulse"
+                style={{ left: `${15 + i * 15}%`, top: `${20 + (i % 3) * 30}%`, animationDelay: `${i * 0.5}s` }} />
+            ))}
+          </div>
+          <div className="relative flex items-center justify-between px-5 py-3 flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.3)" }}>
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
+                </span>
+                <span className="text-[10px] text-green-400 font-black tracking-wider">MODE DÉMO</span>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white">Tu explores FinanceApp avec de vraies données de marché</p>
+                <p className="text-[11px] text-white/40">Graphes live · Signaux IA · $100,000 fictifs · Crée un compte pour trader</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <a href="/login" className="px-4 py-2 rounded-xl text-sm font-semibold text-white/60 hover:text-white transition border border-white/10">Se connecter</a>
+              <a href="/signup" className="px-4 py-2 rounded-xl text-sm font-black text-black" style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}>Créer un compte gratuit →</a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Signup modal (demo mode) ─────────────────────────────────────── */}
+      {showSignupModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-sm rounded-3xl p-7 text-center" style={{ background: "#0d0d0d", border: "1px solid rgba(34,197,94,0.2)" }}>
+            <div className="w-16 h-16 rounded-2xl mx-auto mb-5 flex items-center justify-center text-3xl" style={{ background: "rgba(34,197,94,0.1)" }}>🚀</div>
+            <h2 className="text-xl font-black text-white mb-2">Prêt à trader pour de vrai ?</h2>
+            <p className="text-sm text-white/40 leading-relaxed mb-6">Crée ton compte gratuit en 30 secondes et commence avec <strong className="text-green-400">$100,000 fictifs</strong>.</p>
+            <div className="space-y-2 mb-6 text-left">
+              {["✅ Paper trading sans risque","✅ 3 signaux IA gratuits par jour","✅ Académie complète niveau débutant","✅ Tuteur IA personnel"].map(f => (
+                <p key={f} className="text-xs text-white/60">{f}</p>
+              ))}
+            </div>
+            <a href="/signup" className="block w-full py-3.5 rounded-2xl font-black text-sm text-black mb-3" style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}>Créer mon compte gratuit →</a>
+            <button onClick={() => setShowSignupModal(false)} className="text-xs text-white/25 hover:text-white/50 transition">Continuer en mode démo</button>
+          </div>
+        </div>
+      )}
+
       {/* ── Personalized greeting ────────────────────────────────── */}
       {userProfile && (
         <div className="px-5 pt-4 pb-0">
@@ -797,7 +869,7 @@ export default function Dashboard() {
                               <span className="text-xs font-bold text-white">${s.price?.toFixed(2)}</span>
                               <span className="text-[10px] text-gray-600">{s.date}</span>
                               {s.type === "buy" && (
-                                <button onClick={openBuy} className="text-[10px] px-2 py-0.5 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 transition">Acheter</button>
+                                <button onClick={isDemo ? () => setShowSignupModal(true) : openBuy} className="text-[10px] px-2 py-0.5 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 transition">Acheter</button>
                               )}
                             </div>
                           ))}
@@ -1225,12 +1297,12 @@ export default function Dashboard() {
                           <p className="text-[11px] text-gray-400 leading-relaxed">{prediction.summary}</p>
 
                           {prediction.recommendation === "ACHETER" && (
-                            <button onClick={openBuy} className="w-full py-2 rounded-lg bg-green-500 hover:bg-green-400 text-white text-xs font-bold transition">
+                            <button onClick={isDemo ? () => setShowSignupModal(true) : openBuy} className="w-full py-2 rounded-lg bg-green-500 hover:bg-green-400 text-white text-xs font-bold transition">
                               Acheter {ticker.replace("-USD", "")}
                             </button>
                           )}
                           {prediction.recommendation === "VENDRE" && position && (
-                            <button onClick={() => { setOrderModal("sell"); setOrderQty(String(position.qty)) }}
+                            <button onClick={isDemo ? () => setShowSignupModal(true) : () => { setOrderModal("sell"); setOrderQty(String(position.qty)) }}
                               className="w-full py-2 rounded-lg bg-red-500 hover:bg-red-400 text-white text-xs font-bold transition">
                               Vendre {ticker.replace("-USD", "")}
                             </button>
@@ -1336,12 +1408,12 @@ export default function Dashboard() {
 
           {/* Buy / Sell buttons */}
           <div data-tour="buy-btn" className="px-4 py-3 border-b border-white/[0.05] space-y-2">
-            <button onClick={openBuy}
+            <button onClick={isDemo ? () => setShowSignupModal(true) : openBuy}
               className="w-full py-3 rounded-xl btn-primary text-sm tracking-wide">
               Acheter {ticker.replace("-USD", "")}
             </button>
             {position && (
-              <button onClick={() => { setOrderModal("sell"); setOrderQty(String(position.qty)) }}
+              <button onClick={isDemo ? () => setShowSignupModal(true) : () => { setOrderModal("sell"); setOrderQty(String(position.qty)) }}
                 className="w-full py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 text-sm font-bold transition">
                 Vendre {position.qty} parts
               </button>

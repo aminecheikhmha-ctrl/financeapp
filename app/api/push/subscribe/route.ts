@@ -1,27 +1,34 @@
 import { NextRequest, NextResponse } from "next/server"
+import webpush from "web-push"
 import { createClient } from "@supabase/supabase-js"
 
-function makeSupabase() {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
+export const runtime = "nodejs"
+
+function setupVapid() {
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT ?? "mailto:contact@financeapp.io",
+    process.env.VAPID_PUBLIC_KEY ?? "",
+    process.env.VAPID_PRIVATE_KEY ?? ""
+  )
 }
 
 export async function POST(req: NextRequest) {
-  const token = req.headers.get("authorization")?.replace("Bearer ", "")
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  try {
+    setupVapid()
+    const { subscription, userId } = await req.json()
+    if (!subscription) return NextResponse.json({ error: "subscription required" }, { status: 400 })
 
-  const supabase = makeSupabase()
-  const { data: { user } } = await supabase.auth.getUser(token)
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (userId) {
+      const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
+      await supabase.from("push_subscriptions").upsert({
+        user_id: userId,
+        subscription: JSON.stringify(subscription),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "user_id" })
+    }
 
-  const subscription = await req.json()
-
-  // Store subscription in user_profiles
-  await supabase
-    .from("user_profiles")
-    .upsert(
-      { id: user.id, push_subscription: JSON.stringify(subscription) },
-      { onConflict: "id" }
-    )
-
-  return NextResponse.json({ ok: true })
+    return NextResponse.json({ success: true })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
 }

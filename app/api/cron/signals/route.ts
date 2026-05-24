@@ -63,6 +63,24 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Send push notification for BUY/SELL signals
+    const fortSignals = results.filter(r => r.signal === "BUY" || r.signal === "SELL")
+    if (fortSignals.length > 0 && typeof process.env.NEXT_PUBLIC_APP_URL === "string") {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL
+      fetch(`${appUrl}/api/push/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-cron-secret": process.env.CRON_SECRET ?? "" },
+        body: JSON.stringify({
+          all: true,
+          title: `🚨 ${fortSignals.length} signal${fortSignals.length > 1 ? "s" : ""} fort${fortSignals.length > 1 ? "s" : ""} détecté${fortSignals.length > 1 ? "s" : ""}`,
+          body: fortSignals.slice(0, 3).map((s: any) =>
+            `${s.signal === "BUY" ? "↗" : "↘"} ${s.symbol} — ${s.price}`
+          ).join(" · "),
+          url: "/signaux",
+        }),
+      }).catch(() => {})
+    }
+
     return NextResponse.json({ ok: true, updated: results.length, results })
   } catch (err) {
     // cron error silenced
