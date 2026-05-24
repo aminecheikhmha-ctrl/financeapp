@@ -35,7 +35,9 @@ export const PLANS = {
 export type PlanKey = keyof typeof PLANS
 
 export function getPlan(plan: string): PlanKey {
-  if (plan === "pro" || plan === "premium") return plan
+  const normalized = (plan ?? "").toLowerCase().trim()
+  if (normalized === "pro") return "pro"
+  if (normalized === "premium") return "premium"
   return "free"
 }
 

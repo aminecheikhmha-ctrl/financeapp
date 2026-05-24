@@ -230,7 +230,7 @@ export default function Apprendre() {
       setUser(authData.user)
 
       const { data: profile } = await supabase
-        .from("profiles").select("plan").eq("email", authData.user.email).single()
+        .from("profiles").select("plan").eq("email", authData.user.email).maybeSingle()
       if (profile?.plan) setPlan(getPlan(profile.plan))
 
       await fetchProgress(authData.user.id)

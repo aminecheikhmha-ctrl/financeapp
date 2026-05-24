@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase"
 import type { SignalResult } from "@/app/api/signals/route"
 import UpgradeModal from "@/app/components/UpgradeModal"
 import { RefreshCw } from "lucide-react"
+import { getPlan } from "@/lib/plans"
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
@@ -712,8 +713,8 @@ export default function Signaux() {
         .from("profiles")
         .select("plan")
         .eq("email", data.user.email)
-        .single()
-      setPlan(profile?.plan ?? "free")
+        .maybeSingle()
+      setPlan(getPlan(profile?.plan ?? "free"))
     })
   }, [router])
 
