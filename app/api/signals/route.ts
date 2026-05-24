@@ -46,6 +46,10 @@ export type SignalResult = {
   ai_comment: string
   timestamp: string
   expires_at: string
+  candle_pattern: string | null
+  ichimoku_signal: "bullish" | "bearish" | "neutral"
+  above_ma200: boolean
+  volume_spike: boolean
 }
 
 // ─── Asset list ───────────────────────────────────────────────────────────────
@@ -386,6 +390,50 @@ function calcPricePosition(price: number, support: number, resistance: number): 
   return ((price - support) / (resistance - support)) * 100
 }
 
+function calcIchimoku(highs: number[], lows: number[], closes: number[]) {
+  if (highs.length < 26) return { bullish: false, bearish: false }
+  const tenkan = (Math.max(...highs.slice(-9)) + Math.min(...lows.slice(-9))) / 2
+  const kijun  = (Math.max(...highs.slice(-26)) + Math.min(...lows.slice(-26))) / 2
+  const price  = closes[closes.length - 1]
+  return {
+    tenkan, kijun,
+    bullish: price > tenkan && tenkan > kijun,
+    bearish: price < tenkan && tenkan < kijun,
+  }
+}
+
+function detectCandlePattern(bars: { open: number; high: number; low: number; close: number }[]): { pattern: string; type: "buy" | "sell" | "neutral"; strength: number } | null {
+  const last = bars[bars.length - 1]
+  const prev = bars[bars.length - 2]
+  if (!last || !prev) return null
+
+  const body = Math.abs(last.close - last.open)
+  const range = last.high - last.low
+  if (range === 0) return null
+  const bodyRatio = body / range
+
+  const lowerWick = Math.min(last.open, last.close) - last.low
+  if (bodyRatio < 0.3 && lowerWick > body * 2 && last.close > last.open)
+    return { pattern: "Hammer", type: "buy", strength: 0.7 }
+
+  const upperWick = last.high - Math.max(last.open, last.close)
+  if (bodyRatio < 0.3 && upperWick > body * 2 && last.close < last.open)
+    return { pattern: "Shooting Star", type: "sell", strength: 0.7 }
+
+  if (prev.close < prev.open && last.close > last.open &&
+      last.open < prev.close && last.close > prev.open)
+    return { pattern: "Bullish Engulfing", type: "buy", strength: 0.85 }
+
+  if (prev.close > prev.open && last.close < last.open &&
+      last.open > prev.close && last.close < prev.open)
+    return { pattern: "Bearish Engulfing", type: "sell", strength: 0.85 }
+
+  if (bodyRatio < 0.1)
+    return { pattern: "Doji", type: "neutral", strength: 0.5 }
+
+  return null
+}
+
 // ─── Scoring checks ───────────────────────────────────────────────────────────
 
 type IndicatorData = {
@@ -540,11 +588,13 @@ async function processAsset(asset: Asset): Promise<SignalResult | null> {
     const rawCloses: (number | null)[] = q.close ?? []
     const rawHighs: (number | null)[] = q.high ?? []
     const rawLows: (number | null)[] = q.low ?? []
+    const rawOpens: (number | null)[] = q.open ?? []
     const rawVolumes: (number | null)[] = q.volume ?? []
 
     const closes = rawCloses.filter((v): v is number => v != null)
     const highs = rawHighs.filter((v): v is number => v != null)
     const lows = rawLows.filter((v): v is number => v != null)
+    const opens = rawOpens.filter((v): v is number => v != null)
     const volumes = rawVolumes.map((v) => (v != null ? v : 0))
 
     if (closes.length < 30) return null
@@ -601,6 +651,16 @@ async function processAsset(asset: Asset): Promise<SignalResult | null> {
       price_position,
     }
 
+    // New indicators
+    const ichimoku = calcIchimoku(highs, lows, closes)
+    const ichimoku_signal: "bullish" | "bearish" | "neutral" = ichimoku.bullish ? "bullish" : ichimoku.bearish ? "bearish" : "neutral"
+    const ma200 = calcSMA(closes, 200)
+    const above_ma200 = price > ma200
+    const volume_spike = volume_ratio > 2.0
+    const bars = closes.map((c, i) => ({ open: opens[i] ?? c, high: highs[i] ?? c, low: lows[i] ?? c, close: c }))
+    const candlePattern = detectCandlePattern(bars)
+    const candle_pattern = candlePattern ? candlePattern.pattern : null
+
     // Score
     let buy_score = 0
     const buy_confirmed: string[] = []
@@ -610,6 +670,11 @@ async function processAsset(asset: Asset): Promise<SignalResult | null> {
         buy_confirmed.push(check.name)
       }
     }
+    // Extra buy points from new indicators
+    if (ichimoku.bullish) { buy_score += 2; buy_confirmed.push("Ichimoku·Bull") }
+    if (candlePattern?.type === "buy") { buy_score += 2; buy_confirmed.push(candlePattern.pattern) }
+    if (above_ma200) buy_score += 1
+    if (volume_spike) buy_score += 3
 
     let sell_score = 0
     const sell_confirmed: string[] = []
@@ -619,8 +684,13 @@ async function processAsset(asset: Asset): Promise<SignalResult | null> {
         sell_confirmed.push(check.name)
       }
     }
+    // Extra sell points from new indicators
+    if (ichimoku.bearish) { sell_score += 2; sell_confirmed.push("Ichimoku·Bear") }
+    if (candlePattern?.type === "sell") { sell_score += 2; sell_confirmed.push(candlePattern.pattern) }
+    if (!above_ma200) sell_score += 1
+    if (volume_spike) sell_score += 3
 
-    const MAX_POINTS = 22
+    const MAX_POINTS = 29 // 22 original + 7 new max
     const isBuy = buy_score >= sell_score
     const winning_points = isBuy ? buy_score : sell_score
     const confirmed_by = isBuy ? buy_confirmed : sell_confirmed
@@ -672,7 +742,7 @@ async function processAsset(asset: Asset): Promise<SignalResult | null> {
       strength,
       confluence_score,
       confluence_count: confirmed_by.length,
-      total_indicators: 17,
+      total_indicators: 21,
       confirmed_by,
       entry_price: price,
       tp1,
@@ -689,6 +759,10 @@ async function processAsset(asset: Asset): Promise<SignalResult | null> {
       ai_comment: "",
       timestamp: now.toISOString(),
       expires_at: expires.toISOString(),
+      candle_pattern,
+      ichimoku_signal,
+      above_ma200,
+      volume_spike,
     }
   } catch {
     return null
@@ -698,16 +772,36 @@ async function processAsset(asset: Asset): Promise<SignalResult | null> {
 // ─── Route handler ─────────────────────────────────────────────────────────────
 
 export async function GET() {
-  // Process all assets in batches of 10
-  const BATCH_SIZE = 10
+  // Check Supabase cache (10 min)
+  try {
+    const { data: cached } = await supabase
+      .from("signals_cache")
+      .select("*")
+      .gt("created_at", new Date(Date.now() - 10 * 60 * 1000).toISOString())
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single()
+
+    if (cached?.signals) {
+      return NextResponse.json(cached.signals, {
+        headers: { "Cache-Control": "public, s-maxage=600", "X-Cache": "HIT" }
+      })
+    }
+  } catch {
+    // Cache table may not exist — continue
+  }
+
+  // Process all assets in parallel batches of 15
+  const BATCH_SIZE = 15
   const results: SignalResult[] = []
 
   for (let i = 0; i < ASSETS.length; i += BATCH_SIZE) {
     const batch = ASSETS.slice(i, i + BATCH_SIZE)
-    const batchResults = await Promise.all(batch.map(processAsset))
+    const batchResults = await Promise.allSettled(batch.map(processAsset))
     for (const r of batchResults) {
-      if (r !== null) results.push(r)
+      if (r.status === "fulfilled" && r.value !== null) results.push(r.value)
     }
+    if (i + BATCH_SIZE < ASSETS.length) await new Promise(r => setTimeout(r, 100))
   }
 
   // Generate AI comments for FORT signals only (one batch Groq call)
@@ -778,17 +872,27 @@ export async function GET() {
     }
   }
 
-  const response = NextResponse.json({
+  const statsData = {
+    total: results.length,
+    fort,
+    achats,
+    ventes,
+    avg_confluence: Math.round(avg_confluence),
+  }
+
+  const responseData = {
     signals: results,
-    stats: {
-      total: results.length,
-      fort,
-      achats,
-      ventes,
-      avg_confluence: Math.round(avg_confluence),
-    },
+    stats: statsData,
+  }
+
+  // Store in Supabase cache (fire and forget)
+  void supabase.from("signals_cache").insert({
+    signals: responseData,
+    stats: statsData,
+    created_at: new Date().toISOString(),
   })
 
+  const response = NextResponse.json(responseData)
   response.headers.set("Cache-Control", "public, s-maxage=300, stale-while-revalidate=60")
   return response
 }

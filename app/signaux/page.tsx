@@ -1,11 +1,23 @@
 "use client"
 
-import { useEffect, useState, useRef, useCallback } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import type { SignalResult } from "@/app/api/signals/route"
 import UpgradeModal from "@/app/components/UpgradeModal"
-import { cn } from "@/lib/utils"
+import { RefreshCw } from "lucide-react"
+
+// ─── Design tokens ────────────────────────────────────────────────────────────
+
+const D = {
+  bg:     "#050505",
+  card:   "#0a0a0a",
+  border: "rgba(255,255,255,0.06)",
+  green:  "#22c55e",
+  red:    "#ef4444",
+  yellow: "#f59e0b",
+  purple: "#8b5cf6",
+} as const
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -34,20 +46,37 @@ type HistoriqueRow = {
   created_at: string
 }
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const INDICATOR_EXPLANATIONS: Record<string, string> = {
+  "RSI·14": "RSI sous 35 — l'actif est en zone de survente",
+  "RSI·7": "RSI court terme sous 30 — momentum très faible",
+  "MACD·Hist↑": "Histogramme MACD positif et croissant — momentum haussier",
+  "EMA·Cross": "EMA9 au-dessus de l'EMA21 — tendance court terme haussière",
+  "BB·Lower": "Prix sous la bande de Bollinger basse — rebond probable",
+  "Volume·élevé": "Volume 1.5x la moyenne — intérêt institutionnel",
+  "OBV↑": "On-Balance Volume en hausse — pression acheteuse sous-jacente",
+  "Stoch·%K": "Stochastique en zone de survente — momentum retournement",
+  "Support": "Prix proche d'un support clé — zone d'achat potentielle",
+  "Hammer": "Pattern chandelier Hammer — signal de retournement haussier",
+  "Bullish Engulfing": "Bougie englobante haussière — forte pression acheteuse",
+  "VWAP": "Prix sous le VWAP — opportunité d'achat pour les institutionnels",
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function signalBadge(signal: string): { label: string; color: string; bg: string; border: string } {
   switch (signal) {
     case "ACHAT_FORT":
-      return { label: "ACHAT FORT ⚡", color: "text-green-300", bg: "bg-green-500/20", border: "border-green-500/40" }
+      return { label: "ACHAT FORT ⚡", color: "#86efac", bg: "rgba(34,197,94,0.15)", border: "rgba(34,197,94,0.35)" }
     case "ACHAT":
-      return { label: "ACHAT ↗", color: "text-green-400", bg: "bg-green-500/15", border: "border-green-500/30" }
+      return { label: "ACHAT ↗", color: "#4ade80", bg: "rgba(34,197,94,0.1)", border: "rgba(34,197,94,0.25)" }
     case "VENTE_FORT":
-      return { label: "VENTE FORTE ⚡", color: "text-red-300", bg: "bg-red-500/20", border: "border-red-500/40" }
+      return { label: "VENTE FORTE ⚡", color: "#fca5a5", bg: "rgba(239,68,68,0.15)", border: "rgba(239,68,68,0.35)" }
     case "VENTE":
-      return { label: "VENTE ↘", color: "text-red-400", bg: "bg-red-500/15", border: "border-red-500/30" }
+      return { label: "VENTE ↘", color: "#f87171", bg: "rgba(239,68,68,0.1)", border: "rgba(239,68,68,0.25)" }
     default:
-      return { label: signal, color: "text-gray-400", bg: "bg-white/10", border: "border-white/20" }
+      return { label: signal, color: "rgba(255,255,255,0.4)", bg: "rgba(255,255,255,0.05)", border: "rgba(255,255,255,0.1)" }
   }
 }
 
@@ -67,8 +96,8 @@ function timeUntilExpiry(expires_at: string): string {
   if (diff <= 0) return "Expiré"
   const h = Math.floor(diff / 3_600_000)
   const m = Math.floor((diff % 3_600_000) / 60_000)
-  if (h > 0) return `Expire dans ${h}h${m > 0 ? m + "m" : ""}`
-  return `Expire dans ${m}m`
+  if (h > 0) return `${h}h${m > 0 ? m + "m" : ""}`
+  return `${m}m`
 }
 
 function timeAgo(date: string): string {
@@ -85,561 +114,521 @@ function isBuySignal(signal: string): boolean {
   return signal === "ACHAT" || signal === "ACHAT_FORT"
 }
 
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
+function fmtPrice(price: number): string {
+  return price < 1
+    ? price.toFixed(4)
+    : price.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
 
-function SkeletonCard() {
+// ─── Skeleton row ─────────────────────────────────────────────────────────────
+
+function SignalRowSkeleton() {
   return (
-    <div className="bg-[#0d0d0d] border border-white/8 rounded-2xl p-5 space-y-4 animate-pulse">
-      <div className="flex items-center gap-3">
-        <div className="h-6 w-28 bg-white/10 rounded-lg" />
-        <div className="h-6 w-20 bg-white/5 rounded-lg" />
+    <div className="grid gap-4 px-4 py-3 animate-pulse"
+      style={{ gridTemplateColumns: "auto 1fr auto auto auto auto auto auto" }}>
+      <div className="h-6 w-20 rounded-lg" style={{ background: "rgba(255,255,255,0.05)" }} />
+      <div>
+        <div className="h-3.5 w-16 rounded mb-1" style={{ background: "rgba(255,255,255,0.05)" }} />
+        <div className="h-2.5 w-24 rounded" style={{ background: "rgba(255,255,255,0.03)" }} />
       </div>
-      <div className="h-8 w-32 bg-white/10 rounded-lg" />
-      <div className="h-3 w-full bg-white/5 rounded-full" />
-      <div className="flex gap-2">
-        <div className="h-5 w-16 bg-white/5 rounded-full" />
-        <div className="h-5 w-16 bg-white/5 rounded-full" />
-        <div className="h-5 w-20 bg-white/5 rounded-full" />
-      </div>
-      <div className="grid grid-cols-4 gap-2">
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-12 bg-white/5 rounded-xl" />
-        ))}
-      </div>
+      <div className="h-3.5 w-14 rounded" style={{ background: "rgba(255,255,255,0.05)" }} />
+      <div className="h-3.5 w-10 rounded" style={{ background: "rgba(255,255,255,0.05)" }} />
+      <div className="h-3.5 w-24 rounded" style={{ background: "rgba(255,255,255,0.05)" }} />
+      <div className="h-3.5 w-8 rounded" style={{ background: "rgba(255,255,255,0.05)" }} />
+      <div className="h-3.5 w-16 rounded" style={{ background: "rgba(255,255,255,0.05)" }} />
+      <div className="h-6 w-16 rounded-lg" style={{ background: "rgba(255,255,255,0.05)" }} />
     </div>
   )
 }
 
-// ─── Top-3 Premium Card ────────────────────────────────────────────────────────
+// ─── Top 3 Card ───────────────────────────────────────────────────────────────
 
-function Top3Card({ signal }: { signal: SignalResult }) {
+function Top3Card({ signal, rank }: { signal: SignalResult; rank: number }) {
   const router = useRouter()
   const b = signalBadge(signal.signal)
   const isLong = isBuySignal(signal.signal)
   const isFort = signal.signal === "ACHAT_FORT" || signal.signal === "VENTE_FORT"
 
   return (
-    <div
-      className={`relative bg-[#0d0d0d] rounded-2xl p-5 space-y-3 border overflow-hidden ${
-        isFort
-          ? isLong
-            ? "border-green-500/40"
-            : "border-red-500/40"
-          : isLong
-          ? "border-green-500/20"
-          : "border-red-500/20"
-      }`}
+    <div className="relative rounded-2xl overflow-hidden"
       style={{
-        background: isFort
-          ? isLong
-            ? "linear-gradient(135deg, #0d1f0d 0%, #0d0d0d 60%)"
-            : "linear-gradient(135deg, #1f0d0d 0%, #0d0d0d 60%)"
-          : undefined,
-      }}
-    >
-      {/* Badge + symbol + price */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="space-y-1">
-          <span
-            className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-lg border ${b.bg} ${b.border} ${b.color}`}
-          >
-            {b.label}
-          </span>
-          <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-white font-black text-xl">{signal.symbol}</span>
-            <span className="text-gray-500 text-xs">{signal.name}</span>
+        background: D.card,
+        border: isFort
+          ? `1px solid ${isLong ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`
+          : `1px solid ${D.border}`,
+      }}>
+      {/* Color top band */}
+      <div className="h-0.5 w-full" style={{ background: isLong ? D.green : D.red }} />
+
+      <div className="p-5 space-y-3">
+        {/* Rank badge + signal */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              {rank === 1 && (
+                <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full"
+                  style={{ background: "#f59e0b", color: "#000" }}>
+                  #1
+                </span>
+              )}
+              <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-lg"
+                style={{ background: b.bg, border: `1px solid ${b.border}`, color: b.color }}>
+                {b.label}
+              </span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-white font-black text-xl">{signal.symbol}</span>
+              <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>{signal.name}</span>
+            </div>
           </div>
-        </div>
-        <div className="text-right">
-          <p className="text-white font-black text-lg">
-            {signal.price < 1 ? signal.price.toFixed(4) : signal.price.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </p>
-          <p className={`text-xs font-bold ${signal.change_24h >= 0 ? "text-green-400" : "text-red-400"}`}>
-            {signal.change_24h >= 0 ? "+" : ""}{signal.change_24h.toFixed(2)}%
-          </p>
-        </div>
-      </div>
-
-      {/* Confluence bar */}
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-gray-500 text-[10px] font-semibold uppercase tracking-wide">Confluence</span>
-          <span className="text-white text-xs font-black">
-            {signal.confluence_score.toFixed(0)}%
-            <span className="text-gray-600 font-normal ml-1">
-              ({signal.confluence_count}/{signal.total_indicators})
-            </span>
-          </span>
-        </div>
-        <div className="w-full bg-white/5 rounded-full h-2">
-          <div
-            className={`h-2 rounded-full ${isLong ? "bg-gradient-to-r from-green-600 to-emerald-400" : "bg-gradient-to-r from-red-600 to-rose-400"}`}
-            style={{ width: `${signal.confluence_score}%` }}
-          />
-        </div>
-        <div className="flex flex-wrap gap-1 mt-2">
-          {signal.confirmed_by.slice(0, 3).map((label) => (
-            <span
-              key={label}
-              className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${
-                isLong
-                  ? "bg-green-500/10 text-green-400 border-green-500/20"
-                  : "bg-red-500/10 text-red-400 border-red-500/20"
-              }`}
-            >
-              {label}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* TP/SL */}
-      <div className="grid grid-cols-3 gap-2 text-center bg-white/3 rounded-xl p-2">
-        {[
-          { label: "Entrée", val: signal.entry_price },
-          { label: "TP1", val: signal.tp1 },
-          { label: "SL", val: signal.sl },
-        ].map(({ label, val }) => (
-          <div key={label}>
-            <p
-              className={`text-[9px] font-bold uppercase mb-0.5 ${
-                label === "SL" ? "text-red-400" : label === "TP1" ? "text-green-400" : "text-gray-500"
-              }`}
-            >
-              {label}
+          <div className="text-right">
+            <p className="text-white font-black text-lg">{fmtPrice(signal.price)}</p>
+            <p className="text-xs font-bold" style={{ color: signal.change_24h >= 0 ? D.green : D.red }}>
+              {signal.change_24h >= 0 ? "+" : ""}{signal.change_24h.toFixed(2)}%
             </p>
-            <p className="text-white text-[11px] font-bold">
-              {val < 1 ? val.toFixed(4) : val.toLocaleString("fr-FR", { maximumFractionDigits: 2 })}
-            </p>
-            {label !== "Entrée" && (
-              <p
-                className={`text-[9px] ${label === "SL" ? "text-red-400/70" : "text-green-400/70"}`}
-              >
-                {pctChange(signal.entry_price, val)}
-              </p>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* AI comment */}
-      {signal.ai_comment && (
-        <div className="flex gap-2 items-start bg-white/3 rounded-xl px-3 py-2">
-          <span className="text-sm flex-shrink-0">🧠</span>
-          <p className="text-gray-300 text-[11px] italic leading-relaxed">"{signal.ai_comment}"</p>
-        </div>
-      )}
-
-      {/* Buttons */}
-      <div className="flex gap-2 pt-1">
-        <button
-          onClick={() => router.push(`/dashboard?symbol=${signal.symbol}`)}
-          className="flex-1 text-[11px] font-semibold py-2 rounded-xl border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition"
-        >
-          Voir graphe ↗
-        </button>
-        <button
-          onClick={() => router.push(`/signaux/${signal.symbol}`)}
-          className={`flex-1 text-[11px] font-bold py-2 rounded-xl transition ${
-            isLong ? "bg-green-500 hover:bg-green-600 text-white" : "bg-red-500 hover:bg-red-600 text-white"
-          }`}
-        >
-          Analyse →
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// ─── Signal Card (list view) ───────────────────────────────────────────────────
-
-function SignalCard({ signal, blurred, buzz }: { signal: SignalResult; blurred?: boolean; buzz?: { buzz_score: number; dominant_sentiment: string; mentions_24h: number } | null }) {
-  const router = useRouter()
-  const b = signalBadge(signal.signal)
-  const isLong = isBuySignal(signal.signal)
-
-  return (
-    <div
-      className={`relative bg-[#0d0d0d] rounded-2xl p-5 space-y-4 overflow-hidden border-l-4 border border-white/5 ${
-        isLong ? "border-l-green-500" : "border-l-red-500"
-      }`}
-    >
-      {blurred && (
-        <div className="absolute inset-0 z-10 backdrop-blur-sm bg-black/50 flex items-center justify-center rounded-2xl">
-          <div className="text-center">
-            <p className="text-3xl mb-2">🔒</p>
-            <p className="text-white font-bold text-sm">Premium requis</p>
-            <a href="/pricing" className="text-xs text-green-400 underline mt-1 block">
-              Passer Premium
-            </a>
           </div>
         </div>
-      )}
 
-      {/* Row 1 */}
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3 flex-wrap">
-          <span
-            className={`text-[11px] font-black uppercase px-2.5 py-1 rounded-lg border ${b.bg} ${b.border} ${b.color} tracking-wide`}
-          >
-            {b.label}
-          </span>
-          <div className="flex items-baseline gap-2">
-            <span className="text-white font-black text-xl">{signal.symbol}</span>
-            <span className="text-gray-500 text-sm">· {signal.name}</span>
-          </div>
-          <span className="text-xs text-gray-600 bg-white/5 px-2 py-0.5 rounded-full">scalp</span>
-          {buzz && buzz.buzz_score > 0 && (
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-              buzz.dominant_sentiment === "bullish" ? "bg-orange-500/10 text-orange-400 border-orange-500/20" :
-              buzz.dominant_sentiment === "bearish" ? "bg-red-500/10 text-red-400 border-red-500/20" :
-              "bg-gray-500/10 text-gray-400 border-gray-500/20"
-            }`}>
-              🔥 {buzz.mentions_24h} Reddit
+        {/* Confluence bar */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.3)" }}>Confluence</span>
+            <span className="text-xs font-black text-white">
+              {signal.confluence_score.toFixed(0)}%
+              <span className="font-normal ml-1" style={{ color: "rgba(255,255,255,0.3)" }}>
+                ({signal.confluence_count}/{signal.total_indicators})
+              </span>
             </span>
-          )}
-        </div>
-        <div className="text-right flex-shrink-0">
-          <p className="text-white font-black text-lg">
-            {signal.price < 1
-              ? signal.price.toFixed(4)
-              : signal.price.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </p>
-          <p className={`text-xs font-semibold ${signal.change_24h >= 0 ? "text-green-400" : "text-red-400"}`}>
-            {signal.change_24h >= 0 ? "+" : ""}{signal.change_24h.toFixed(2)}%
-          </p>
-        </div>
-      </div>
-
-      {/* Confluence bar */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-gray-400 text-xs font-semibold">Confluence</span>
-          <span className="text-xs font-black text-white">
-            {signal.confluence_score.toFixed(0)}%
-            <span className="text-gray-500 font-normal ml-1">
-              ({signal.confluence_count}/{signal.total_indicators})
-            </span>
-          </span>
-        </div>
-        <div className="w-full bg-white/5 rounded-full h-1.5">
-          <div
-            className={`h-1.5 rounded-full transition-all ${
-              isLong
-                ? "bg-gradient-to-r from-green-600 to-emerald-400"
-                : "bg-gradient-to-r from-red-600 to-rose-400"
-            }`}
-            style={{ width: `${signal.confluence_score}%` }}
-          />
-        </div>
-        {signal.confirmed_by.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 pt-0.5">
-            <span className="text-[10px] text-gray-500 font-semibold self-center">Confirmé par</span>
-            {signal.confirmed_by.slice(0, 9).map((label) => (
-              <span
-                key={label}
-                className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                  isLong
-                    ? "bg-green-500/10 text-green-400 border-green-500/20"
-                    : "bg-red-500/10 text-red-400 border-red-500/20"
-                }`}
-              >
+          </div>
+          <div className="w-full h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.05)" }}>
+            <div className="h-1.5 rounded-full transition-all"
+              style={{
+                width: `${signal.confluence_score}%`,
+                background: isLong
+                  ? "linear-gradient(to right, #16a34a, #22c55e)"
+                  : "linear-gradient(to right, #dc2626, #ef4444)"
+              }} />
+          </div>
+          <div className="flex flex-wrap gap-1 mt-2">
+            {signal.confirmed_by.slice(0, 3).map(label => (
+              <span key={label} className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
+                style={{
+                  background: isLong ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)",
+                  border: isLong ? "1px solid rgba(34,197,94,0.2)" : "1px solid rgba(239,68,68,0.2)",
+                  color: isLong ? "#4ade80" : "#f87171",
+                }}>
                 {label}
               </span>
             ))}
           </div>
-        )}
-      </div>
+        </div>
 
-      {/* Price levels */}
-      <div className="bg-white/3 rounded-xl p-3 space-y-2">
-        <div className="grid grid-cols-5 gap-1 text-center">
+        {/* TP/SL grid */}
+        <div className="grid grid-cols-3 gap-2 text-center rounded-xl p-2"
+          style={{ background: "rgba(255,255,255,0.02)" }}>
           {[
-            { label: "Entrée", val: signal.entry_price, pct: null },
-            { label: "TP1", val: signal.tp1, pct: pctChange(signal.entry_price, signal.tp1) },
-            { label: "TP2", val: signal.tp2, pct: pctChange(signal.entry_price, signal.tp2) },
-            { label: "TP3", val: signal.tp3, pct: pctChange(signal.entry_price, signal.tp3) },
-            { label: "SL", val: signal.sl, pct: pctChange(signal.entry_price, signal.sl) },
-          ].map(({ label, val, pct }) => (
-            <div key={label} className="space-y-0.5">
-              <p
-                className={`text-[9px] font-bold uppercase ${
-                  label === "SL" ? "text-red-400" : label === "Entrée" ? "text-gray-500" : "text-green-400"
-                }`}
-              >
+            { label: "Entrée", val: signal.entry_price },
+            { label: "TP1", val: signal.tp1 },
+            { label: "SL", val: signal.sl },
+          ].map(({ label, val }) => (
+            <div key={label}>
+              <p className="text-[9px] font-bold uppercase mb-0.5"
+                style={{ color: label === "SL" ? D.red : label === "TP1" ? D.green : "rgba(255,255,255,0.3)" }}>
                 {label}
               </p>
               <p className="text-white text-[11px] font-bold">
-                {val < 1
-                  ? val.toFixed(3)
-                  : val.toLocaleString("fr-FR", { maximumFractionDigits: 0 })}
+                {val < 1 ? val.toFixed(4) : val.toLocaleString("fr-FR", { maximumFractionDigits: 2 })}
               </p>
-              {pct && (
-                <p
-                  className={`text-[9px] font-semibold ${
-                    label === "SL" ? "text-red-400/80" : "text-green-400/80"
-                  }`}
-                >
-                  {pct}
+              {label !== "Entrée" && (
+                <p className="text-[9px]" style={{ color: label === "SL" ? "rgba(239,68,68,0.6)" : "rgba(34,197,94,0.7)" }}>
+                  {pctChange(signal.entry_price, val)}
                 </p>
               )}
             </div>
           ))}
         </div>
-        <div className="flex items-center gap-4 pt-1 border-t border-white/5">
-          <span className="text-gray-500 text-[10px] font-semibold uppercase tracking-wide">R/R</span>
-          <span className="text-xs text-white font-semibold">
-            TP1 <span className="text-green-400">{signal.risk_reward_tp1.toFixed(1)}x</span>
-          </span>
-          <span className="text-xs text-white font-semibold">
-            TP2 <span className="text-green-400">{signal.risk_reward_tp2.toFixed(1)}x</span>
-          </span>
-          <span className="text-[10px] text-gray-500 ml-auto">
-            {timeUntilExpiry(signal.expires_at)}
-          </span>
-        </div>
-      </div>
 
-      {/* AI comment */}
-      {signal.ai_comment && (
-        <div className="flex gap-2 items-start bg-white/3 rounded-xl px-3 py-2.5">
-          <span className="text-base flex-shrink-0">🧠</span>
-          <p className="text-gray-300 text-xs italic leading-relaxed">"{signal.ai_comment}"</p>
-        </div>
-      )}
+        {/* AI comment */}
+        {signal.ai_comment && (
+          <div className="flex gap-2 items-start rounded-xl px-3 py-2"
+            style={{ background: "rgba(255,255,255,0.02)" }}>
+            <span className="text-sm flex-shrink-0">🧠</span>
+            <p className="text-[11px] italic leading-relaxed" style={{ color: "rgba(255,255,255,0.55)" }}>
+              "{signal.ai_comment}"
+            </p>
+          </div>
+        )}
 
-      {/* Buttons */}
-      <div className="flex gap-2 pt-1">
-        <button
-          onClick={() => router.push(`/dashboard?symbol=${signal.symbol}`)}
-          className="flex-1 text-xs font-semibold py-2.5 rounded-xl border border-white/10 text-gray-300 hover:text-white hover:border-white/20 transition"
-        >
-          Voir graphe ↗
-        </button>
+        {/* Button */}
         <button
           onClick={() => router.push(`/signaux/${signal.symbol}`)}
-          className={`flex-1 text-xs font-bold py-2.5 rounded-xl transition ${
-            isLong
-              ? "bg-green-500 hover:bg-green-600 text-white"
-              : "bg-red-500 hover:bg-red-600 text-white"
-          }`}
-        >
-          Analyse complète →
+          className="w-full text-[11px] font-bold py-2 rounded-xl transition-all hover:opacity-80"
+          style={{
+            background: isLong ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)",
+            border: isLong ? "1px solid rgba(34,197,94,0.25)" : "1px solid rgba(239,68,68,0.25)",
+            color: isLong ? D.green : D.red,
+          }}>
+          Voir le graphe →
         </button>
       </div>
     </div>
   )
 }
 
-// ─── Signal Grid Card (compact) ────────────────────────────────────────────────
+// ─── Table row ────────────────────────────────────────────────────────────────
 
-function GridCard({ signal, blurred }: { signal: SignalResult; blurred?: boolean }) {
+function SignalRow({ signal, blurred, onUpgrade }: { signal: SignalResult; blurred?: boolean; onUpgrade: () => void }) {
   const router = useRouter()
   const b = signalBadge(signal.signal)
   const isLong = isBuySignal(signal.signal)
 
-  return (
-    <div
-      className={`relative bg-[#0d0d0d] rounded-2xl p-4 space-y-3 overflow-hidden border-l-4 border border-white/5 ${
-        isLong ? "border-l-green-500" : "border-l-red-500"
-      }`}
-    >
-      {blurred && (
-        <div className="absolute inset-0 z-10 backdrop-blur-sm bg-black/50 flex items-center justify-center rounded-2xl">
-          <div className="text-center">
-            <p className="text-2xl mb-1">🔒</p>
-            <a href="/pricing" className="text-xs text-green-400 underline">
-              Premium
-            </a>
-          </div>
+  if (blurred) {
+    return (
+      <div className="relative px-4 py-3 flex items-center gap-4" style={{ borderTop: `1px solid ${D.border}` }}>
+        <div className="absolute inset-0 z-10 flex items-center justify-end pr-4"
+          style={{ backdropFilter: "blur(4px)", background: "rgba(5,5,5,0.7)" }}>
+          <button onClick={onUpgrade}
+            className="text-[10px] font-black px-3 py-1 rounded-lg transition-all hover:opacity-80"
+            style={{ background: "rgba(34,197,94,0.2)", border: "1px solid rgba(34,197,94,0.3)", color: D.green }}>
+            🔒 Premium
+          </button>
         </div>
-      )}
-
-      <div className="flex items-start justify-between">
-        <div>
-          <span
-            className={`text-[9px] font-black uppercase px-2 py-0.5 rounded border ${b.bg} ${b.border} ${b.color}`}
-          >
-            {b.label}
-          </span>
-          <p className="text-white font-black text-base mt-1">{signal.symbol}</p>
-          <p className="text-gray-500 text-[10px]">{signal.name}</p>
-        </div>
-        <div className="text-right">
-          <p className="text-white font-bold text-sm">
-            {signal.price < 1 ? signal.price.toFixed(4) : signal.price.toLocaleString("fr-FR", { maximumFractionDigits: 2 })}
-          </p>
-          <p className={`text-[10px] font-semibold ${signal.change_24h >= 0 ? "text-green-400" : "text-red-400"}`}>
-            {signal.change_24h >= 0 ? "+" : ""}{signal.change_24h.toFixed(2)}%
-          </p>
+        {/* Blurred content placeholder */}
+        <div className="h-6 w-20 rounded" style={{ background: "rgba(255,255,255,0.05)" }} />
+        <div className="flex-1">
+          <div className="h-3 w-12 rounded mb-1" style={{ background: "rgba(255,255,255,0.05)" }} />
+          <div className="h-2.5 w-20 rounded" style={{ background: "rgba(255,255,255,0.03)" }} />
         </div>
       </div>
+    )
+  }
+
+  return (
+    <div
+      className="hidden md:grid items-center gap-4 px-4 py-3 transition-colors cursor-pointer group"
+      style={{
+        gridTemplateColumns: "140px 1fr 90px 60px 140px 50px 70px 80px",
+        borderTop: `1px solid ${D.border}`,
+      }}
+      onClick={() => router.push(`/signaux/${signal.symbol}`)}
+      onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.015)")}
+      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+    >
+      {/* Signal badge */}
+      <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-lg w-fit"
+        style={{ background: b.bg, border: `1px solid ${b.border}`, color: b.color }}>
+        {b.label}
+      </span>
+
+      {/* Asset */}
+      <div>
+        <div className="flex items-center gap-1.5">
+          <p className="text-white font-bold text-sm">{signal.symbol}</p>
+          {signal.candle_pattern && (
+            <span className="text-[8px] font-bold px-1.5 py-0.5 rounded"
+              style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.25)", color: "#a78bfa" }}>
+              {signal.candle_pattern}
+            </span>
+          )}
+        </div>
+        <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.3)" }}>{signal.name}</p>
+      </div>
+
+      {/* Price */}
+      <p className="text-white font-semibold text-sm tabular-nums">{fmtPrice(signal.price)}</p>
+
+      {/* Change */}
+      <p className="text-sm font-semibold tabular-nums"
+        style={{ color: signal.change_24h >= 0 ? D.green : D.red }}>
+        {signal.change_24h >= 0 ? "+" : ""}{signal.change_24h.toFixed(1)}%
+      </p>
 
       {/* Confluence bar */}
       <div>
-        <div className="flex justify-between mb-1">
-          <span className="text-gray-500 text-[9px] font-semibold">Confluence</span>
-          <span className="text-white text-[10px] font-black">{signal.confluence_score.toFixed(0)}%</span>
+        <div className="flex items-center gap-2">
+          <div className="flex-1 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
+            <div className="h-1 rounded-full"
+              style={{
+                width: `${signal.confluence_score}%`,
+                background: isLong ? D.green : D.red,
+              }} />
+          </div>
+          <span className="text-xs font-black text-white tabular-nums">{signal.confluence_score.toFixed(0)}%</span>
         </div>
-        <div className="w-full bg-white/5 rounded-full h-1">
-          <div
-            className={`h-1 rounded-full ${isLong ? "bg-green-500" : "bg-red-500"}`}
-            style={{ width: `${signal.confluence_score}%` }}
-          />
-        </div>
       </div>
 
-      {/* Top 3 pills */}
-      <div className="flex flex-wrap gap-1">
-        {signal.confirmed_by.slice(0, 3).map((label) => (
-          <span
-            key={label}
-            className={`text-[9px] px-1.5 py-0.5 rounded-full border ${
-              isLong
-                ? "bg-green-500/10 text-green-400 border-green-500/20"
-                : "bg-red-500/10 text-red-400 border-red-500/20"
-            }`}
-          >
-            {label}
-          </span>
-        ))}
-      </div>
+      {/* R/R */}
+      <p className="text-sm font-semibold tabular-nums" style={{ color: "rgba(255,255,255,0.6)" }}>
+        {signal.risk_reward_tp1.toFixed(1)}x
+      </p>
 
-      {/* TP1/SL */}
-      <div className="flex items-center gap-3 text-[10px]">
-        <span className="text-gray-500">Entrée <span className="text-white font-semibold">{signal.entry_price < 1 ? signal.entry_price.toFixed(3) : signal.entry_price.toLocaleString("fr-FR", { maximumFractionDigits: 0 })}</span></span>
-        <span className="text-green-400">TP1 {pctChange(signal.entry_price, signal.tp1)}</span>
-        <span className="text-red-400">SL {pctChange(signal.entry_price, signal.sl)}</span>
-      </div>
+      {/* Expire */}
+      <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.3)" }}>
+        {timeUntilExpiry(signal.expires_at)}
+      </p>
 
-      {/* AI comment */}
-      {signal.ai_comment && (
-        <p className="text-gray-500 text-[10px] italic truncate">🧠 "{signal.ai_comment}"</p>
-      )}
-
+      {/* Action */}
       <button
-        onClick={() => router.push(`/signaux/${signal.symbol}`)}
-        className={`w-full text-[10px] font-bold py-1.5 rounded-lg transition ${
-          isLong ? "bg-green-500/20 text-green-400 hover:bg-green-500/30" : "bg-red-500/20 text-red-400 hover:bg-red-500/30"
-        }`}
-      >
+        className="text-[10px] font-bold px-3 py-1.5 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+        style={{
+          background: isLong ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)",
+          border: isLong ? "1px solid rgba(34,197,94,0.25)" : "1px solid rgba(239,68,68,0.25)",
+          color: isLong ? D.green : D.red,
+        }}
+        onClick={e => { e.stopPropagation(); router.push(`/signaux/${signal.symbol}`) }}>
         Analyse →
       </button>
     </div>
   )
 }
 
-// ─── Historique tab ────────────────────────────────────────────────────────────
+// Mobile signal row (flex instead of grid)
+function SignalRowMobile({ signal, blurred, onUpgrade }: { signal: SignalResult; blurred?: boolean; onUpgrade: () => void }) {
+  const router = useRouter()
+  const b = signalBadge(signal.signal)
+  const isLong = isBuySignal(signal.signal)
 
-function statusFromIndicateurs(row: HistoriqueRow): { label: string; color: string; bg: string } {
-  const ind = row.indicateurs as any
-  const signal = ind?.signal as string | undefined
-  const isLong = row.direction === "LONG"
-  const now = Date.now()
-  const expires = ind?.expires_at ? new Date(ind.expires_at).getTime() : 0
-  if (now < expires) return { label: "En cours ⏳", color: "text-yellow-400", bg: "bg-yellow-500/10 border-yellow-500/20" }
-  // Expired — show neutral closed state
-  if (isLong) return { label: "Clôturé ◼", color: "text-gray-400", bg: "bg-white/5 border-white/10" }
-  return { label: "Clôturé ◼", color: "text-gray-400", bg: "bg-white/5 border-white/10" }
+  if (blurred) {
+    return (
+      <div className="relative px-4 py-3 flex items-center gap-3 md:hidden" style={{ borderTop: `1px solid ${D.border}` }}>
+        <div className="absolute inset-0 z-10 flex items-center justify-end pr-4"
+          style={{ backdropFilter: "blur(4px)", background: "rgba(5,5,5,0.7)" }}>
+          <button onClick={onUpgrade}
+            className="text-[10px] font-black px-3 py-1 rounded-lg"
+            style={{ background: "rgba(34,197,94,0.2)", border: "1px solid rgba(34,197,94,0.3)", color: D.green }}>
+            🔒 Premium
+          </button>
+        </div>
+        <div className="h-6 w-20 rounded" style={{ background: "rgba(255,255,255,0.05)" }} />
+        <div className="flex-1 h-3 rounded" style={{ background: "rgba(255,255,255,0.03)" }} />
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-3 px-4 py-3 md:hidden"
+      style={{ borderTop: `1px solid ${D.border}` }}
+      onClick={() => router.push(`/signaux/${signal.symbol}`)}>
+      <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded flex-shrink-0"
+        style={{ background: b.bg, border: `1px solid ${b.border}`, color: b.color }}>
+        {b.label}
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="text-white font-bold text-sm truncate">{signal.symbol}</p>
+        <p className="text-[10px] truncate" style={{ color: "rgba(255,255,255,0.3)" }}>{signal.name}</p>
+      </div>
+      <div className="text-right flex-shrink-0">
+        <p className="text-white text-sm font-bold tabular-nums">{fmtPrice(signal.price)}</p>
+        <p className="text-[10px] font-semibold tabular-nums"
+          style={{ color: signal.change_24h >= 0 ? D.green : D.red }}>
+          {signal.change_24h >= 0 ? "+" : ""}{signal.change_24h.toFixed(1)}%
+        </p>
+      </div>
+      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+        <span className="text-[10px] font-black text-white">{signal.confluence_score.toFixed(0)}%</span>
+        <div className="w-12 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
+          <div className="h-1 rounded-full"
+            style={{ width: `${signal.confluence_score}%`, background: isLong ? D.green : D.red }} />
+        </div>
+      </div>
+    </div>
+  )
 }
+
+// ─── Grid card ────────────────────────────────────────────────────────────────
+
+function GridCard({ signal, blurred, onUpgrade }: { signal: SignalResult; blurred?: boolean; onUpgrade: () => void }) {
+  const router = useRouter()
+  const b = signalBadge(signal.signal)
+  const isLong = isBuySignal(signal.signal)
+
+  return (
+    <div className="relative rounded-xl overflow-hidden cursor-pointer transition-all hover:scale-[1.01]"
+      style={{ background: D.card, border: `1px solid ${D.border}` }}
+      onClick={() => router.push(`/signaux/${signal.symbol}`)}>
+      {blurred && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl"
+          style={{ backdropFilter: "blur(6px)", background: "rgba(5,5,5,0.75)" }}>
+          <div className="text-center">
+            <p className="text-2xl mb-1">🔒</p>
+            <button onClick={e => { e.stopPropagation(); onUpgrade() }}
+              className="text-[10px] font-black px-3 py-1 rounded-lg"
+              style={{ background: "rgba(34,197,94,0.2)", border: "1px solid rgba(34,197,94,0.3)", color: D.green }}>
+              Premium
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="h-0.5 w-full" style={{ background: isLong ? D.green : D.red }} />
+
+      <div className="p-4 space-y-3">
+        <div className="flex items-start justify-between">
+          <div>
+            <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded"
+              style={{ background: b.bg, border: `1px solid ${b.border}`, color: b.color }}>
+              {b.label}
+            </span>
+            <p className="text-white font-black text-base mt-1">{signal.symbol}</p>
+            <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.3)" }}>{signal.name}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-white font-bold text-sm tabular-nums">{fmtPrice(signal.price)}</p>
+            <p className="text-[10px] font-semibold"
+              style={{ color: signal.change_24h >= 0 ? D.green : D.red }}>
+              {signal.change_24h >= 0 ? "+" : ""}{signal.change_24h.toFixed(2)}%
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <div className="flex justify-between mb-1">
+            <span className="text-[9px] font-semibold uppercase" style={{ color: "rgba(255,255,255,0.3)" }}>Confluence</span>
+            <span className="text-[10px] font-black text-white">{signal.confluence_score.toFixed(0)}%</span>
+          </div>
+          <div className="w-full h-1 rounded-full" style={{ background: "rgba(255,255,255,0.05)" }}>
+            <div className="h-1 rounded-full" style={{ width: `${signal.confluence_score}%`, background: isLong ? D.green : D.red }} />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-1">
+          {signal.confirmed_by.slice(0, 3).map(label => (
+            <span key={label} className="text-[9px] px-1.5 py-0.5 rounded-full"
+              style={{
+                background: isLong ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)",
+                border: isLong ? "1px solid rgba(34,197,94,0.2)" : "1px solid rgba(239,68,68,0.2)",
+                color: isLong ? "#4ade80" : "#f87171",
+              }}>
+              {label}
+            </span>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-3 text-[10px]">
+          <span style={{ color: "rgba(255,255,255,0.3)" }}>TP1 <span className="font-bold" style={{ color: D.green }}>{pctChange(signal.entry_price, signal.tp1)}</span></span>
+          <span style={{ color: "rgba(255,255,255,0.3)" }}>SL <span className="font-bold" style={{ color: D.red }}>{pctChange(signal.entry_price, signal.sl)}</span></span>
+        </div>
+
+        {signal.ai_comment && (
+          <p className="text-[10px] italic truncate" style={{ color: "rgba(255,255,255,0.3)" }}>
+            🧠 "{signal.ai_comment}"
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Historique ───────────────────────────────────────────────────────────────
 
 function HistoriqueView({ rows }: { rows: HistoriqueRow[] }) {
   const router = useRouter()
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {rows.length === 0 && (
-        <div className="text-center text-gray-500 py-16">
+        <div className="text-center py-16" style={{ color: "rgba(255,255,255,0.3)" }}>
           <p className="text-4xl mb-3">📋</p>
-          <p className="text-lg font-semibold">Aucun historique disponible</p>
+          <p className="text-lg font-semibold text-white">Aucun historique disponible</p>
           <p className="text-sm mt-1">Les signaux apparaîtront ici après le premier scan</p>
         </div>
       )}
-      {rows.map((row) => {
+      {rows.map(row => {
         const isLong = row.direction === "LONG"
         const ind = row.indicateurs as any
         const sigLabel = ind?.signal as string | undefined
         const b = sigLabel
           ? signalBadge(sigLabel)
           : isLong
-            ? { label: "ACHAT ↗", color: "text-green-400", bg: "bg-green-500/15", border: "border-green-500/30" }
-            : { label: "VENTE ↘", color: "text-red-400", bg: "bg-red-500/15", border: "border-red-500/30" }
+            ? { label: "ACHAT ↗", color: "#4ade80", bg: "rgba(34,197,94,0.1)", border: "rgba(34,197,94,0.25)" }
+            : { label: "VENTE ↘", color: "#f87171", bg: "rgba(239,68,68,0.1)", border: "rgba(239,68,68,0.25)" }
 
-        const status = statusFromIndicateurs(row)
         const confirmedBy: string[] = ind?.confirmed_by ?? []
-        const rr1 = ind?.risk_reward_tp1 as number | undefined
-        const rr2 = ind?.risk_reward_tp2 as number | undefined
-        const assetName = ind?.name as string | undefined
         const confluenceScore = ind?.confluence_score as number | undefined
         const confluenceCount = ind?.confluence_count as number | undefined
         const totalInd = ind?.total_indicators as number | undefined
+        const rr1 = ind?.risk_reward_tp1 as number | undefined
+        const assetName = ind?.name as string | undefined
+        const expiresAt = ind?.expires_at as string | undefined
+        const isActive = expiresAt ? new Date(expiresAt).getTime() > Date.now() : false
 
         return (
-          <div
-            key={row.id}
-            className={`bg-[#0d0d0d] rounded-xl p-4 border border-white/5 border-l-4 ${isLong ? "border-l-green-500/60" : "border-l-red-500/60"}`}
-          >
-            {/* Header row */}
+          <div key={row.id} className="rounded-xl p-4 border-l-2"
+            style={{
+              background: D.card,
+              border: `1px solid ${D.border}`,
+              borderLeft: `2px solid ${isLong ? "rgba(34,197,94,0.5)" : "rgba(239,68,68,0.5)"}`,
+            }}>
             <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded border ${b.bg} ${b.border} ${b.color}`}>
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded"
+                  style={{ background: b.bg, border: `1px solid ${b.border}`, color: b.color }}>
                   {b.label}
                 </span>
                 <span className="text-white font-bold">{row.ticker}</span>
-                {assetName && <span className="text-gray-500 text-xs">{assetName}</span>}
-                <span className="text-gray-600 text-[10px] bg-white/5 px-2 py-0.5 rounded-full capitalize">{row.timeframe}</span>
+                {assetName && <span className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>{assetName}</span>}
               </div>
-              <div className="flex items-center gap-3">
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${status.bg} ${status.color}`}>
-                  {status.label}
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                  style={isActive
+                    ? { background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", color: D.yellow }
+                    : { background: "rgba(255,255,255,0.04)", border: `1px solid ${D.border}`, color: "rgba(255,255,255,0.3)" }}>
+                  {isActive ? "En cours ⏳" : "Clôturé ◼"}
                 </span>
-                <span className="text-gray-600 text-xs">{timeAgo(row.created_at)}</span>
+                <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.25)" }}>{timeAgo(row.created_at)}</span>
               </div>
             </div>
 
-            {/* Confluence bar */}
             {confluenceScore != null && (
               <div className="mb-3">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-gray-600 text-[10px]">Confluence</span>
-                  <span className="text-white text-[10px] font-bold">
+                  <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.3)" }}>Confluence</span>
+                  <span className="text-[10px] font-bold text-white">
                     {confluenceScore.toFixed(0)}%
                     {confluenceCount != null && totalInd != null && (
-                      <span className="text-gray-600 font-normal ml-1">({confluenceCount}/{totalInd})</span>
+                      <span className="font-normal ml-1" style={{ color: "rgba(255,255,255,0.3)" }}>({confluenceCount}/{totalInd})</span>
                     )}
                   </span>
                 </div>
-                <div className="w-full bg-white/5 rounded-full h-1">
-                  <div
-                    className={`h-1 rounded-full ${isLong ? "bg-green-500/60" : "bg-red-500/60"}`}
-                    style={{ width: `${confluenceScore}%` }}
-                  />
+                <div className="w-full h-1 rounded-full" style={{ background: "rgba(255,255,255,0.05)" }}>
+                  <div className="h-1 rounded-full"
+                    style={{ width: `${confluenceScore}%`, background: isLong ? "rgba(34,197,94,0.5)" : "rgba(239,68,68,0.5)" }} />
                 </div>
                 {confirmedBy.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1.5">
                     {confirmedBy.slice(0, 6).map(l => (
-                      <span key={l} className={`text-[9px] px-1.5 py-0.5 rounded-full border ${isLong ? "bg-green-500/8 text-green-500/70 border-green-500/15" : "bg-red-500/8 text-red-500/70 border-red-500/15"}`}>{l}</span>
+                      <span key={l} className="text-[9px] px-1.5 py-0.5 rounded-full"
+                        style={{
+                          background: isLong ? "rgba(34,197,94,0.06)" : "rgba(239,68,68,0.06)",
+                          border: isLong ? "1px solid rgba(34,197,94,0.12)" : "1px solid rgba(239,68,68,0.12)",
+                          color: isLong ? "rgba(74,222,128,0.6)" : "rgba(248,113,113,0.6)",
+                        }}>
+                        {l}
+                      </span>
                     ))}
                   </div>
                 )}
               </div>
             )}
 
-            {/* Prices */}
             <div className="grid grid-cols-5 gap-1.5 text-center">
               {[
                 { label: "Entrée", val: row.prix_entree },
-                { label: "TP1",    val: row.take_profit_1 },
-                { label: "TP2",    val: row.take_profit_2 },
-                { label: "TP3",    val: row.take_profit_3 ?? null },
-                { label: "SL",     val: row.stop_loss },
+                { label: "TP1", val: row.take_profit_1 },
+                { label: "TP2", val: row.take_profit_2 },
+                { label: "TP3", val: row.take_profit_3 ?? null },
+                { label: "SL", val: row.stop_loss },
               ].map(({ label, val }) => val != null && (
                 <div key={label}>
-                  <p className={`text-[9px] font-bold uppercase mb-0.5 ${label === "SL" ? "text-red-400" : label === "Entrée" ? "text-gray-500" : "text-green-400"}`}>{label}</p>
+                  <p className="text-[9px] font-bold uppercase mb-0.5"
+                    style={{ color: label === "SL" ? D.red : label === "Entrée" ? "rgba(255,255,255,0.3)" : D.green }}>
+                    {label}
+                  </p>
                   <p className="text-white text-[10px] font-semibold">
                     {val < 1 ? val.toFixed(4) : val.toLocaleString("fr-FR", { maximumFractionDigits: 2 })}
                   </p>
                   {label !== "Entrée" && (
-                    <p className={`text-[9px] ${label === "SL" ? "text-red-400/60" : "text-green-400/60"}`}>
+                    <p className="text-[9px]" style={{ color: label === "SL" ? "rgba(239,68,68,0.6)" : "rgba(34,197,94,0.6)" }}>
                       {pctChange(row.prix_entree, val)}
                     </p>
                   )}
@@ -647,24 +636,26 @@ function HistoriqueView({ rows }: { rows: HistoriqueRow[] }) {
               ))}
             </div>
 
-            {/* R/R + button */}
-            {(rr1 != null || rr2 != null) && (
-              <div className="flex items-center gap-4 mt-2 pt-2 border-t border-white/5">
-                <span className="text-gray-600 text-[10px] uppercase tracking-wide">R/R</span>
-                {rr1 != null && <span className="text-[10px] text-white">TP1 <span className={isLong ? "text-green-400" : "text-red-400"}>{rr1.toFixed(1)}x</span></span>}
-                {rr2 != null && <span className="text-[10px] text-white">TP2 <span className={isLong ? "text-green-400" : "text-red-400"}>{rr2.toFixed(1)}x</span></span>}
-                <button
-                  onClick={() => router.push(`/dashboard?symbol=${row.ticker}`)}
-                  className="ml-auto text-[10px] text-gray-500 hover:text-white transition px-2 py-0.5 rounded border border-white/8 hover:border-white/20"
-                >
-                  Voir graphe ↗
-                </button>
-              </div>
-            )}
+            <div className="flex items-center gap-4 mt-2 pt-2" style={{ borderTop: `1px solid ${D.border}` }}>
+              {rr1 != null && (
+                <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>
+                  R/R TP1 <span className="font-bold" style={{ color: isLong ? D.green : D.red }}>{rr1.toFixed(1)}x</span>
+                </span>
+              )}
+              <button
+                onClick={() => router.push(`/dashboard?symbol=${row.ticker}`)}
+                className="ml-auto text-[10px] transition"
+                style={{ color: "rgba(255,255,255,0.25)" }}
+                onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.7)")}
+                onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.25)")}>
+                Voir graphe ↗
+              </button>
+            </div>
 
-            {/* AI comment */}
             {row.raisonnement && (
-              <p className="text-gray-600 text-[10px] italic mt-2">🧠 "{row.raisonnement.slice(0, 120)}{row.raisonnement.length > 120 ? "…" : ""}"</p>
+              <p className="text-[10px] italic mt-2" style={{ color: "rgba(255,255,255,0.25)" }}>
+                🧠 "{row.raisonnement.slice(0, 120)}{row.raisonnement.length > 120 ? "…" : ""}"
+              </p>
             )}
           </div>
         )
@@ -685,47 +676,22 @@ export default function Signaux() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<"live" | "historique">("live")
   const [filterSignal, setFilterSignal] = useState("tous")
-  const [filterStrength, setFilterStrength] = useState("tous")
   const [filterType, setFilterType] = useState("tous")
   const [sortBy, setSortBy] = useState("confluence")
   const [iaOnly, setIaOnly] = useState(false)
   const [viewMode, setViewMode] = useState<"list" | "grid">("list")
   const [countdown, setCountdown] = useState(300)
-  const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
   const [historique, setHistorique] = useState<HistoriqueRow[]>([])
   const [histLoading, setHistLoading] = useState(false)
-  const [filter, setFilter] = useState("all")
-  const [signalSentiment, setSignalSentiment] = useState<Record<string, { buzz_score: number; dominant_sentiment: string; mentions_24h: number }>>({})
-
-  // Fetch Reddit buzz for visible signals (top 6)
-  useEffect(() => {
-    if (signals.length === 0) return
-    const top = signals.slice(0, 6).map(s => s.symbol)
-    Promise.allSettled(
-      top.map(sym =>
-        fetch(`/api/news/reddit-buzz?symbol=${sym}`)
-          .then(r => r.ok ? r.json() : null)
-          .then(d => d ? { sym, d } : null)
-      )
-    ).then(results => {
-      const map: Record<string, any> = {}
-      for (const r of results) {
-        if (r.status === "fulfilled" && r.value) {
-          map[r.value.sym] = r.value.d
-        }
-      }
-      setSignalSentiment(map)
-    }).catch(() => {})
-  }, [signals])
 
   const fetchSignals = useCallback(async () => {
+    setLoading(true)
     try {
       const res = await fetch("/api/signals")
       if (!res.ok) return
       const data = await res.json()
       setSignals(data.signals ?? [])
       setStats(data.stats ?? null)
-      setLastUpdate(new Date())
       setCountdown(300)
     } catch {
       // silently fail
@@ -747,22 +713,21 @@ export default function Signaux() {
         .select("plan")
         .eq("email", data.user.email)
         .single()
-      const userPlan = profile?.plan ?? "free"
-      setPlan(userPlan)
+      setPlan(profile?.plan ?? "free")
     })
   }, [router])
 
-  // Fetch signals on mount + auto-refresh (free users see first 3)
+  // Fetch signals on mount + auto-refresh
   useEffect(() => {
     if (!user) return
     fetchSignals()
     const interval = setInterval(fetchSignals, 300_000)
     return () => clearInterval(interval)
-  }, [user, plan, fetchSignals])
+  }, [user, fetchSignals])
 
   // Countdown timer
   useEffect(() => {
-    const t = setInterval(() => setCountdown((c) => (c <= 1 ? 300 : c - 1)), 1000)
+    const t = setInterval(() => setCountdown(c => (c <= 1 ? 300 : c - 1)), 1000)
     return () => clearInterval(t)
   }, [])
 
@@ -781,364 +746,350 @@ export default function Signaux() {
       })
   }, [tab, plan, historique.length])
 
-  // ─── Free plan gate ────────────────────────────────────────────────────────
-
   if (!user) return null
 
-
-  // ─── Filtering + sorting ─────────────────────────────────────────────────
-
-  const signalFilterMap: Record<string, string> = {
-    "achat fort": "ACHAT_FORT",
-    achat: "ACHAT",
-    vente: "VENTE",
-    "vente forte": "VENTE_FORT",
-  }
-
-  const typeFilterMap: Record<string, string> = {
-    actions: "stock",
-    crypto: "crypto",
-    etf: "etf",
-    "matières premières": "commodity",
-  }
+  // ─── Filtering + sorting ───────────────────────────────────────────────────
 
   const filtered = signals
-    .filter((s) => {
-      if (filterSignal === "tous") return true
-      return s.signal === (signalFilterMap[filterSignal] ?? filterSignal.toUpperCase())
-    })
-    .filter((s) => filterStrength === "tous" || s.strength === filterStrength)
-    .filter((s) => {
-      if (filterType === "tous") return true
-      return s.type === (typeFilterMap[filterType] ?? filterType)
-    })
-    .filter((s) => !iaOnly || !!s.ai_comment)
+    .filter(s => filterSignal === "tous" || s.signal === filterSignal)
+    .filter(s => filterType === "tous" || s.type === filterType)
+    .filter(s => !iaOnly || !!s.ai_comment)
     .sort((a, b) => {
       if (sortBy === "confluence") return b.confluence_score - a.confluence_score
-      if (sortBy === "rsi_buy") return a.rsi - b.rsi
-      if (sortBy === "rr") return b.risk_reward_tp2 - a.risk_reward_tp2
+      if (sortBy === "rr") return b.risk_reward_tp1 - a.risk_reward_tp1
       return b.volume_ratio - a.volume_ratio
     })
 
   const top3 = [...signals].sort((a, b) => b.confluence_score - a.confluence_score).slice(0, 3)
-
-  // Free plan shows first 3 clear, rest blurred
   const isBlurring = plan === "free"
 
   return (
     <>
-    <div className="min-h-screen p-4 md:p-6 overflow-x-hidden page-enter" style={{ background: "var(--bg-canvas)" }}>
-      <div className="max-w-6xl mx-auto space-y-5">
+      <div className="min-h-screen" style={{ background: D.bg }}>
 
-        {/* ── Tabs ─────────────────────────────────────────────────────────── */}
-        <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1 w-fit">
-          {(["live", "historique"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`px-5 py-2 rounded-lg text-sm font-semibold transition capitalize ${
-                tab === t ? "bg-white text-black" : "text-gray-400 hover:text-white"
-              }`}
-            >
-              {t === "live" ? (
-                <span className="flex items-center gap-2">
+        {/* ── HEADER ──────────────────────────────────────────────────────── */}
+        <div className="px-6 py-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <h1 className="text-2xl font-black tracking-tight text-white">Signaux</h1>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+                  style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)" }}>
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
                   </span>
-                  Live
-                </span>
-              ) : (
-                "Historique"
+                  <span className="text-[10px] font-black tracking-wider" style={{ color: "#4ade80" }}>LIVE</span>
+                </div>
+              </div>
+              {stats && (
+                <div className="flex items-center gap-4 text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  <span><span className="text-white font-semibold">{stats.total}</span> signaux actifs</span>
+                  <span style={{ color: "rgba(255,255,255,0.1)" }}>·</span>
+                  <span><span className="font-semibold" style={{ color: D.yellow }}>{stats.fort}</span> forts</span>
+                  <span style={{ color: "rgba(255,255,255,0.1)" }}>·</span>
+                  <span><span className="font-semibold" style={{ color: D.green }}>{stats.achats}</span> achats</span>
+                  <span style={{ color: "rgba(255,255,255,0.1)" }}>·</span>
+                  <span><span className="font-semibold" style={{ color: D.red }}>{stats.ventes}</span> ventes</span>
+                  <span style={{ color: "rgba(255,255,255,0.1)" }}>·</span>
+                  <span>Confluence moy. <span className="text-white font-semibold">{stats.avg_confluence}%</span></span>
+                </div>
               )}
-            </button>
-          ))}
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Tabs */}
+              <div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${D.border}` }}>
+                {(["live", "historique"] as const).map(t => (
+                  <button key={t} onClick={() => setTab(t)}
+                    className="px-4 py-2 text-[11px] font-semibold transition-all capitalize"
+                    style={{
+                      background: tab === t ? "rgba(255,255,255,0.1)" : "transparent",
+                      color: tab === t ? "white" : "rgba(255,255,255,0.3)",
+                    }}>
+                    {t === "live" ? "Live" : "Historique"}
+                  </button>
+                ))}
+              </div>
+              {/* Countdown */}
+              <div className="text-right">
+                <p className="text-[10px] mb-1" style={{ color: "rgba(255,255,255,0.2)" }}>Prochain scan</p>
+                <p className={`text-lg font-black tabular-nums ${countdown <= 60 ? "text-red-400" : "text-white"}`}>
+                  {formatCountdown(countdown)}
+                </p>
+                <div className="w-24 h-0.5 rounded-full mt-1" style={{ background: "rgba(255,255,255,0.05)" }}>
+                  <div className="h-full rounded-full transition-all duration-1000"
+                    style={{
+                      width: `${(countdown / 300) * 100}%`,
+                      background: countdown <= 60 ? D.red : D.green,
+                    }} />
+                </div>
+              </div>
+              {/* Refresh */}
+              <button onClick={fetchSignals} disabled={loading}
+                className="w-9 h-9 rounded-xl flex items-center justify-center transition-all disabled:opacity-40"
+                style={{ border: `1px solid ${D.border}`, color: "rgba(255,255,255,0.4)" }}
+                onMouseEnter={e => (e.currentTarget.style.color = "white")}
+                onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.4)")}>
+                <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* ── LIVE TAB ─────────────────────────────────────────────────────── */}
         {tab === "live" && (
           <>
-            {/* Header */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center gap-3">
-                  <h1 className="text-xl md:text-2xl font-black tracking-tight">Signaux de Trading</h1>
-                  <span className="flex items-center gap-1.5 bg-green-500/15 border border-green-500/30 px-2.5 py-1 rounded-full">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
-                    </span>
-                    <span className="text-green-400 text-[10px] font-black tracking-wider">LIVE</span>
-                  </span>
-                </div>
-                {plan !== "free" && (
-                  <div className={`text-xs px-3 py-1.5 rounded-full font-bold uppercase tracking-wide ${
-                    plan === "premium"
-                      ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
-                      : "bg-green-500/20 text-green-400 border border-green-500/30"
-                  }`}>
-                    {plan === "pro" ? "⭐ Pro" : "💎 Premium"}
-                  </div>
-                )}
-                {plan === "free" && (
-                  <a href="/pricing" className="text-xs px-3 py-1.5 rounded-full font-bold uppercase tracking-wide bg-white/5 text-white/40 border border-white/10 hover:border-green-500/30 hover:text-green-400 transition">
-                    🔒 3 signaux gratuits · Passer Pro
-                  </a>
-                )}
-              </div>
-
-              {/* Stats row */}
-              {stats && (
-                <div className="flex items-center gap-4 flex-wrap text-xs text-gray-400">
-                  <span><span className="text-white font-semibold">{stats.total}</span> actifs</span>
-                  <span className="text-white/20">|</span>
-                  <span><span className="text-yellow-400 font-semibold">{stats.fort}</span> forts</span>
-                  <span className="text-white/20">|</span>
-                  <span><span className="text-green-400 font-semibold">{stats.achats}</span> achats</span>
-                  <span className="text-white/20">|</span>
-                  <span><span className="text-red-400 font-semibold">{stats.ventes}</span> ventes</span>
-                  <span className="text-white/20">|</span>
-                  <span>Confluence moy: <span className="text-white font-semibold">{stats.avg_confluence}%</span></span>
-                </div>
-              )}
-
-              {/* Countdown + last update */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-[11px] text-gray-500">
-                  <span>Actualisation dans <span className="text-white font-semibold">{formatCountdown(countdown)}</span></span>
-                  {lastUpdate && (
-                    <span>Mis à jour {timeAgo(lastUpdate.toISOString())}</span>
-                  )}
-                </div>
-                <div className="w-full bg-white/5 rounded-full h-0.5">
-                  <div
-                    className="h-0.5 rounded-full bg-green-500 transition-all duration-1000"
-                    style={{ width: `${(countdown / 300) * 100}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Top 3 */}
-            {!loading && top3.length > 0 && (
-              <div>
-                <p className="text-[11px] font-black text-gray-500 uppercase tracking-widest mb-3">
-                  ⭐ Top 3 du moment
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {top3.map((s, i) => (
-                    <div key={s.symbol} className="relative">
-                      {i === 0 && (
-                        <div className="absolute -top-2 -right-2 z-10 bg-yellow-500 text-black text-[9px] font-black px-2 py-0.5 rounded-full">
-                          #1
-                        </div>
-                      )}
-                      <Top3Card signal={s} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Filter bar */}
-            <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-4 space-y-3">
-
-              {/* Row 1 — Signal type */}
-              <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide pb-0.5">
-                <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest min-w-[44px] flex-shrink-0">Signal</span>
-                <div className="flex gap-1.5 flex-nowrap">
-                  {[
-                    { key: "tous",        label: "Tout",          active: "bg-white/15 text-white border-white/20" },
-                    { key: "achat fort",  label: "⚡ Achat Fort", active: "bg-green-500/25 text-green-300 border-green-500/40" },
-                    { key: "achat",       label: "↗ Achat",       active: "bg-green-500/15 text-green-400 border-green-500/25" },
-                    { key: "vente",       label: "↘ Vente",       active: "bg-red-500/15 text-red-400 border-red-500/25" },
-                    { key: "vente forte", label: "⚡ Vente Forte", active: "bg-red-500/25 text-red-300 border-red-500/40" },
-                  ].map(({ key, label, active }) => (
-                    <button
-                      key={key}
-                      onClick={() => setFilterSignal(key)}
-                      className={`flex-shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-[11px] font-semibold transition border ${
-                        filterSignal === key ? active : "border-white/8 text-gray-500 hover:text-white hover:border-white/15"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Row 2 — Force + Type */}
-              <div className="flex items-center gap-3 flex-wrap overflow-x-auto scrollbar-hide pb-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest min-w-[44px]">Force</span>
-                  <div className="flex bg-white/5 rounded-lg p-0.5">
-                    {[
-                      { key: "tous",     label: "Tout"   },
-                      { key: "strong",   label: "Fort"   },
-                      { key: "moderate", label: "Modéré" },
-                      { key: "weak",     label: "Faible" },
-                    ].map(({ key, label }) => (
-                      <button
-                        key={key}
-                        onClick={() => setFilterStrength(key)}
-                        className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition ${
-                          filterStrength === key ? "bg-white text-black" : "text-gray-500 hover:text-white"
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest min-w-[44px]">Type</span>
-                  <div className="flex bg-white/5 rounded-lg p-0.5">
-                    {[
-                      { key: "tous",               label: "Tout"      },
-                      { key: "actions",             label: "Actions"   },
-                      { key: "crypto",              label: "Crypto"    },
-                      { key: "etf",                 label: "ETF"       },
-                      { key: "matières premières",  label: "Matières"  },
-                    ].map(({ key, label }) => (
-                      <button
-                        key={key}
-                        onClick={() => setFilterType(key)}
-                        className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition ${
-                          filterType === key ? "bg-white text-black" : "text-gray-500 hover:text-white"
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Row 3 — Tri + IA toggle + Vue */}
-              <div className="flex items-center gap-3 flex-wrap overflow-x-auto scrollbar-hide pb-0.5 pt-2 border-t border-white/5">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Tri</span>
-                  <div className="flex bg-white/5 rounded-lg p-0.5">
-                    {[
-                      { key: "confluence", label: "Confluence" },
-                      { key: "rsi_buy",    label: "RSI"        },
-                      { key: "rr",         label: "R/R"        },
-                      { key: "volume",     label: "Volume"     },
-                    ].map(({ key, label }) => (
-                      <button
-                        key={key}
-                        onClick={() => setSortBy(key)}
-                        className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition ${
-                          sortBy === key ? "bg-white text-black" : "text-gray-500 hover:text-white"
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => setIaOnly(!iaOnly)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition border ${
-                    iaOnly
-                      ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
-                      : "border-white/8 text-gray-500 hover:text-white hover:border-white/15"
-                  }`}
-                >
-                  🧠 IA uniquement
-                </button>
-
-                <div className="ml-auto flex bg-white/5 rounded-lg p-0.5">
-                  {[
-                    { key: "list", label: "☰ Liste" },
-                    { key: "grid", label: "⊞ Grille" },
-                  ].map(({ key, label }) => (
-                    <button
-                      key={key}
-                      onClick={() => setViewMode(key as "list" | "grid")}
-                      className={`px-3 py-1 rounded-md text-[11px] font-semibold transition ${
-                        viewMode === key ? "bg-white text-black" : "text-gray-500 hover:text-white"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Signal list */}
-            {loading ? (
-              <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-3 gap-4" : "grid grid-cols-1 lg:grid-cols-2 gap-5"}>
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <SkeletonCard key={i} />
+            {/* ── FILTERS ─────────────────────────────────────────────────── */}
+            <div className="px-6 py-3 flex items-center gap-2 overflow-x-auto"
+              style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+              {/* Signal group */}
+              <div className="flex rounded-lg overflow-hidden flex-shrink-0"
+                style={{ border: `1px solid ${D.border}` }}>
+                {[
+                  { key: "tous", label: "Tout" },
+                  { key: "ACHAT_FORT", label: "⚡ Fort achat" },
+                  { key: "ACHAT", label: "↗ Achat" },
+                  { key: "VENTE", label: "↘ Vente" },
+                  { key: "VENTE_FORT", label: "⚡ Fort vente" },
+                ].map(f => (
+                  <button key={f.key} onClick={() => setFilterSignal(f.key)}
+                    className="px-3 py-1.5 text-[11px] font-semibold transition-all whitespace-nowrap"
+                    style={{
+                      background: filterSignal === f.key ? "rgba(255,255,255,0.1)" : "transparent",
+                      color: filterSignal === f.key ? "white" : "rgba(255,255,255,0.3)",
+                    }}>
+                    {f.label}
+                  </button>
                 ))}
               </div>
-            ) : filtered.length === 0 ? (
-              <div className="text-center text-gray-500 py-24">
-                <p className="text-5xl mb-4">📡</p>
-                <p className="text-xl font-semibold">Aucun signal ne correspond aux filtres</p>
-                <p className="mt-2 text-sm">Essayez de modifier les filtres ou attendez la prochaine actualisation</p>
+
+              <div className="w-px h-5 flex-shrink-0" style={{ background: "rgba(255,255,255,0.1)" }} />
+
+              {/* Type */}
+              <div className="flex gap-1 flex-shrink-0">
+                {[
+                  { key: "tous", label: "Tous" },
+                  { key: "stock", label: "📈 Actions" },
+                  { key: "crypto", label: "₿ Crypto" },
+                  { key: "etf", label: "📦 ETF" },
+                ].map(f => (
+                  <button key={f.key} onClick={() => setFilterType(f.key)}
+                    className="px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all whitespace-nowrap"
+                    style={{
+                      background: filterType === f.key ? "rgba(255,255,255,0.08)" : "transparent",
+                      border: filterType === f.key ? `1px solid rgba(255,255,255,0.12)` : "1px solid transparent",
+                      color: filterType === f.key ? "white" : "rgba(255,255,255,0.3)",
+                    }}>
+                    {f.label}
+                  </button>
+                ))}
               </div>
-            ) : viewMode === "list" ? (
-              <div className="relative">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                  {filtered.map((signal, idx) => (
-                    <SignalCard
-                      key={signal.symbol}
-                      signal={signal}
-                      blurred={isBlurring && idx >= 3}
-                      buzz={signalSentiment[signal.symbol] ?? null}
-                    />
+
+              <div className="w-px h-5 flex-shrink-0" style={{ background: "rgba(255,255,255,0.1)" }} />
+
+              {/* Sort */}
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.2)" }}>Trier</span>
+                {[
+                  { key: "confluence", label: "Confluence" },
+                  { key: "rr", label: "R/R" },
+                  { key: "volume", label: "Volume" },
+                ].map(s => (
+                  <button key={s.key} onClick={() => setSortBy(s.key)}
+                    className="px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all"
+                    style={{
+                      background: sortBy === s.key ? "rgba(255,255,255,0.08)" : "transparent",
+                      color: sortBy === s.key ? "white" : "rgba(255,255,255,0.25)",
+                    }}>
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="w-px h-5 flex-shrink-0" style={{ background: "rgba(255,255,255,0.1)" }} />
+
+              {/* View toggle */}
+              <div className="flex gap-1 flex-shrink-0">
+                {[
+                  { key: "list", label: "☰" },
+                  { key: "grid", label: "⊞" },
+                ].map(v => (
+                  <button key={v.key} onClick={() => setViewMode(v.key as "list" | "grid")}
+                    className="w-7 h-7 rounded-md text-[12px] font-bold transition-all flex items-center justify-center"
+                    style={{
+                      background: viewMode === v.key ? "rgba(255,255,255,0.08)" : "transparent",
+                      color: viewMode === v.key ? "white" : "rgba(255,255,255,0.3)",
+                    }}>
+                    {v.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="ml-auto flex-shrink-0">
+                <button onClick={() => setIaOnly(!iaOnly)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all"
+                  style={{
+                    background: iaOnly ? "rgba(139,92,246,0.15)" : "transparent",
+                    color: iaOnly ? "#a78bfa" : "rgba(255,255,255,0.25)",
+                    border: iaOnly ? "1px solid rgba(139,92,246,0.25)" : "1px solid transparent",
+                  }}>
+                  🧠 Avec commentaire IA
+                </button>
+              </div>
+            </div>
+
+            {/* ── TOP 3 ───────────────────────────────────────────────────── */}
+            {!loading && top3.length > 0 && (
+              <div className="px-6 pt-5 pb-4">
+                <p className="text-[11px] font-black uppercase tracking-widest mb-3"
+                  style={{ color: "rgba(255,255,255,0.3)" }}>
+                  ⭐ Meilleures opportunités
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {top3.map((s, i) => (
+                    <Top3Card key={s.symbol} signal={s} rank={i + 1} />
                   ))}
                 </div>
-                {isBlurring && filtered.length > 3 && (
-                  <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black to-transparent flex items-end justify-center pb-6">
-                    <button
-                      onClick={() => setShowUpgrade(true)}
-                      className="px-6 py-3 rounded-xl bg-green-500 hover:bg-green-400 text-black font-black text-sm transition shadow-lg shadow-green-500/25"
-                    >
-                      🚀 Débloquer les signaux illimités
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="relative">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {filtered.map((signal, idx) => (
-                    <GridCard
-                      key={signal.symbol}
-                      signal={signal}
-                      blurred={isBlurring && idx >= 3}
-                    />
-                  ))}
-                </div>
-                {isBlurring && filtered.length > 3 && (
-                  <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black to-transparent flex items-end justify-center pb-6">
-                    <button
-                      onClick={() => setShowUpgrade(true)}
-                      className="px-6 py-3 rounded-xl bg-green-500 hover:bg-green-400 text-black font-black text-sm transition shadow-lg shadow-green-500/25"
-                    >
-                      🚀 Débloquer les signaux illimités
-                    </button>
-                  </div>
-                )}
               </div>
             )}
+
+            {/* ── SIGNAL LIST ─────────────────────────────────────────────── */}
+            <div className="px-6 pb-6">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[11px] font-black uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  Tous les signaux ({filtered.length})
+                </p>
+              </div>
+
+              {loading ? (
+                viewMode === "grid" ? (
+                  <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <div key={i} className="h-40 rounded-xl animate-pulse"
+                        style={{ background: D.card, border: `1px solid ${D.border}` }} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${D.border}` }}>
+                    {/* Table header */}
+                    <div className="hidden md:grid items-center gap-4 px-4 py-2.5"
+                      style={{
+                        gridTemplateColumns: "140px 1fr 90px 60px 140px 50px 70px 80px",
+                        background: "rgba(255,255,255,0.02)",
+                        borderBottom: `1px solid ${D.border}`,
+                      }}>
+                      {["Signal", "Actif", "Prix", "Var.", "Confluence", "R/R", "Expire", ""].map(h => (
+                        <span key={h} className="text-[9px] uppercase tracking-widest font-bold"
+                          style={{ color: "rgba(255,255,255,0.2)" }}>
+                          {h}
+                        </span>
+                      ))}
+                    </div>
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <SignalRowSkeleton key={i} />
+                    ))}
+                  </div>
+                )
+              ) : filtered.length === 0 ? (
+                <div className="text-center py-24" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  <p className="text-5xl mb-4">📡</p>
+                  <p className="text-xl font-semibold text-white">Aucun signal ne correspond aux filtres</p>
+                  <p className="mt-2 text-sm">Essayez de modifier les filtres ou attendez la prochaine actualisation</p>
+                </div>
+              ) : viewMode === "grid" ? (
+                <div className="relative">
+                  <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                    {filtered.map((signal, idx) => (
+                      <GridCard
+                        key={signal.symbol}
+                        signal={signal}
+                        blurred={isBlurring && idx >= 3}
+                        onUpgrade={() => setShowUpgrade(true)}
+                      />
+                    ))}
+                  </div>
+                  {isBlurring && filtered.length > 3 && (
+                    <div className="relative -mt-16 h-20 flex items-end justify-center pb-4"
+                      style={{ background: `linear-gradient(to bottom, transparent, ${D.bg})` }}>
+                      <button onClick={() => setShowUpgrade(true)}
+                        className="px-6 py-2.5 rounded-xl text-sm font-black text-black transition-all hover:scale-105"
+                        style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}>
+                        🚀 Débloquer tous les signaux
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="relative rounded-xl overflow-hidden" style={{ border: `1px solid ${D.border}` }}>
+                  {/* Table header — desktop */}
+                  <div className="hidden md:grid items-center gap-4 px-4 py-2.5"
+                    style={{
+                      gridTemplateColumns: "140px 1fr 90px 60px 140px 50px 70px 80px",
+                      background: "rgba(255,255,255,0.02)",
+                      borderBottom: `1px solid ${D.border}`,
+                    }}>
+                    {["Signal", "Actif", "Prix", "Var.", "Confluence", "R/R", "Expire", ""].map(h => (
+                      <span key={h} className="text-[9px] uppercase tracking-widest font-bold"
+                        style={{ color: "rgba(255,255,255,0.2)" }}>
+                        {h}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Rows */}
+                  {filtered.map((signal, idx) => (
+                    <div key={signal.symbol}>
+                      <SignalRow
+                        signal={signal}
+                        blurred={isBlurring && idx >= 3}
+                        onUpgrade={() => setShowUpgrade(true)}
+                      />
+                      <SignalRowMobile
+                        signal={signal}
+                        blurred={isBlurring && idx >= 3}
+                        onUpgrade={() => setShowUpgrade(true)}
+                      />
+                    </div>
+                  ))}
+
+                  {isBlurring && filtered.length > 3 && (
+                    <div className="relative -mt-16 h-20 flex items-end justify-center pb-4"
+                      style={{ background: `linear-gradient(to bottom, transparent, ${D.bg})` }}>
+                      <button onClick={() => setShowUpgrade(true)}
+                        className="px-6 py-2.5 rounded-xl text-sm font-black text-black transition-all hover:scale-105"
+                        style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}>
+                        🚀 Débloquer tous les signaux
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </>
         )}
 
         {/* ── HISTORIQUE TAB ────────────────────────────────────────────────── */}
         {tab === "historique" && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-black tracking-tight">Historique des signaux</h2>
-            {histLoading ? (
-              <div className="space-y-3">
+          <div className="px-6 py-6 space-y-4">
+            <h2 className="text-xl font-black tracking-tight text-white">Historique des signaux</h2>
+            {plan === "free" ? (
+              <div className="text-center py-16 rounded-2xl" style={{ border: `1px solid ${D.border}` }}>
+                <p className="text-4xl mb-3">🔒</p>
+                <p className="text-lg font-bold text-white mb-1">Accès Premium requis</p>
+                <p className="text-sm mb-4" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  Consultez l'historique complet des signaux avec un abonnement Pro
+                </p>
+                <button onClick={() => setShowUpgrade(true)}
+                  className="px-6 py-2.5 rounded-xl text-sm font-black text-black"
+                  style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}>
+                  Débloquer l'historique
+                </button>
+              </div>
+            ) : histLoading ? (
+              <div className="space-y-2">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="h-24 bg-[#0d0d0d] rounded-xl animate-pulse" />
+                  <div key={i} className="h-24 rounded-xl animate-pulse"
+                    style={{ background: D.card, border: `1px solid ${D.border}` }} />
                 ))}
               </div>
             ) : (
@@ -1148,8 +1099,7 @@ export default function Signaux() {
         )}
 
       </div>
-    </div>
-    <UpgradeModal open={showUpgrade} onClose={() => setShowUpgrade(false)} context="signals" />
+      <UpgradeModal open={showUpgrade} onClose={() => setShowUpgrade(false)} context="signals" />
     </>
   )
 }
