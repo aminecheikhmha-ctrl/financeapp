@@ -227,9 +227,9 @@ function generateEvents(from: Date): EconEvent[] {
 
 export async function GET() {
   const cached = cache.get("econ")
-  if (cached && Date.now() - cached.ts < CACHE_TTL) return NextResponse.json(cached.data)
+  if (cached && Date.now() - cached.ts < CACHE_TTL) return NextResponse.json({ events: cached.data })
 
   const events = generateEvents(new Date())
   cache.set("econ", { data: events, ts: Date.now() })
-  return NextResponse.json(events)
+  return NextResponse.json({ events })
 }
