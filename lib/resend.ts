@@ -151,6 +151,50 @@ export async function sendConversionEmail(email: string, daysActive = 7) {
   })
 }
 
+export async function sendUpgradeEmail(email: string, plan: "pro" | "premium", username?: string) {
+  const name = username || email.split("@")[0]
+  const planLabel = plan === "premium" ? "Premium ⭐" : "Pro 🚀"
+  const features = plan === "premium"
+    ? ["Toutes les fonctionnalités Pro", "Alertes de prix illimitées", "API Access & webhooks", "Capital paper trading 1 000 000$", "Support prioritaire 24/7"]
+    : ["Signaux illimités en temps réel", "Analyses IA sans restriction", "10 alertes de prix", "Capital paper trading 100 000$", "Accès à toute l'académie (15+ cours)"]
+  return getResend().emails.send({
+    from: FROM,
+    to: email,
+    subject: `Bienvenue sur FinanceApp ${planLabel} 🎉`,
+    html: baseTemplate(`
+      ${heading(`Bienvenue dans le club ${planLabel}`)}
+      ${para(`Félicitations ${name} ! Ton abonnement est actif. Tu as maintenant accès à :`)}
+      ${featureList(features)}
+      ${ctaButton("Accéder à mon dashboard →", `${APP_URL}/dashboard`)}
+      ${para("<em style='font-size:13px'>Questions ? Réponds directement à cet email, on est là pour toi.</em>")}
+    `),
+  })
+}
+
+export async function sendPaymentFailedEmail(email: string, username?: string) {
+  const name = username || email.split("@")[0]
+  return getResend().emails.send({
+    from: FROM,
+    to: email,
+    subject: "⚠️ Problème de paiement — Action requise",
+    html: baseTemplate(`
+      ${heading("Problème avec ton paiement ⚠️")}
+      ${para(`Bonjour ${name}, nous n'avons pas pu débiter ta carte pour ton abonnement FinanceApp.`)}
+      <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:12px;padding:16px;margin:16px 0">
+        <p style="color:#f87171;font-size:14px;margin:0;font-weight:600">⚠️ Ton accès sera suspendu dans 3 jours si le problème n'est pas résolu.</p>
+      </div>
+      ${para("Pour résoudre ça rapidement :")}
+      ${featureList([
+        "Vérifie que ta carte n'est pas expirée",
+        "Assure-toi que les fonds sont suffisants",
+        "Contacte ta banque si le problème persiste",
+      ])}
+      ${ctaButton("Mettre à jour mon moyen de paiement →", `${APP_URL}/pricing`)}
+      ${para("<em style='font-size:13px'>Ton historique et tes données restent sauvegardés.</em>")}
+    `),
+  })
+}
+
 export async function sendAlertTriggeredEmail(email: string, symbol: string, price: number, direction: "above" | "below") {
   const dir = direction === "above" ? "dépassé" : "atteint"
   return getResend().emails.send({
