@@ -61,10 +61,8 @@ function ChatBotInner() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const [corner, setCorner] = useState<Corner>("br")
-  const [dragging, setDragging] = useState(false)
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null)
-  const dragStart = useRef<{ x: number; y: number } | null>(null)
-  const hasMoved = useRef(false)
+  const dragging = dragPos !== null
   const btnRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
@@ -72,37 +70,69 @@ function ChatBotInner() {
     if (saved) setCorner(saved)
   }, [])
 
-  function onPointerDown(e: React.PointerEvent) {
-    dragStart.current = { x: e.clientX, y: e.clientY }
-    hasMoved.current = false
-    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  function onMouseDown(e: React.MouseEvent) {
+    e.preventDefault()
+    const startX = e.clientX
+    const startY = e.clientY
+    let moved = false
+
+    function onMove(ev: MouseEvent) {
+      if (!moved && Math.hypot(ev.clientX - startX, ev.clientY - startY) > 5) {
+        moved = true
+      }
+      if (moved) setDragPos({ x: ev.clientX, y: ev.clientY })
+    }
+
+    function onUp(ev: MouseEvent) {
+      window.removeEventListener("mousemove", onMove)
+      window.removeEventListener("mouseup", onUp)
+      if (moved) {
+        const c = snapToCorner(ev.clientX, ev.clientY)
+        setCorner(c)
+        localStorage.setItem("chatbot-corner", c)
+        setDragPos(null)
+      } else {
+        setDragPos(null)
+        setOpen(v => !v)
+      }
+    }
+
+    window.addEventListener("mousemove", onMove)
+    window.addEventListener("mouseup", onUp)
   }
 
-  function onPointerMove(e: React.PointerEvent) {
-    if (!dragStart.current) return
-    const dx = e.clientX - dragStart.current.x
-    const dy = e.clientY - dragStart.current.y
-    if (!hasMoved.current && Math.hypot(dx, dy) > 6) {
-      hasMoved.current = true
-      setDragging(true)
-    }
-    if (hasMoved.current) {
-      setDragPos({ x: e.clientX, y: e.clientY })
-    }
-  }
+  function onTouchStart(e: React.TouchEvent) {
+    const t = e.touches[0]
+    const startX = t.clientX
+    const startY = t.clientY
+    let moved = false
 
-  function onPointerUp(e: React.PointerEvent) {
-    if (hasMoved.current && dragPos) {
-      const newCorner = snapToCorner(dragPos.x, dragPos.y)
-      setCorner(newCorner)
-      localStorage.setItem("chatbot-corner", newCorner)
-    } else if (!hasMoved.current) {
-      setOpen(v => !v)
+    function onMove(ev: TouchEvent) {
+      ev.preventDefault()
+      const touch = ev.touches[0]
+      if (!moved && Math.hypot(touch.clientX - startX, touch.clientY - startY) > 5) {
+        moved = true
+      }
+      if (moved) setDragPos({ x: touch.clientX, y: touch.clientY })
     }
-    dragStart.current = null
-    hasMoved.current = false
-    setDragging(false)
-    setDragPos(null)
+
+    function onEnd(ev: TouchEvent) {
+      window.removeEventListener("touchmove", onMove)
+      window.removeEventListener("touchend", onEnd)
+      const touch = ev.changedTouches[0]
+      if (moved) {
+        const c = snapToCorner(touch.clientX, touch.clientY)
+        setCorner(c)
+        localStorage.setItem("chatbot-corner", c)
+        setDragPos(null)
+      } else {
+        setDragPos(null)
+        setOpen(v => !v)
+      }
+    }
+
+    window.addEventListener("touchmove", onMove, { passive: false })
+    window.addEventListener("touchend", onEnd)
   }
 
   // Charge l'historique au montage
@@ -178,8 +208,8 @@ function ChatBotInner() {
   }
 
   const btnStyle: React.CSSProperties = dragging && dragPos
-    ? { position: "fixed", left: dragPos.x - 24, top: dragPos.y - 24, zIndex: 201, cursor: "grabbing" }
-    : { ...getButtonPos(corner), position: "fixed", zIndex: 199, cursor: "grab" }
+    ? { position: "fixed", left: dragPos.x - 24, top: dragPos.y - 24, zIndex: 201, cursor: "grabbing", transition: "none" }
+    : { ...getButtonPos(corner), position: "fixed", zIndex: 199, cursor: "grab", transition: "top 0.25s, bottom 0.25s, left 0.25s, right 0.25s" }
 
   return (
     <>
@@ -289,15 +319,14 @@ function ChatBotInner() {
       {/* Floating button — draggable */}
       <button
         ref={btnRef}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl transition-transform select-none"
+        onMouseDown={onMouseDown}
+        onTouchStart={onTouchStart}
+        className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl select-none"
         style={{
           ...btnStyle,
           background: "linear-gradient(135deg, #4ade80, #059669)",
-          transition: dragging ? "none" : "all 0.2s ease",
           touchAction: "none",
+          userSelect: "none",
         }}
       >
         <span className="text-xl">{open && !dragging ? "✕" : "🧠"}</span>
