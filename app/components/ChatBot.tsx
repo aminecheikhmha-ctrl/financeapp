@@ -18,7 +18,8 @@ export default function ChatBot() {
 type Corner = "br" | "bl" | "tr" | "tl"
 
 function snapToCorner(x: number, y: number): Corner {
-  const cx = window.innerWidth / 2
+  const sidebarW = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--sidebar-w") || "64")
+  const cx = (window.innerWidth + sidebarW) / 2
   const cy = window.innerHeight / 2
   if (x < cx && y < cy) return "tl"
   if (x >= cx && y < cy) return "tr"
@@ -26,27 +27,26 @@ function snapToCorner(x: number, y: number): Corner {
   return "br"
 }
 
+const LEFT_OFFSET = "calc(var(--sidebar-w, 64px) + 16px)"
+
 function getButtonPos(corner: Corner): React.CSSProperties {
-  const edge = 16
   const topOffset = 72
   switch (corner) {
-    case "br": return { bottom: edge, right: edge }
-    case "bl": return { bottom: edge, left: edge }
-    case "tr": return { top: topOffset, right: edge }
-    case "tl": return { top: topOffset, left: edge }
+    case "br": return { bottom: 16, right: 16 }
+    case "bl": return { bottom: 16, left: LEFT_OFFSET }
+    case "tr": return { top: topOffset, right: 16 }
+    case "tl": return { top: topOffset, left: LEFT_OFFSET }
   }
 }
 
 function getPanelPos(corner: Corner): React.CSSProperties {
-  const edge = 16
-  const btnSize = 48
-  const gap = 8
+  const btnSize = 48 + 8
   const topOffset = 72
   switch (corner) {
-    case "br": return { bottom: edge + btnSize + gap, right: edge }
-    case "bl": return { bottom: edge + btnSize + gap, left: edge }
-    case "tr": return { top: topOffset + btnSize + gap, right: edge }
-    case "tl": return { top: topOffset + btnSize + gap, left: edge }
+    case "br": return { bottom: 16 + btnSize, right: 16 }
+    case "bl": return { bottom: 16 + btnSize, left: LEFT_OFFSET }
+    case "tr": return { top: topOffset + btnSize, right: 16 }
+    case "tl": return { top: topOffset + btnSize, left: LEFT_OFFSET }
   }
 }
 
