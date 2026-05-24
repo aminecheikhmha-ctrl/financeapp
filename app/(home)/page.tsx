@@ -16,7 +16,7 @@ export default function HomePage() {
   return (
     <main style={{ background: "#050505", minHeight: "100vh" }}>
       {/* SECTION 1 — HERO */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden px-6 pb-20">
+      <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden px-6 pt-24 pb-20">
         {/* Background */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 80% 60% at 50% 40%, rgba(34,197,94,0.08) 0%, transparent 70%)" }} />
