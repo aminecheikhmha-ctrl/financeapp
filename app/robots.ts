@@ -1,16 +1,15 @@
-import type { MetadataRoute } from "next"
-
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://financeapp-kappa-six.vercel.app"
+import { MetadataRoute } from "next"
 
 export default function robots(): MetadataRoute.Robots {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://financeapp-kappa-six.vercel.app"
   return {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/pricing", "/signup", "/login", "/preuves", "/blog", "/blog/"],
-        disallow: ["/api/", "/dashboard", "/portfolio", "/signaux", "/analyses", "/apprendre", "/forum", "/profil", "/onboarding", "/parametres", "/coach"],
+        allow: ["/", "/blog", "/pricing", "/apprendre", "/signup", "/login", "/analyses", "/signaux"],
+        disallow: ["/api/", "/portfolio", "/profil", "/parametres", "/admin", "/reports", "/coach"],
       },
     ],
-    sitemap: `${BASE_URL}/sitemap.xml`,
+    sitemap: `${baseUrl}/sitemap.xml`,
   }
 }

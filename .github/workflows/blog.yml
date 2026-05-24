@@ -1,0 +1,14 @@
+name: Generate Blog Posts
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate blog posts
+        run: |
+          curl -X POST \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            https://financeapp-kappa-six.vercel.app/api/blog/generate

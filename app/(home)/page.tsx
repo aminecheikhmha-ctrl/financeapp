@@ -1,410 +1,369 @@
-"use client"
+import FAQItem from "@/app/components/FAQItem"
 
-import { useEffect, useState } from "react"
-import { supabase } from "@/lib/supabase"
-import { useRouter } from "next/navigation"
-import NewsletterSignup from "@/app/components/NewsletterSignup"
-
-export default function Home() {
-  const router = useRouter()
-  const [checked, setChecked] = useState(false)
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) router.push("/dashboard")
-      else setChecked(true)
-    })
-  }, [])
-
-  if (!checked) return null
-  return <Landing />
+export const metadata = {
+  title: "FinanceApp — Trading intelligent avec l'IA | Signaux, Analyses, Académie",
+  description: "Signaux de trading IA en temps réel, analyses algorithmiques sur 160+ actifs, paper trading et académie interactive. Tradez plus intelligemment.",
+  keywords: ["signaux trading", "trading IA", "analyse technique", "RSI MACD", "paper trading", "académie trading"],
+  openGraph: {
+    title: "FinanceApp — Trading intelligent avec l'IA",
+    description: "Signaux en temps réel · Analyses IA · Paper Trading · Académie interactive",
+    type: "website",
+    locale: "fr_FR",
+  },
 }
 
-const TESTIMONIALS = [
-  { name: "AlphaTrader92", color: "#4ade80", stars: 5, text: "J'ai appris à trader en 2 semaines grâce à l'académie. Les signaux IA sont incroyables, j'ai +18% ce mois-ci." },
-  { name: "CryptoVictor", color: "#60a5fa", stars: 5, text: "Le paper trading m'a permis de tester mes stratégies sans risque. Maintenant je trade avec confiance." },
-  { name: "SarahInvest", color: "#f472b6", stars: 5, text: "Les analyses IA sont d'une précision redoutable. Je ne prenais pas de positions sans FinanceApp." },
-  { name: "MaxDayTrader", color: "#a78bfa", stars: 5, text: "Le screener en temps réel m'économise 2h de recherche par jour. Indispensable pour mon workflow." },
-  { name: "TradingNovice", color: "#fb923c", stars: 5, text: "J'étais débutant complet. L'académie structurée m'a tout appris, du débutant au niveau avancé." },
-  { name: "EliteQuant", color: "#34d399", stars: 5, text: "Le backtest est solide et les indicateurs techniques couvrent tout ce dont j'ai besoin." },
-]
-
-const FAQS = [
-  { q: "Est-ce que le paper trading est gratuit ?", a: "Oui, le paper trading avec 10 000 $ fictifs est inclus dans le plan Free. Le plan Pro débloque 100 000 $ et des outils avancés." },
-  { q: "Les signaux IA sont-ils fiables ?", a: "Nos signaux sont basés sur la confluence de 20+ indicateurs techniques analysés par Groq AI. Ils ont un taux de précision > 65% sur nos backtests." },
-  { q: "Puis-je annuler à tout moment ?", a: "Oui, sans engagement. Tu peux annuler depuis ton profil en un clic, tu conserves les avantages jusqu'à la fin de la période payée." },
-  { q: "Quels actifs sont disponibles ?", a: "Actions US (NYSE, NASDAQ), crypto (BTC, ETH et 50+ altcoins), ETFs, Forex, matières premières — soit 160+ actifs scannés en temps réel." },
-  { q: "Comment fonctionnent les analyses IA ?", a: "Groq AI (LLaMA 3.3 70B) analyse chaque actif : tendance, supports/résistances, momentum, sentiment macro, et génère une recommandation achat/vente/hold." },
-  { q: "Y a-t-il une version mobile ?", a: "FinanceApp est une web app responsive, parfaitement utilisable sur mobile et tablette. Une app native est prévue pour Q3 2026." },
-  { q: "Les prix sont-ils en temps réel ?", a: "Oui, les prix sont mis à jour toutes les secondes pour les plans Pro et Premium. Le plan Free a un délai de 15 minutes." },
-  { q: "Que contient l'académie ?", a: "15 cours complets : introduction aux marchés, analyse technique, psychologie du trader, crypto, DeFi, options, trading algorithmique et plus — avec quiz interactifs." },
-]
-
-const FEATURES = [
-  { icon: "📊", title: "Graphes professionnels", desc: "Candlesticks, RSI, MACD, Bollinger Bands — des outils dignes des plateformes institutionnelles.", color: "from-blue-500/20 to-blue-600/5" },
-  { icon: "🧠", title: "Analyses IA", desc: "Groq AI analyse chaque actif avec 20+ indicateurs et génère une recommandation en quelques secondes.", color: "from-purple-500/20 to-purple-600/5" },
-  { icon: "📡", title: "Signaux en temps réel", desc: "Alertes buy/sell basées sur la confluence d'indicateurs. Filtrés, scorés, classifiés par force.", color: "from-green-500/20 to-green-600/5" },
-  { icon: "💼", title: "Paper Trading", desc: "Entraîne-toi avec 100 000 $ fictifs. Positions réelles, TP/SL, historique de trades — zéro risque.", color: "from-yellow-500/20 to-yellow-600/5" },
-  { icon: "🎓", title: "Académie Trading", desc: "15 cours du débutant au niveau avancé, avec quiz interactifs et suivi de progression par chapitre.", color: "from-orange-500/20 to-orange-600/5" },
-  { icon: "🔔", title: "Alertes de prix", desc: "Notifié instantanément quand tes niveaux clés sont atteints. Configurables par actif et par seuil.", color: "from-red-500/20 to-red-600/5" },
-]
-
-const PLANS_COMPACT = [
-  { name: "Free", price: "0$", color: "border-white/10", badge: null, features: ["5 actifs en watchlist", "Signaux basiques (3/j)", "Paper trading 10k$", "Cours débutant"] },
-  { name: "Pro", price: "19$", color: "border-green-500/50", badge: "⭐ Populaire", features: ["Watchlist illimitée", "Signaux illimités", "Paper trading 100k$", "Académie complète", "Analyses IA illimitées", "10 alertes de prix"] },
-  { name: "Premium", price: "49$", color: "border-yellow-500/40", badge: "💎 Pro", features: ["Tout Pro inclus", "Screener 160 actifs", "Backtesting avancé", "Alertes illimitées", "API access", "Coaching mensuel"] },
-]
-
-function Landing() {
-  const [signals, setSignals] = useState<any[]>([])
-  const [openFaq, setOpenFaq] = useState<number | null>(null)
-
-  useEffect(() => {
-    fetch("/api/signals")
-      .then(r => r.json())
-      .then(d => setSignals((d?.signals ?? []).slice(0, 5)))
-      .catch(() => {})
-  }, [])
-
+export default function HomePage() {
   return (
-    <div className="min-h-screen bg-[#080808] text-white overflow-x-hidden">
-      <style>{`
-        @keyframes gradientShift { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
-        @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes ticker { from{transform:translateX(0)} to{transform:translateX(-50%)} }
-        .anim-gradient{background-size:200% 200%;animation:gradientShift 8s ease infinite}
-        .anim-fade-up{animation:fadeUp .7s ease forwards}
-        .anim-ticker{animation:ticker 30s linear infinite}
-      `}</style>
-
-      {/* HERO */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center px-4 md:px-6 pt-20 md:pt-24 pb-16 text-center overflow-hidden">
+    <main style={{ background: "#050505", minHeight: "100vh" }}>
+      {/* SECTION 1 — HERO */}
+      <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden px-6 pb-20">
+        {/* Background */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[450px] rounded-full opacity-25 blur-[120px] anim-gradient"
-            style={{ background: "linear-gradient(135deg,#22c55e,#059669,#10b981,#16a34a)" }} />
-          <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(rgba(255,255,255,0.025) 1px,transparent 1px)", backgroundSize: "44px 44px" }} />
+          <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 80% 60% at 50% 40%, rgba(34,197,94,0.08) 0%, transparent 70%)" }} />
+          <div className="absolute inset-0 opacity-[0.025]" style={{
+            backgroundImage: "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
+            backgroundSize: "60px 60px",
+          }} />
         </div>
 
-        <div className="anim-fade-up" style={{ animationDelay: "0ms" }}>
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-green-500/30 bg-green-500/10 text-green-400 text-xs font-bold uppercase tracking-wider mb-6">
-            🚀 Nouveau — Signaux IA en temps réel
-          </span>
-        </div>
+        {/* Hero content */}
+        <div className="relative max-w-4xl mx-auto text-center">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8"
+            style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
+            </span>
+            <span className="text-xs text-green-400 font-bold">🚀 NOUVEAU — Signaux IA avec confluence algorithmique</span>
+          </div>
 
-        <div className="anim-fade-up" style={{ animationDelay: "120ms", opacity: 0 }}>
-          <h1 className="text-3xl sm:text-5xl md:text-7xl font-black leading-[1.05] mb-5 max-w-4xl">
-            Tradez plus intelligemment{" "}
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-green-400 via-emerald-300 to-green-500">
-              avec l'IA
+          {/* Title */}
+          <h1 className="text-5xl md:text-7xl font-black text-white tracking-tight leading-[1.05] mb-6">
+            Tradez plus<br/>intelligemment
+            <span className="block mt-2" style={{
+              background: "linear-gradient(135deg, #4ade80, #22c55e, #86efac)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            }}>
+              avec l&apos;IA
             </span>
           </h1>
-        </div>
 
-        <div className="anim-fade-up" style={{ animationDelay: "240ms", opacity: 0 }}>
-          <p className="text-base md:text-xl text-gray-400 max-w-2xl mx-auto mb-8 leading-relaxed px-2">
-            Signaux de trading en temps réel, analyses IA, graphes professionnels et académie de trading — tout en un.
+          <p className="text-lg md:text-xl max-w-2xl mx-auto leading-relaxed mb-10" style={{ color: "rgba(255,255,255,0.4)" }}>
+            Signaux de trading en temps réel · Analyses IA · Graphes professionnels · Académie interactive.
+            <strong style={{ color: "rgba(255,255,255,0.7)" }}> Tout ce qu&apos;il faut pour trader comme un pro.</strong>
           </p>
-        </div>
 
-        <div className="anim-fade-up flex flex-col sm:flex-row gap-4 justify-center mb-14" style={{ animationDelay: "360ms", opacity: 0 }}>
-          <a href="/signup" className="px-8 py-3.5 rounded-xl font-black text-base bg-green-500 hover:bg-green-400 text-black transition-all shadow-xl shadow-green-500/30 hover:shadow-green-400/40 hover:scale-[1.03]">
-            Commencer gratuitement →
-          </a>
-          <a href="#features" className="px-8 py-3.5 rounded-xl font-semibold text-base border border-white/15 hover:border-white/30 text-gray-300 hover:text-white transition-all">
-            Voir les fonctionnalités
-          </a>
-        </div>
+          {/* CTAs */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
+            <a href="/dashboard" className="group relative flex items-center gap-2.5 px-8 py-4 rounded-2xl text-base font-black text-black transition-all hover:scale-[1.03] active:scale-[0.98]"
+              style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", boxShadow: "0 0 40px rgba(34,197,94,0.3), 0 4px 20px rgba(0,0,0,0.3)" }}>
+              Essayer gratuitement →
+            </a>
+            <a href="/signaux" className="flex items-center gap-2.5 px-8 py-4 rounded-2xl text-base font-bold transition-all hover:bg-white/5"
+              style={{ color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.10)" }}>
+              Voir les signaux <span className="text-green-400 text-xs font-black ml-1">LIVE</span>
+            </a>
+          </div>
 
-        <div className="anim-fade-up flex flex-wrap justify-center gap-6 md:gap-10 text-center" style={{ animationDelay: "480ms", opacity: 0 }}>
-          {[["10 000+","traders actifs"],["160+","actifs scannés"],["20+","indicateurs IA"],["98%","satisfaction"]].map(([v,l]) => (
-            <div key={l}>
-              <div className="text-2xl font-black text-white">{v}</div>
-              <div className="text-xs text-gray-500 font-medium mt-0.5">{l}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* App mockup */}
-        <div className="anim-fade-up mt-16 w-full max-w-4xl mx-auto" style={{ animationDelay: "600ms", opacity: 0 }}>
-          <div className="relative rounded-2xl border border-white/10 bg-[#0d0d0d] overflow-hidden shadow-2xl shadow-black/70">
-            <div className="flex items-center gap-1.5 px-4 py-3 border-b border-white/5 bg-[#111]">
-              <div className="w-3 h-3 rounded-full bg-red-500/60" />
-              <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
-              <div className="w-3 h-3 rounded-full bg-green-500/60" />
-              <span className="ml-3 text-xs text-gray-600">financeapp.io — Dashboard</span>
-            </div>
-            <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-              {[["AAPL","+2.4%"],["BTC","+5.1%"],["NVDA","+3.8%"],["ETH","+1.2%"]].map(([sym,chg]) => (
-                <div key={sym} className="bg-[#151515] rounded-xl p-3 border border-white/5">
-                  <div className="text-[10px] text-gray-500 mb-0.5">{sym}</div>
-                  <div className="text-sm font-black text-green-400">{chg}</div>
-                </div>
-              ))}
-              <div className="col-span-2 sm:col-span-3 bg-[#151515] rounded-xl border border-white/5 h-24 sm:h-32 flex items-center justify-center">
-                <div className="text-gray-700 text-xs text-center">
-                  <div className="text-xl sm:text-2xl mb-1">📊</div>
-                  Graphe interactif
-                </div>
-              </div>
-              <div className="col-span-2 sm:col-span-1 bg-[#151515] rounded-xl border border-white/5 h-24 sm:h-32 p-3">
-                <div className="text-[10px] text-gray-500 mb-2 font-bold uppercase">Signaux IA</div>
-                {[["BUY","AAPL"],["SELL","TSLA"],["BUY","BTC"]].map(([sig,sym]) => (
-                  <div key={sym} className={`text-[10px] font-bold mb-1.5 flex items-center gap-1 ${sig==="BUY"?"text-green-400":"text-red-400"}`}>
-                    <span className="text-[8px]">●</span> {sig} {sym}
+          {/* Social proof */}
+          <div className="flex items-center justify-center gap-6 flex-wrap">
+            <div className="flex items-center gap-2">
+              <div className="flex -space-x-2">
+                {(["#4ade80","#60a5fa","#f97316","#a78bfa","#f87171"] as const).map((color, i) => (
+                  <div key={i} className="w-8 h-8 rounded-full border-2 flex items-center justify-center text-[11px] font-black text-black"
+                    style={{ background: color, borderColor: "#050505", zIndex: 5 - i }}>
+                    {["T","S","M","A","L"][i]}
                   </div>
                 ))}
               </div>
+              <div>
+                <div className="flex">{[...Array(5)].map((_, i) => <span key={i} className="text-yellow-400 text-xs">★</span>)}</div>
+                <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.3)" }}>+10,000 traders actifs</p>
+              </div>
+            </div>
+            <div className="hidden sm:block h-8 w-px" style={{ background: "rgba(255,255,255,0.1)" }} />
+            {[
+              { value: "160+", label: "actifs scannés" },
+              { value: "20+", label: "indicateurs IA" },
+              { value: "98%", label: "satisfaction" },
+            ].map(stat => (
+              <div key={stat.label} className="text-center">
+                <p className="text-sm font-black text-white">{stat.value}</p>
+                <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.3)" }}>{stat.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Dashboard mockup */}
+        <div className="relative mt-20 max-w-5xl mx-auto w-full">
+          <div className="rounded-2xl overflow-hidden" style={{
+            border: "1px solid rgba(255,255,255,0.08)",
+            boxShadow: "0 40px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)",
+          }}>
+            {/* Browser chrome */}
+            <div className="flex items-center gap-2 px-4 py-3" style={{ background: "#0a0a0a", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="flex gap-1.5">
+                <div className="w-3 h-3 rounded-full" style={{ background: "rgba(239,68,68,0.6)" }} />
+                <div className="w-3 h-3 rounded-full" style={{ background: "rgba(234,179,8,0.6)" }} />
+                <div className="w-3 h-3 rounded-full" style={{ background: "rgba(34,197,94,0.6)" }} />
+              </div>
+              <div className="flex-1 flex justify-center">
+                <div className="px-4 py-1 rounded-lg text-[11px] font-mono" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.2)" }}>
+                  financeapp.io/dashboard
+                </div>
+              </div>
+            </div>
+            {/* Dashboard preview */}
+            <div className="h-80 flex" style={{ background: "#080808" }}>
+              <div className="w-12 flex flex-col gap-2 p-2 pt-4" style={{ borderRight: "1px solid rgba(255,255,255,0.05)" }}>
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="h-6 rounded-lg" style={{ background: i === 0 ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.04)" }} />
+                ))}
+              </div>
+              <div className="flex-1 p-4 flex flex-col gap-3">
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { v: "$189.25", c: "#4ade80", l: "AAPL" },
+                    { v: "+2.4%", c: "#4ade80", l: "Variation" },
+                    { v: "$100,000", c: "#60a5fa", l: "Cash" },
+                    { v: "82%", c: "#fbbf24", l: "Confluence" },
+                  ].map(s => (
+                    <div key={s.l} className="rounded-xl p-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                      <p className="text-[8px] mb-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>{s.l}</p>
+                      <p className="text-sm font-black" style={{ color: s.c }}>{s.v}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex-1 rounded-xl overflow-hidden" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                  <svg viewBox="0 0 400 150" className="w-full h-full opacity-60" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#22c55e" stopOpacity="0.3" />
+                        <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M0,120 L40,105 L80,90 L120,95 L160,70 L200,55 L240,42 L280,30 L320,22 L360,15 L400,8" fill="none" stroke="#22c55e" strokeWidth="2" />
+                    <path d="M0,120 L40,105 L80,90 L120,95 L160,70 L200,55 L240,42 L280,30 L320,22 L360,15 L400,8 L400,150 L0,150 Z" fill="url(#chartGrad)" />
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
+          <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-2/3 h-12 blur-2xl rounded-full" style={{ background: "rgba(34,197,94,0.12)" }} />
         </div>
       </section>
 
-      {/* TICKER TAPE */}
-      <div className="overflow-hidden border-y border-white/5 py-3 bg-[#0a0a0a]">
-        <div className="flex anim-ticker whitespace-nowrap">
-          {[0,1].map(ri => (
-            <span key={ri} className="flex gap-0">
-              {["AAPL +2.41%","TSLA +1.83%","BTC +4.92%","NVDA +3.20%","ETH +2.14%","MSFT +0.92%","AMZN +1.55%","GOOGL +1.23%","SOL +6.44%","DOGE +8.11%"].map(t => (
-                <span key={t+ri} className="text-xs font-semibold text-green-400 mx-6">● {t}</span>
-              ))}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* FEATURES */}
-      <section id="features" className="py-16 md:py-24 px-4 md:px-6">
+      {/* SECTION 2 — Features */}
+      <section className="py-24 px-6" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <span className="text-xs font-bold uppercase tracking-widest text-green-400">Fonctionnalités</span>
-            <h2 className="text-2xl md:text-4xl font-black text-white mt-2 mb-3">Tout ce dont un trader a besoin</h2>
-            <p className="text-gray-400 text-base md:text-lg max-w-xl mx-auto">Des outils institutionnels accessibles à tous, propulsés par l'IA.</p>
+            <p className="text-xs text-green-400 font-black uppercase tracking-widest mb-3">Tout en un</p>
+            <h2 className="text-4xl md:text-5xl font-black text-white tracking-tight">
+              La plateforme de trading<br/>la plus complète
+            </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {FEATURES.map(f => (
-              <div key={f.title} className={`group bg-gradient-to-br ${f.color} border border-white/8 rounded-2xl p-6 hover:border-white/20 transition-all duration-300 hover:-translate-y-1 cursor-default`}>
-                <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300 inline-block">{f.icon}</div>
-                <h3 className="text-white font-bold text-base mb-2">{f.title}</h3>
-                <p className="text-gray-400 text-sm leading-relaxed">{f.desc}</p>
-              </div>
+            {[
+              { icon: "📡", title: "Signaux IA temps réel", desc: "20+ indicateurs analysés simultanément sur 160 actifs. Confluence algorithmique pour filtrer les faux signaux.", color: "#22c55e", href: "/signaux" },
+              { icon: "📊", title: "Graphes professionnels", desc: "Candlesticks, RSI, MACD, Bollinger, EMA. Mode plein écran avec signaux IA superposés.", color: "#60a5fa", href: "/dashboard" },
+              { icon: "🎓", title: "Académie interactive", desc: "15 cours avec simulations sur données réelles, quiz gamifiés, tuteur IA personnel et certificats.", color: "#a78bfa", href: "/apprendre" },
+              { icon: "💼", title: "Paper Trading", desc: "$100,000 fictifs pour t'entraîner sans risque. TP/SL automatiques, historique des trades, P&L en temps réel.", color: "#fbbf24", href: "/portfolio" },
+              { icon: "🔍", title: "Screener 160+ actifs", desc: "Scanner actions, crypto, ETF et matières premières avec scoring IA. Trouve les meilleures opportunités en secondes.", color: "#f97316", href: "/analyses" },
+              { icon: "📰", title: "News & Sentiment IA", desc: "Actualités financières en temps réel avec analyse de sentiment. Fear & Greed Index et calendrier économique.", color: "#ec4899", href: "/news" },
+            ].map(feature => (
+              <a key={feature.title} href={feature.href} className="group rounded-2xl p-6 transition-all hover:scale-[1.02]"
+                style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mb-4 transition-transform group-hover:scale-110"
+                  style={{ background: `${feature.color}12`, border: `1px solid ${feature.color}20` }}>
+                  {feature.icon}
+                </div>
+                <h3 className="text-base font-black text-white mb-2 group-hover:text-green-400 transition-colors">{feature.title}</h3>
+                <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.4)" }}>{feature.desc}</p>
+              </a>
             ))}
           </div>
         </div>
       </section>
 
-      {/* HOW IT WORKS */}
-      <section className="py-16 md:py-24 px-4 md:px-6 bg-[#0a0a0a]">
+      {/* SECTION 3 — Steps */}
+      <section className="py-24 px-6" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
-            <span className="text-xs font-bold uppercase tracking-widest text-green-400">Simple</span>
-            <h2 className="text-2xl md:text-4xl font-black text-white mt-2 mb-3">Démarrez en 3 minutes</h2>
+            <p className="text-xs text-green-400 font-black uppercase tracking-widest mb-3">Simple & rapide</p>
+            <h2 className="text-4xl font-black text-white">Commence en 3 minutes</h2>
           </div>
-          <div className="flex flex-col md:flex-row items-stretch gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { n:"1", title:"Crée ton compte", desc:"Inscription gratuite en 30 secondes, aucune carte requise.", icon:"👤" },
-              { n:"2", title:"Configure ta watchlist", desc:"Ajoute tes actifs favoris et personnalise tes alertes de prix.", icon:"⚙️" },
-              { n:"3", title:"Trade avec l'IA", desc:"Reçois des signaux, analyse avec l'IA, practice sur le paper trading.", icon:"🚀" },
+              { step: "01", icon: "✍️", title: "Crée ton compte gratuit", desc: "Inscription en 30 secondes. Aucune carte de crédit requise. Tu reçois $100,000 fictifs immédiatement." },
+              { step: "02", icon: "📡", title: "Consulte les signaux IA", desc: "Notre algorithme scanne 160+ actifs en continu. Reçois des alertes sur les meilleures opportunités." },
+              { step: "03", icon: "💹", title: "Trade et apprends", desc: "Pratique avec notre paper trading, suis l'académie, et deviens un trader profitable." },
             ].map((step, i) => (
-              <div key={step.n} className="flex md:flex-1 flex-col md:flex-row items-center gap-4 w-full">
-                <div className="flex-1 bg-[#111] border border-white/8 rounded-2xl p-6 text-center hover:border-green-500/20 transition-all w-full">
-                  <div className="w-10 h-10 rounded-full bg-green-500/15 border border-green-500/25 flex items-center justify-center text-green-400 font-black text-sm mx-auto mb-3">{step.n}</div>
-                  <div className="text-3xl mb-2">{step.icon}</div>
-                  <h3 className="text-white font-bold mb-1">{step.title}</h3>
-                  <p className="text-gray-500 text-sm">{step.desc}</p>
+              <div key={i} className="text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl text-3xl mb-4"
+                  style={{ background: "linear-gradient(135deg, rgba(34,197,94,0.1), rgba(34,197,94,0.05))", border: "1px solid rgba(34,197,94,0.2)" }}>
+                  {step.icon}
                 </div>
-                {i < 2 && <div className="text-gray-700 text-xl font-black rotate-90 md:rotate-0 flex-shrink-0">→</div>}
+                <div className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: "rgba(34,197,94,0.5)" }}>{step.step}</div>
+                <h3 className="text-base font-black text-white mb-2">{step.title}</h3>
+                <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.4)" }}>{step.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* LIVE SCREENER */}
-      <section className="py-16 md:py-24 px-4 md:px-6">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-12">
-            <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-green-400">
-              <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"/><span className="relative inline-flex rounded-full h-2 w-2 bg-green-400"/></span>
-              Live
-            </span>
-            <h2 className="text-2xl md:text-4xl font-black text-white mt-2 mb-3">Opportunités en ce moment</h2>
-            <p className="text-gray-400">Les signaux les plus forts détectés par notre IA à l'instant.</p>
-          </div>
-          <div className="space-y-3 mb-8">
-            {signals.length > 0 ? signals.map((s: any, i: number) => (
-              <div key={i} className="flex items-center gap-3 bg-[#111] border border-white/8 rounded-xl px-4 py-3 hover:border-green-500/15 transition">
-                <span className="text-sm font-black text-white w-14 flex-shrink-0">{s.symbol ?? s.ticker ?? "—"}</span>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-lg flex-shrink-0 ${(s.signal ?? "").toLowerCase().includes("buy") || (s.signal ?? "").toLowerCase().includes("achat") ? "bg-green-500/15 text-green-400 border border-green-500/20" : "bg-red-500/15 text-red-400 border border-red-500/20"}`}>
-                  {s.signal ?? "SIGNAL"}
-                </span>
-                <span className="text-xs text-gray-500 truncate flex-1 hidden sm:block">{s.reason ?? s.description ?? "Confluence d'indicateurs détectée"}</span>
-                <span className={`text-xs font-bold flex-shrink-0 hidden sm:block ${s.strength === "strong" ? "text-green-400" : s.strength === "medium" ? "text-yellow-400" : "text-gray-600"}`}>
-                  {s.strength === "strong" ? "🔥 Fort" : s.strength === "medium" ? "⚡ Moyen" : "— Faible"}
-                </span>
-              </div>
-            )) : Array.from({length:5},(_,i) => (
-              <div key={i} className="h-14 bg-[#111] border border-white/5 rounded-xl animate-pulse" />
-            ))}
-          </div>
-          <div className="text-center">
-            <a href="/signup" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-green-500/10 border border-green-500/25 text-green-400 font-semibold text-sm hover:bg-green-500/20 transition">
-              Voir tous les signaux →
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* TESTIMONIALS */}
-      <section className="py-16 md:py-24 px-4 md:px-6 bg-[#0a0a0a]">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <span className="text-xs font-bold uppercase tracking-widest text-green-400">Avis traders</span>
-            <h2 className="text-2xl md:text-4xl font-black text-white mt-2 mb-3">Ce que disent nos traders</h2>
-            <p className="text-gray-400">Plus de 10 000 traders font confiance à FinanceApp.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {TESTIMONIALS.map(t => (
-              <div key={t.name} className="bg-[#111] border border-white/5 rounded-2xl p-5 hover:border-white/10 transition-all hover:-translate-y-0.5">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center font-black text-black text-sm flex-shrink-0" style={{background:t.color}}>
-                    {t.name[0]}
+      {/* SECTION 4 — Pricing */}
+      <section className="py-24 px-6" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+        <div className="max-w-4xl mx-auto text-center">
+          <p className="text-xs text-green-400 font-black uppercase tracking-widest mb-3">Tarifs transparents</p>
+          <h2 className="text-4xl font-black text-white mb-4">Commence gratuitement</h2>
+          <p className="mb-12" style={{ color: "rgba(255,255,255,0.4)" }}>Upgrade quand tu es prêt. Annulation à tout moment.</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {[
+              { name: "Free", price: "0€", period: "pour toujours", color: "#6b7280", features: ["3 signaux IA/jour", "Paper trading", "Cours débutant", "Forum communautaire"], cta: "Commencer gratuitement", href: "/signup", highlight: false },
+              { name: "Pro ⭐", price: "19€", period: "/mois", color: "#22c55e", features: ["Signaux illimités", "Screener 160+ actifs", "Alertes illimitées", "Tous les cours", "Backtest", "Rapports avancés"], cta: "Passer à Pro", href: "/pricing", highlight: true },
+              { name: "Premium 💎", price: "49€", period: "/mois", color: "#fbbf24", features: ["Tout Pro inclus", "API publique", "Rapport IA hebdo", "Support prioritaire", "Accès beta"], cta: "Passer Premium", href: "/pricing", highlight: false },
+            ].map(plan => (
+              <div key={plan.name} className={`rounded-2xl p-6 relative ${plan.highlight ? "scale-105" : ""}`}
+                style={{
+                  background: plan.highlight ? "rgba(34,197,94,0.06)" : "#0a0a0a",
+                  border: `1px solid ${plan.highlight ? "rgba(34,197,94,0.25)" : "rgba(255,255,255,0.06)"}`,
+                  boxShadow: plan.highlight ? "0 0 40px rgba(34,197,94,0.08)" : "none",
+                }}>
+                {plan.highlight && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-black text-black" style={{ background: "#22c55e" }}>
+                    LE PLUS POPULAIRE
                   </div>
-                  <div>
-                    <div className="text-white font-semibold text-sm">{t.name}</div>
-                    <div className="text-yellow-400 text-xs tracking-wider">{"★".repeat(t.stars)}</div>
-                  </div>
-                </div>
-                <p className="text-gray-400 text-sm leading-relaxed">"{t.text}"</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* PRICING SUMMARY */}
-      <section className="py-16 md:py-24 px-4 md:px-6">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <span className="text-xs font-bold uppercase tracking-widest text-green-400">Tarifs</span>
-            <h2 className="text-2xl md:text-4xl font-black text-white mt-2 mb-3">Simple et transparent</h2>
-            <p className="text-gray-400">Commence gratuitement, upgrade quand tu es prêt.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {PLANS_COMPACT.map(p => (
-              <div key={p.name} className={`relative bg-[#111] border ${p.color} rounded-2xl p-6 flex flex-col ${p.name==="Pro"?"shadow-lg shadow-green-500/10":""}`}>
-                {p.badge && (
-                  <span className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-black whitespace-nowrap ${p.name==="Pro"?"bg-green-500 text-black":"bg-yellow-500/20 border border-yellow-500/30 text-yellow-400"}`}>{p.badge}</span>
                 )}
-                <div className="mb-4 mt-2">
-                  <div className="text-xl font-black text-white">{p.name}</div>
-                  <div className="text-3xl font-black mt-1">{p.price}<span className="text-gray-500 text-sm font-normal">/mois</span></div>
+                <p className="text-sm font-bold mb-1" style={{ color: plan.color }}>{plan.name}</p>
+                <div className="flex items-baseline gap-1 mb-1">
+                  <span className="text-3xl font-black text-white">{plan.price}</span>
+                  <span className="text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>{plan.period}</span>
                 </div>
-                <ul className="space-y-2 flex-1 mb-5">
-                  {p.features.map(f => (
-                    <li key={f} className="flex items-start gap-2 text-sm text-gray-300">
-                      <span className="text-green-400 mt-0.5 flex-shrink-0">✓</span>{f}
-                    </li>
+                <div className="h-px my-4" style={{ background: "rgba(255,255,255,0.06)" }} />
+                <div className="space-y-2 mb-6">
+                  {plan.features.map(f => (
+                    <div key={f} className="flex items-center gap-2 text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+                      <span style={{ color: plan.color }}>✓</span>{f}
+                    </div>
                   ))}
-                </ul>
-                <a href={p.name==="Free"?"/signup":"/pricing"} className={`w-full py-2.5 rounded-xl text-sm font-bold text-center transition block ${p.name==="Pro"?"bg-green-500 hover:bg-green-400 text-black":"border border-white/15 hover:border-white/30 text-white"}`}>
-                  {p.name==="Free"?"Commencer gratuitement":"Voir les détails →"}
+                </div>
+                <a href={plan.href} className="block w-full py-3 rounded-xl text-sm font-black text-center transition-all hover:scale-[1.02]"
+                  style={{
+                    background: plan.highlight ? "#22c55e" : "rgba(255,255,255,0.06)",
+                    color: plan.highlight ? "black" : "white",
+                    border: plan.highlight ? "none" : "1px solid rgba(255,255,255,0.08)",
+                  }}>
+                  {plan.cta}
                 </a>
               </div>
             ))}
           </div>
-          <p className="text-center text-gray-600 text-xs mt-8">Paiement sécurisé · Annulation à tout moment · 30j satisfait ou remboursé</p>
         </div>
       </section>
 
-      {/* FAQ */}
-      <section className="py-16 md:py-24 px-4 md:px-6 bg-[#0a0a0a]">
-        <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-16">
-            <span className="text-xs font-bold uppercase tracking-widest text-green-400">FAQ</span>
-            <h2 className="text-2xl md:text-4xl font-black text-white mt-2 mb-3">Questions fréquentes</h2>
+      {/* SECTION 5 — Témoignages */}
+      <section className="py-24 px-6" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <p className="text-xs text-green-400 font-black uppercase tracking-widest mb-3">Témoignages</p>
+            <h2 className="text-4xl font-black text-white">Ce que disent nos traders</h2>
           </div>
-          <div className="space-y-2">
-            {FAQS.map((faq,i) => (
-              <div key={i} className="border border-white/8 rounded-xl overflow-hidden">
-                <button onClick={() => setOpenFaq(openFaq===i?null:i)} className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-white/3 transition">
-                  <span className="text-white font-semibold text-sm pr-4">{faq.q}</span>
-                  <span className={`text-green-400 text-xl font-light flex-shrink-0 transition-transform duration-200 ${openFaq===i?"rotate-45":""}`}>+</span>
-                </button>
-                {openFaq===i && (
-                  <div className="px-5 pb-4 border-t border-white/5">
-                    <p className="text-gray-400 text-sm leading-relaxed pt-3">{faq.a}</p>
-                  </div>
-                )}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {[
+              { name: "Thomas M.", role: "Trader débutant", text: "Les signaux IA m'ont permis de comprendre l'analyse technique en pratiquant sur de vraies données. L'académie est exceptionnelle.", stars: 5 },
+              { name: "Sarah K.", role: "Investisseuse active", text: "Le screener est incroyable. Je trouve des opportunités que je ne voyais pas avant. Le rapport qualité/prix est imbattable.", stars: 5 },
+              { name: "Marc D.", role: "Trader intermédiaire", text: "J'utilise FinanceApp tous les jours. Les alertes de prix et les signaux confluents m'ont vraiment aidé à améliorer mes trades.", stars: 5 },
+              { name: "Amina B.", role: "Étudiante en finance", text: "Parfait pour apprendre. Le tuteur IA répond à toutes mes questions et les simulations sont très réalistes.", stars: 5 },
+              { name: "Pierre L.", role: "Day trader", text: "Les graphes sont au niveau TradingView mais intégrés aux signaux IA. Game changer pour mon workflow quotidien.", stars: 5 },
+              { name: "Julie R.", role: "Investisseuse long terme", text: "J'ai commencé en free et upgradé rapidement. Les analyses macro et le calendrier économique sont parfaits pour ma stratégie.", stars: 5 },
+            ].map((t, i) => (
+              <div key={i} className="rounded-2xl p-5" style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="flex mb-3">{[...Array(t.stars)].map((_, j) => <span key={j} className="text-yellow-400 text-sm">★</span>)}</div>
+                <p className="text-sm leading-relaxed mb-4" style={{ color: "rgba(255,255,255,0.6)" }}>"{t.text}"</p>
+                <div>
+                  <p className="text-sm font-bold text-white">{t.name}</p>
+                  <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>{t.role}</p>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA BAND */}
-      <section className="py-16 md:py-20 px-4 md:px-6 relative overflow-hidden">
-        <div className="absolute inset-0 anim-gradient opacity-10" style={{background:"linear-gradient(135deg,#22c55e,#059669,#10b981)"}} />
-        <div className="max-w-3xl mx-auto text-center relative">
-          <h2 className="text-2xl md:text-4xl font-black text-white mb-4">Prêt à trader plus intelligemment ?</h2>
-          <p className="text-gray-300 mb-8">Rejoins 10 000+ traders qui utilisent FinanceApp au quotidien.</p>
-          <a href="/signup" className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl font-black bg-white text-black hover:bg-gray-100 transition shadow-xl">
-            Créer un compte gratuit →
-          </a>
+      {/* SECTION 6 — FAQ */}
+      <section className="py-24 px-6" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+        <div className="max-w-2xl mx-auto">
+          <h2 className="text-4xl font-black text-white text-center mb-12">Questions fréquentes</h2>
+          <div className="space-y-3">
+            {[
+              { q: "Est-ce que FinanceApp utilise de vraies données de marché ?", a: "Oui, toutes les données proviennent de Yahoo Finance en temps réel. Les prix, variations et volumes sont mis à jour en continu." },
+              { q: "Le paper trading c'est quoi exactement ?", a: "C'est du trading simulé avec $100,000 fictifs. Tu apprends à trader sans risquer un seul euro. Parfait pour débuter ou tester de nouvelles stratégies." },
+              { q: "Les signaux IA sont-ils fiables ?", a: "Nos signaux combinent 20+ indicateurs techniques avec un score de confluence algorithmique. Plus la confluence est haute, plus le signal est fiable." },
+              { q: "Je suis débutant, est-ce fait pour moi ?", a: "Absolument ! L'académie interactive avec 15 cours, des simulations sur données réelles et un tuteur IA personnel t'accompagne de zéro à trader actif." },
+              { q: "Puis-je annuler mon abonnement à tout moment ?", a: "Oui, sans engagement. Tu peux annuler depuis ton profil en un clic. Aucune question posée." },
+            ].map((faq, i) => (
+              <FAQItem key={i} question={faq.q} answer={faq.a} />
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* NEWSLETTER */}
-      <section className="py-12 px-4 md:px-6" style={{ background: "#0a0a0a", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+      {/* SECTION 7 — CTA final */}
+      <section className="py-24 px-6 text-center" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
         <div className="max-w-xl mx-auto">
-          <NewsletterSignup source="landing-footer" />
+          <div className="w-16 h-16 rounded-3xl mx-auto mb-6 flex items-center justify-center text-3xl"
+            style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)" }}>
+            🚀
+          </div>
+          <h2 className="text-4xl font-black text-white mb-4">Prêt à trader plus intelligemment ?</h2>
+          <p className="mb-8" style={{ color: "rgba(255,255,255,0.4)" }}>Rejoins 10,000+ traders. Gratuit, sans CB, annulation à tout moment.</p>
+          <a href="/signup" className="inline-flex items-center gap-2 px-10 py-5 rounded-2xl text-lg font-black text-black transition-all hover:scale-[1.03] active:scale-[0.98]"
+            style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", boxShadow: "0 0 60px rgba(34,197,94,0.3)" }}>
+            Commencer gratuitement →
+          </a>
+          <p className="text-xs mt-4" style={{ color: "rgba(255,255,255,0.2)" }}>
+            ✓ Sans carte de crédit · ✓ $100,000 fictifs offerts · ✓ Annulation à tout moment
+          </p>
         </div>
       </section>
 
       {/* FOOTER */}
-      <footer className="border-t border-white/5 py-10 md:py-12 px-4 md:px-6 bg-[#080808]">
+      <footer style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }} className="py-12 px-6">
         <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center">
-                  <span className="text-white font-black text-xs">F</span>
-                </div>
-                <span className="text-white font-black">FinanceApp</span>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm" style={{ background: "linear-gradient(135deg, #4ade80, #059669)", color: "black" }}>F</div>
+                <span className="font-bold text-white">FinanceApp</span>
               </div>
-              <p className="text-gray-600 text-xs leading-relaxed max-w-[200px]">La plateforme de trading intelligente pour les traders modernes.</p>
+              <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.3)" }}>Trading intelligent avec l&apos;IA. Signaux, analyses et académie pour tous les traders.</p>
             </div>
             {[
-              {title:"Produit", links:[["Fonctionnalités","/#features"],["Signaux","/signaux"],["Académie","/apprendre"],["Blog","/blog"],["Forum","/forum"]]},
-              {title:"Tarifs", links:[["Plans & Prix","/pricing"],["Free","/signup"],["Pro","/pricing"],["Premium","/pricing"]]},
-              {title:"Légal", links:[["CGU","/legal/terms"],["Confidentialité","/legal/privacy"],["Cookies","/legal/cookies"],["Support","mailto:support@financeapp.io"]]},
+              { title: "Produit", links: [{ label: "Dashboard", href: "/dashboard" }, { label: "Signaux", href: "/signaux" }, { label: "Analyses", href: "/analyses" }, { label: "Académie", href: "/apprendre" }, { label: "Blog", href: "/blog" }] },
+              { title: "Compte", links: [{ label: "S'inscrire", href: "/signup" }, { label: "Se connecter", href: "/login" }, { label: "Tarifs", href: "/pricing" }] },
+              { title: "Légal", links: [{ label: "Confidentialité", href: "/legal/privacy" }, { label: "CGU", href: "/legal/terms" }, { label: "Mentions légales", href: "/legal/mentions" }] },
             ].map(col => (
               <div key={col.title}>
-                <h4 className="text-white font-bold text-xs mb-3 uppercase tracking-wide">{col.title}</h4>
-                <ul className="space-y-2">
-                  {col.links.map(([l,h]) => (
-                    <li key={l}><a href={h} className="text-gray-600 hover:text-gray-300 text-xs transition">{l}</a></li>
+                <p className="text-[10px] uppercase tracking-widest font-bold mb-3" style={{ color: "rgba(255,255,255,0.25)" }}>{col.title}</p>
+                <div className="space-y-2">
+                  {col.links.map(link => (
+                    <a key={link.label} href={link.href} className="block text-sm transition-colors hover:text-white" style={{ color: "rgba(255,255,255,0.4)" }}>{link.label}</a>
                   ))}
-                </ul>
+                </div>
               </div>
             ))}
           </div>
-          <div className="border-t border-white/5 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-gray-700 text-xs">© 2026 FinanceApp — Tous droits réservés</p>
-            <div className="flex items-center gap-3">
-              {[["𝕏","#"],["in","#"],["▶","#"]].map(([icon,href]) => (
-                <a key={icon} href={href} className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-500 hover:text-white transition text-xs font-bold">{icon}</a>
-              ))}
-            </div>
-          </div>
-          {/* Legal links */}
-          <div className="flex flex-wrap justify-center gap-4 mt-4 text-xs text-gray-700">
-            <a href="/legal/privacy" className="hover:text-gray-500 transition">Confidentialité</a>
-            <a href="/legal/terms" className="hover:text-gray-500 transition">CGU</a>
-            <a href="/legal/cookies" className="hover:text-gray-500 transition">Cookies</a>
-            <a href="mailto:support@financeapp.io" className="hover:text-gray-500 transition">Support</a>
+          <div className="flex items-center justify-between flex-wrap gap-4" style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "1.5rem" }}>
+            <p className="text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>© 2026 FinanceApp. Tous droits réservés.</p>
+            <p className="text-xs" style={{ color: "rgba(255,255,255,0.15)" }}>⚠️ Le trading comporte des risques. FinanceApp est un outil éducatif, pas un conseiller financier.</p>
           </div>
         </div>
       </footer>
-    </div>
+    </main>
   )
 }
