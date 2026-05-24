@@ -15,6 +15,41 @@ export default function ChatBot() {
   return <ChatBotInner />
 }
 
+type Corner = "br" | "bl" | "tr" | "tl"
+
+function snapToCorner(x: number, y: number): Corner {
+  const cx = window.innerWidth / 2
+  const cy = window.innerHeight / 2
+  if (x < cx && y < cy) return "tl"
+  if (x >= cx && y < cy) return "tr"
+  if (x < cx && y >= cy) return "bl"
+  return "br"
+}
+
+function getButtonPos(corner: Corner): React.CSSProperties {
+  const edge = 16
+  const topOffset = 72
+  switch (corner) {
+    case "br": return { bottom: edge, right: edge }
+    case "bl": return { bottom: edge, left: edge }
+    case "tr": return { top: topOffset, right: edge }
+    case "tl": return { top: topOffset, left: edge }
+  }
+}
+
+function getPanelPos(corner: Corner): React.CSSProperties {
+  const edge = 16
+  const btnSize = 48
+  const gap = 8
+  const topOffset = 72
+  switch (corner) {
+    case "br": return { bottom: edge + btnSize + gap, right: edge }
+    case "bl": return { bottom: edge + btnSize + gap, left: edge }
+    case "tr": return { top: topOffset + btnSize + gap, right: edge }
+    case "tl": return { top: topOffset + btnSize + gap, left: edge }
+  }
+}
+
 function ChatBotInner() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
@@ -24,6 +59,51 @@ function ChatBotInner() {
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [historyLoaded, setHistoryLoaded] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  const [corner, setCorner] = useState<Corner>("br")
+  const [dragging, setDragging] = useState(false)
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null)
+  const dragStart = useRef<{ x: number; y: number } | null>(null)
+  const hasMoved = useRef(false)
+  const btnRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    const saved = localStorage.getItem("chatbot-corner") as Corner | null
+    if (saved) setCorner(saved)
+  }, [])
+
+  function onPointerDown(e: React.PointerEvent) {
+    dragStart.current = { x: e.clientX, y: e.clientY }
+    hasMoved.current = false
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  }
+
+  function onPointerMove(e: React.PointerEvent) {
+    if (!dragStart.current) return
+    const dx = e.clientX - dragStart.current.x
+    const dy = e.clientY - dragStart.current.y
+    if (!hasMoved.current && Math.hypot(dx, dy) > 6) {
+      hasMoved.current = true
+      setDragging(true)
+    }
+    if (hasMoved.current) {
+      setDragPos({ x: e.clientX, y: e.clientY })
+    }
+  }
+
+  function onPointerUp(e: React.PointerEvent) {
+    if (hasMoved.current && dragPos) {
+      const newCorner = snapToCorner(dragPos.x, dragPos.y)
+      setCorner(newCorner)
+      localStorage.setItem("chatbot-corner", newCorner)
+    } else if (!hasMoved.current) {
+      setOpen(v => !v)
+    }
+    dragStart.current = null
+    hasMoved.current = false
+    setDragging(false)
+    setDragPos(null)
+  }
 
   // Charge l'historique au montage
   useEffect(() => {
@@ -97,13 +177,17 @@ function ChatBotInner() {
     setLoading(false)
   }
 
+  const btnStyle: React.CSSProperties = dragging && dragPos
+    ? { position: "fixed", left: dragPos.x - 24, top: dragPos.y - 24, zIndex: 201, cursor: "grabbing" }
+    : { ...getButtonPos(corner), position: "fixed", zIndex: 199, cursor: "grab" }
+
   return (
     <>
       {/* Panel chat */}
-      {open && (
+      {open && !dragging && (
         <div
-          className="fixed bottom-20 md:bottom-6 right-4 w-80 md:w-96 h-[480px] flex flex-col rounded-2xl shadow-2xl z-[200]"
-          style={{ background: "#111", border: "1px solid #1a1a1a" }}
+          className="w-80 md:w-96 h-[480px] flex flex-col rounded-2xl shadow-2xl z-[200]"
+          style={{ ...getPanelPos(corner), position: "fixed", background: "#111", border: "1px solid #1a1a1a" }}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
@@ -202,13 +286,21 @@ function ChatBotInner() {
         </div>
       )}
 
-      {/* Floating button */}
+      {/* Floating button — draggable */}
       <button
-        onClick={() => setOpen(v => !v)}
-        className="fixed bottom-20 md:bottom-6 right-4 z-[199] w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl transition-all hover:scale-110 active:scale-95"
-        style={{ background: "linear-gradient(135deg, #4ade80, #059669)" }}
+        ref={btnRef}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl transition-transform select-none"
+        style={{
+          ...btnStyle,
+          background: "linear-gradient(135deg, #4ade80, #059669)",
+          transition: dragging ? "none" : "all 0.2s ease",
+          touchAction: "none",
+        }}
       >
-        <span className="text-xl">{open ? "✕" : "🧠"}</span>
+        <span className="text-xl">{open && !dragging ? "✕" : "🧠"}</span>
       </button>
     </>
   )
