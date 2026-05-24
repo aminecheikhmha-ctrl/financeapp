@@ -33,15 +33,20 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ posts: data ?? [] })
 }
 
-// PATCH — update a post (pin/unpin)
+// PATCH — update a post (pin/unpin, edit title/content)
 export async function PATCH(req: NextRequest) {
   if (!await checkAdmin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
-  const { id, pinned } = await req.json()
+  const { id, pinned, title, content } = await req.json()
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 })
 
   const supabase = makeSupabase()
-  const { error } = await supabase.from("forum_posts").update({ pinned }).eq("id", id)
+  const updates: Record<string, any> = {}
+  if (pinned !== undefined) updates.pinned = pinned
+  if (title !== undefined) updates.title = title
+  if (content !== undefined) updates.content = content
+
+  const { error } = await supabase.from("forum_posts").update(updates).eq("id", id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
