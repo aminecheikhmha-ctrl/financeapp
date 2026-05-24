@@ -30,7 +30,7 @@ export default function Navbar() {
   }, [])
 
   const isPublic = PUBLIC_ROUTES.includes(pathname)
-  if (!ready || !isPublic || user) return null
+  if (!ready || !isPublic) return null
 
   const navLinks = [
     { href: "/#features", label: "Fonctionnalités" },
@@ -39,6 +39,37 @@ export default function Navbar() {
     { href: "/blog", label: "Blog" },
     { href: "/signaux", label: "Signaux" },
   ]
+
+  // Logged-in user on a public route → minimal bar with dashboard link
+  if (user) {
+    return (
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? "bg-[#080808]/90 backdrop-blur-xl border-b border-white/5 shadow-xl"
+          : "bg-[#080808]/70 backdrop-blur-md border-b border-white/5"
+      }`}>
+        <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between">
+          <a href="/" className="flex items-center gap-2.5 group flex-shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/30">
+              <span className="text-white font-black text-sm">F</span>
+            </div>
+            <span className="text-white font-black text-lg tracking-tight group-hover:text-green-400 transition">
+              FinanceApp
+            </span>
+          </a>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-gray-500 hidden sm:block">{user.email}</span>
+            <a
+              href="/dashboard"
+              className="px-4 py-2 rounded-xl text-sm font-bold bg-green-500 hover:bg-green-400 text-black transition shadow-lg shadow-green-500/25"
+            >
+              Dashboard →
+            </a>
+          </div>
+        </div>
+      </nav>
+    )
+  }
 
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -73,6 +104,12 @@ export default function Navbar() {
         {/* Desktop CTAs */}
         <div className="hidden md:flex items-center gap-3">
           <a
+            href="/dashboard"
+            className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-300 hover:text-white transition"
+          >
+            Demo
+          </a>
+          <a
             href="/login"
             className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-300 border border-white/10 hover:border-white/25 hover:text-white transition"
           >
@@ -105,6 +142,9 @@ export default function Navbar() {
               {l.label}
             </a>
           ))}
+          <a href="/dashboard" className="block text-green-400 hover:text-green-300 py-2 text-sm font-semibold transition">
+            Démo gratuite
+          </a>
           <div className="flex gap-3 pt-2">
             <a href="/login" className="flex-1 py-2.5 text-center rounded-xl border border-white/10 text-sm font-semibold text-gray-300">
               Connexion

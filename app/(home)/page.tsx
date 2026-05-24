@@ -58,13 +58,13 @@ export default function HomePage() {
 
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
-            <a href="/dashboard" className="group relative flex items-center gap-2.5 px-8 py-4 rounded-2xl text-base font-black text-black transition-all hover:scale-[1.03] active:scale-[0.98]"
+            <a href="/signup" className="group relative flex items-center gap-2.5 px-8 py-4 rounded-2xl text-base font-black text-black transition-all hover:scale-[1.03] active:scale-[0.98]"
               style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", boxShadow: "0 0 40px rgba(34,197,94,0.3), 0 4px 20px rgba(0,0,0,0.3)" }}>
-              Essayer gratuitement →
+              Commencer gratuitement →
             </a>
-            <a href="/signaux" className="flex items-center gap-2.5 px-8 py-4 rounded-2xl text-base font-bold transition-all hover:bg-white/5"
+            <a href="/dashboard" className="flex items-center gap-2.5 px-8 py-4 rounded-2xl text-base font-bold transition-all hover:bg-white/5"
               style={{ color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.10)" }}>
-              Voir les signaux <span className="text-green-400 text-xs font-black ml-1">LIVE</span>
+              Voir le dashboard <span className="text-green-400 text-xs font-black ml-1">DEMO</span>
             </a>
           </div>
 
@@ -224,9 +224,9 @@ export default function HomePage() {
           <p className="mb-12" style={{ color: "rgba(255,255,255,0.4)" }}>Upgrade quand tu es prêt. Annulation à tout moment.</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {[
-              { name: "Free", price: "0€", period: "pour toujours", color: "#6b7280", features: ["3 signaux IA/jour", "Paper trading", "Cours débutant", "Forum communautaire"], cta: "Commencer gratuitement", href: "/signup", highlight: false },
-              { name: "Pro ⭐", price: "19€", period: "/mois", color: "#22c55e", features: ["Signaux illimités", "Screener 160+ actifs", "Alertes illimitées", "Tous les cours", "Backtest", "Rapports avancés"], cta: "Passer à Pro", href: "/pricing", highlight: true },
-              { name: "Premium 💎", price: "49€", period: "/mois", color: "#fbbf24", features: ["Tout Pro inclus", "API publique", "Rapport IA hebdo", "Support prioritaire", "Accès beta"], cta: "Passer Premium", href: "/pricing", highlight: false },
+              { name: "Free", price: "0€", period: "pour toujours", color: "#6b7280", features: ["5 actifs en watchlist", "3 signaux IA / jour", "Paper trading 10 000 $", "Cours débutant", "Forum communautaire"], cta: "Commencer gratuitement", href: "/signup", highlight: false },
+              { name: "Pro ⭐", price: "19€", period: "/mois", color: "#22c55e", features: ["Signaux IA illimités", "Paper trading 100 000 $", "10 alertes de prix", "Académie complète (15 cours)", "Graphes pro + 20 indicateurs", "Support prioritaire"], cta: "Passer à Pro", href: "/pricing", highlight: true },
+              { name: "Premium 💎", price: "49€", period: "/mois", color: "#fbbf24", features: ["Tout Pro inclus", "Screener 160 actifs temps réel", "Alertes de prix illimitées", "API access", "1h coaching / mois", "Support prioritaire 7j/7"], cta: "Passer Premium", href: "/pricing", highlight: false },
             ].map(plan => (
               <div key={plan.name} className={`rounded-2xl p-6 relative ${plan.highlight ? "scale-105" : ""}`}
                 style={{
