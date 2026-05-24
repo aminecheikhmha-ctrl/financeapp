@@ -304,6 +304,30 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(cached.data)
   }
 
+  // Support for general news (no specific symbol)
+  if (symbol === "general") {
+    const cachedGeneral = cache.get("general")
+    if (cachedGeneral && Date.now() - cachedGeneral.ts < CACHE_TTL) {
+      return NextResponse.json(cachedGeneral.data)
+    }
+    const [reuters, marketwatch, cnbc] = await Promise.all([
+      fetchReutersRSS(), fetchMarketWatchRSS(), fetchCNBCRSS(),
+    ])
+    let generalAll = deduplicate([...reuters, ...marketwatch, ...cnbc])
+      .sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime())
+      .slice(0, limit)
+    generalAll = generalAll.map(article => ({
+      ...article,
+      tickers: extractTickers(article.title),
+      breaking: detectBreaking(article.title),
+      category: detectCategory(article),
+    }))
+    await enrichWithAISummaries(generalAll)
+    const generalResult = { articles: generalAll, last_updated: new Date().toISOString() }
+    cache.set("general", { data: generalResult, ts: Date.now() })
+    return NextResponse.json(generalResult)
+  }
+
   const [yahoo, finnhub, reddit, reuters, marketwatch, cnbc] = await Promise.all([
     fetchYahooRSS(symbol),
     fetchFinnhub(symbol),

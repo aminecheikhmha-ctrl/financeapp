@@ -167,3 +167,16 @@ button:focus-visible, a:focus-visible, input:focus-visible {
   transform: translateY(0);
   box-shadow: 0 2px 12px rgba(74,222,128,0.3);
 }
+
+/* ── Ticker tape ───────────────────────────────── */
+@keyframes ticker-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.ticker-animate {
+  display: inline-flex;
+  animation: ticker-scroll 45s linear infinite;
+}
+.ticker-wrap:hover .ticker-animate {
+  animation-play-state: paused;
+}
