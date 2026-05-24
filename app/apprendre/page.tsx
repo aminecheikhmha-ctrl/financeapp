@@ -307,9 +307,6 @@ export default function Apprendre() {
     return done === c.chapters.length && c.chapters.length > 0
   })
 
-  // Last 3 courses in the array (the newest additions)
-  const newestCourses = COURSES.slice(-3)
-
   // Popular courses from DB, falling back to first debutant courses
   const popularCourses = popularIds.length >= 3
     ? popularIds.map(id => COURSES.find(c => c.id === id)).filter(Boolean) as Course[]
@@ -319,6 +316,8 @@ export default function Apprendre() {
     const done = progress[c.id]?.size ?? 0
     return done > 0 && done < c.chapters.length
   })
+
+  const LEVEL_ORDER: Record<string, number> = { "débutant": 0, "intermédiaire": 1, "avancé": 2 }
 
   const filtered = COURSES.filter(course => {
     if (levelFilter !== "all" && course.level !== levelFilter) return false
@@ -330,7 +329,7 @@ export default function Apprendre() {
     if (statusFilter === "completed" && !(done === total && total > 0)) return false
     if (statusFilter === "new"       && done > 0) return false
     return true
-  })
+  }).sort((a, b) => (LEVEL_ORDER[a.level] ?? 0) - (LEVEL_ORDER[b.level] ?? 0))
 
   if (!ready) return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg-canvas)" }}>
@@ -643,64 +642,6 @@ export default function Apprendre() {
             )}
           </motion.div>
         </div>
-
-        {/* ── NOUVEAUX COURS ───────────────────────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.45 }}
-          className="mb-7">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <span className="text-base">🆕</span>
-              <p className="font-black text-white text-sm">Nouveaux cours</p>
-              <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md animate-pulse"
-                style={{ background: "rgba(74,222,128,0.1)", color: "#4ade80", border: "1px solid rgba(74,222,128,0.2)" }}>
-                NOUVEAU
-              </span>
-            </div>
-            <button onClick={() => { setLevel("all"); setType("all"); setStatus("new") }}
-              className="text-[10px] font-bold transition-colors" style={{ color: "#333" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "#666")}
-              onMouseLeave={e => (e.currentTarget.style.color = "#333")}>
-              Voir tous →
-            </button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {newestCourses.map((course, index) => {
-              const lc = LEVEL_COLORS[course.level]
-              const { done, total, pct } = getCourseProgress(course, progress)
-              const grad = COURSE_GRADIENTS[course.id] ?? "from-gray-950 to-slate-950"
-              return (
-                <motion.div key={course.id}
-                  initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.48 + index * 0.06 }}
-                  whileHover={{ y: -3, scale: 1.01 }} whileTap={{ scale: 0.99 }}
-                  onClick={() => router.push(`/apprendre/${course.id}`)}
-                  className={`cursor-pointer rounded-2xl p-4 relative overflow-hidden bg-gradient-to-br ${grad}`}
-                  style={{ border: `1px solid ${lc.border}` }}>
-                  <div className="absolute top-2 right-2 text-4xl opacity-[0.07] select-none pointer-events-none leading-none">{course.icon}</div>
-                  <div className="flex items-center gap-2.5 mb-2.5">
-                    <span className="text-xl">{course.icon}</span>
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest"
-                      style={{ background: lc.bg, color: lc.text, border: `1px solid ${lc.border}` }}>
-                      {getLevelLabel(course.level)}
-                    </span>
-                  </div>
-                  <p className="text-white font-black text-sm mb-1 leading-snug">{course.title}</p>
-                  <p className="text-[10px] mb-3 line-clamp-2 leading-relaxed" style={{ color: "#555" }}>{course.description}</p>
-                  <div className="flex items-center justify-between text-[10px]" style={{ color: "#444" }}>
-                    <span>⏱ {course.duration}</span>
-                    <span style={{ color: lc.text }}>{pct}% ✓</span>
-                  </div>
-                  <div className="mt-2 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
-                    <div className="h-full rounded-full transition-all"
-                      style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${lc.text}80, ${lc.text})` }} />
-                  </div>
-                </motion.div>
-              )
-            })}
-          </div>
-        </motion.div>
 
         {/* ── LES PLUS POPULAIRES ──────────────────────────────────────────── */}
         <motion.div
