@@ -1,14 +1,15 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { RefreshCw, TrendingUp, TrendingDown, Minus, Flame, Search } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { AnimatePresence, motion } from "framer-motion"
+import FearGreedGauge, { type FearGreedResult } from "@/app/components/news/FearGreedGauge"
+import EconomicCalendar from "@/app/components/news/EconomicCalendar"
+import MarketPulse from "@/app/components/news/MarketPulse"
+import TrendingTopics from "@/app/components/news/TrendingTopics"
+import EarningsCalendar from "@/app/components/news/EarningsCalendar"
+import SocialPulse from "@/app/components/news/SocialPulse"
 
-const TOP_SYMBOLS = [
-  "AAPL", "MSFT", "NVDA", "TSLA", "META", "GOOGL", "AMZN",
-  "BTC-USD", "ETH-USD", "SOL-USD", "SPY", "QQQ",
-]
-
+// ─── Types ────────────────────────────────────────────────────────────────────
 type Article = {
   title: string
   source: string
@@ -16,66 +17,231 @@ type Article = {
   published_at: string
   reddit_score?: number
   reddit_comments?: number
+  tickers?: string[]
+  ai_summary?: string
+  breaking?: boolean
+  sentiment_score?: number
+  category?: "crypto" | "macro" | "earnings" | "reddit" | "general"
 }
 
-type SymbolSentiment = {
+type SentimentItem = {
   symbol: string
-  score: number
-  label: string
-  impact: string
-  articles: number
-  reddit_mentions: number
   buzz_score: number
-  loading: boolean
+  reddit_mentions: number
+  dominant_sentiment: string
 }
 
-const SOURCES = ["Tous", "Yahoo Finance", "Reddit", "Finnhub"]
+type TickerPrice = {
+  symbol: string
+  price: number
+  change: number
+}
 
-export default function NewsPage() {
-  const [query, setQuery] = useState("")
-  const [activeSymbol, setActiveSymbol] = useState<string | null>(null)
-  const [articles, setArticles] = useState<Article[]>([])
-  const [loadingArticles, setLoadingArticles] = useState(false)
-  const [sentiments, setSentiments] = useState<SymbolSentiment[]>(
-    TOP_SYMBOLS.map(s => ({ symbol: s, score: 0, label: "—", impact: "neutre", articles: 0, reddit_mentions: 0, buzz_score: 0, loading: true }))
+type BriefingResult = {
+  date: string
+  bullets: string[]
+  asia_summary: string
+  watch_today: string[]
+  trade_idea: string
+  generated_at: string
+}
+
+type FeedTab = "all" | "breaking" | "watchlist" | "bullish" | "bearish" | "reddit" | "crypto" | "macro" | "earnings"
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+const SYMBOLS = ["SPY", "QQQ", "AAPL", "NVDA", "TSLA", "MSFT", "META", "AMZN", "BTC-USD", "ETH-USD", "SOL-USD", "JPM", "GOOGL"]
+
+const TAPE_SYMBOLS = ["SPY", "QQQ", "NVDA", "TSLA", "AAPL", "MSFT", "META", "BTC-USD"]
+
+const FEED_TABS: Array<{ key: FeedTab; label: string }> = [
+  { key: "all", label: "📰 Tout" },
+  { key: "breaking", label: "🔴 Breaking" },
+  { key: "watchlist", label: "⭐ Watchlist" },
+  { key: "bullish", label: "🟢 Haussier" },
+  { key: "bearish", label: "🔴 Baissier" },
+  { key: "reddit", label: "🔥 Reddit" },
+  { key: "crypto", label: "₿ Crypto" },
+  { key: "macro", label: "🌍 Macro" },
+  { key: "earnings", label: "📊 Earnings" },
+]
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function timeAgo(iso: string): string {
+  const ago = Math.round((Date.now() - new Date(iso).getTime()) / 60000)
+  if (ago < 60) return `${ago}m`
+  if (ago < 1440) return `${Math.round(ago / 60)}h`
+  return `${Math.round(ago / 1440)}j`
+}
+
+// ─── NewsCard (inline) ────────────────────────────────────────────────────────
+function NewsCard({ article }: { article: Article }) {
+  const isReddit = article.source.includes("Reddit")
+  const score = article.sentiment_score ?? 0
+
+  return (
+    <div
+      className="group rounded-2xl p-3.5 transition-all border"
+      style={{ background: "#0d0d0d", borderColor: "rgba(255,255,255,0.06)" }}
+      onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)")}
+      onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)")}
+    >
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-2">
+        <span
+          className={`text-[9px] px-1.5 py-0.5 rounded font-semibold ${isReddit ? "bg-orange-500/10 text-orange-400" : "bg-blue-500/10 text-blue-400"}`}
+        >
+          {article.source}
+        </span>
+        <span className="text-[9px] text-white/30">{timeAgo(article.published_at)}</span>
+        {article.breaking && (
+          <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-red-500/15 text-red-400 animate-pulse">
+            🔴 BREAKING
+          </span>
+        )}
+      </div>
+
+      {/* Title */}
+      <a href={article.url} target="_blank" rel="noopener noreferrer">
+        <p className="text-sm text-gray-300 group-hover:text-green-400 transition leading-snug line-clamp-2 mb-2">
+          {article.title}
+        </p>
+      </a>
+
+      {/* AI summary */}
+      {article.ai_summary && (
+        <p className="text-[10px] text-white/40 italic mb-2">{article.ai_summary}</p>
+      )}
+
+      {/* Sentiment bar */}
+      {score !== 0 && (
+        <div className="h-0.5 rounded-full bg-white/5 mb-2 overflow-hidden">
+          <div
+            className="h-full rounded-full"
+            style={{
+              width: `${Math.abs(score)}%`,
+              background: score > 0 ? "#4ade80" : "#ef4444",
+              marginLeft: score < 0 ? `${100 - Math.abs(score)}%` : undefined,
+            }}
+          />
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="flex items-center justify-between">
+        <div className="flex flex-wrap gap-1">
+          {article.tickers?.slice(0, 4).map(t => (
+            <a
+              key={t}
+              href={`/dashboard?symbol=${t}`}
+              className="text-[8px] px-1.5 py-0.5 rounded font-bold transition"
+              style={{ background: "rgba(74,222,128,0.08)", color: "#4ade80" }}
+              onMouseEnter={e => (e.currentTarget.style.background = "rgba(74,222,128,0.18)")}
+              onMouseLeave={e => (e.currentTarget.style.background = "rgba(74,222,128,0.08)")}
+            >
+              {t}
+            </a>
+          ))}
+          {article.reddit_score != null && article.reddit_score > 0 && (
+            <span className="text-[8px] text-orange-400 font-semibold">↑ {article.reddit_score}</span>
+          )}
+          {article.reddit_comments != null && article.reddit_comments > 0 && (
+            <span className="text-[8px] text-white/30">💬 {article.reddit_comments}</span>
+          )}
+        </div>
+        <a
+          href={article.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[10px] text-white/30 hover:text-white transition font-semibold"
+        >
+          ↗ Ouvrir
+        </a>
+      </div>
+    </div>
   )
-  const [activeSource, setActiveSource] = useState("Tous")
-  const [loadingAll, setLoadingAll] = useState(false)
+}
 
-  // Load cached sentiment for all top symbols
+// ─── Main Page ────────────────────────────────────────────────────────────────
+export default function NewsPage() {
+  const [articles, setArticles] = useState<Article[]>([])
+  const [sentiments, setSentiments] = useState<SentimentItem[]>([])
+  const [activeSymbol, setActiveSymbol] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<FeedTab>("all")
+  const [activeTopic, setActiveTopic] = useState<string | null>(null)
+  const [briefing, setBriefing] = useState<BriefingResult | null>(null)
+  const [briefingOpen, setBriefingOpen] = useState(false)
+  const [watchlist, setWatchlist] = useState<string[]>([])
+  const [loadingArticles, setLoadingArticles] = useState(false)
+  const [fearGreed, setFearGreed] = useState<FearGreedResult | null>(null)
+  const [tickerPrices, setTickerPrices] = useState<TickerPrice[]>([])
+
+  // Load watchlist from localStorage
   useEffect(() => {
-    async function loadCached() {
-      setLoadingAll(true)
-      const results = await Promise.allSettled(
-        TOP_SYMBOLS.map(sym =>
-          Promise.all([
-            fetch(`/api/news/reddit-buzz?symbol=${sym}`).then(r => r.ok ? r.json() : null),
-          ]).then(([reddit]) => ({ sym, reddit }))
-        )
-      )
-      setSentiments(prev =>
-        prev.map((s, i) => {
-          const r = results[i]
-          if (r.status !== "fulfilled") return { ...s, loading: false }
-          const { reddit } = r.value
-          return {
-            ...s,
-            reddit_mentions: reddit?.mentions_24h ?? 0,
-            buzz_score: reddit?.buzz_score ?? 0,
-            loading: false,
-          }
-        })
-      )
-      setLoadingAll(false)
-    }
-    loadCached()
+    try {
+      const stored = localStorage.getItem("news_watchlist")
+      if (stored) setWatchlist(JSON.parse(stored))
+    } catch {}
   }, [])
 
+  // Load buzz scores
+  useEffect(() => {
+    Promise.allSettled(
+      SYMBOLS.map(sym =>
+        fetch(`/api/news/reddit-buzz?symbol=${sym}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(data => ({ symbol: sym, buzz_score: data?.buzz_score ?? 0, reddit_mentions: data?.mentions_24h ?? 0, dominant_sentiment: data?.dominant_sentiment ?? "neutral" }))
+      )
+    ).then(results => {
+      const items: SentimentItem[] = results
+        .filter(r => r.status === "fulfilled")
+        .map(r => (r as PromiseFulfilledResult<SentimentItem>).value)
+      setSentiments(items)
+    })
+  }, [])
+
+  // Load fear-greed
+  useEffect(() => {
+    fetch("/api/news/fear-greed")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setFearGreed(data) })
+      .catch(() => {})
+  }, [])
+
+  // Load briefing
+  useEffect(() => {
+    fetch("/api/news/briefing")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setBriefing(data) })
+      .catch(() => {})
+  }, [])
+
+  // Ticker tape prices
+  const fetchTickerPrices = useCallback(async () => {
+    const results = await Promise.allSettled(
+      TAPE_SYMBOLS.map(sym =>
+        fetch(`/api/price?symbol=${sym === "BTC-USD" ? "BTC-USD" : sym}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(data => ({ symbol: sym, price: data?.price ?? 0, change: data?.change ?? 0 }))
+      )
+    )
+    const prices: TickerPrice[] = results
+      .filter(r => r.status === "fulfilled" && (r as PromiseFulfilledResult<TickerPrice | null>).value !== null)
+      .map(r => (r as PromiseFulfilledResult<TickerPrice>).value)
+    setTickerPrices(prices)
+  }, [])
+
+  useEffect(() => {
+    fetchTickerPrices()
+    const id = setInterval(fetchTickerPrices, 30000)
+    return () => clearInterval(id)
+  }, [fetchTickerPrices])
+
+  // Load articles when symbol changes
   const loadArticles = useCallback(async (symbol: string) => {
     setLoadingArticles(true)
     setArticles([])
     try {
-      const res = await fetch(`/api/news?symbol=${symbol}&limit=20`)
+      const res = await fetch(`/api/news?symbol=${symbol}&limit=30`)
       const data = res.ok ? await res.json() : null
       if (data?.articles) setArticles(data.articles)
     } catch {}
@@ -87,201 +253,265 @@ export default function NewsPage() {
     loadArticles(sym)
   }
 
-  const filtered = articles.filter(a => {
-    if (activeSource !== "Tous" && !a.source.toLowerCase().includes(activeSource.toLowerCase())) return false
-    if (query && !a.title.toLowerCase().includes(query.toLowerCase())) return false
-    return true
+  function toggleWatchlist(sym: string) {
+    setWatchlist(prev => {
+      const next = prev.includes(sym) ? prev.filter(s => s !== sym) : [...prev, sym]
+      try { localStorage.setItem("news_watchlist", JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
+
+  function handleTopicClick(topic: string) {
+    setActiveTopic(prev => prev === topic ? null : topic)
+  }
+
+  // Filter articles
+  const filteredArticles = articles.filter(article => {
+    if (activeTopic && !article.title.toLowerCase().includes(activeTopic.toLowerCase())) return false
+    switch (activeTab) {
+      case "breaking": return article.breaking === true
+      case "watchlist": return article.tickers?.some(t => watchlist.includes(t)) ?? false
+      case "bullish": return (article.sentiment_score ?? 0) > 30
+      case "bearish": return (article.sentiment_score ?? 0) < -30
+      case "reddit": return article.source.includes("Reddit")
+      case "crypto": return article.category === "crypto"
+      case "macro": return article.category === "macro"
+      case "earnings": return article.category === "earnings"
+      default: return true
+    }
   })
 
-  const sortedSentiments = [...sentiments].sort((a, b) => b.buzz_score - a.buzz_score)
+  const buzzMap = Object.fromEntries(sentiments.map(s => [s.symbol, s.buzz_score]))
 
   return (
-    <div className="min-h-screen page-enter" style={{ background: "var(--bg-canvas)" }}>
-      <div className="max-w-6xl mx-auto px-4 py-6">
+    <div className="min-h-screen overflow-x-hidden" style={{ background: "#060606" }}>
 
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-black text-white mb-1">📰 Veille IA en temps réel</h1>
-          <p className="text-gray-500 text-sm">Actualités financières, sentiment IA et buzz Reddit sur les marchés</p>
+      {/* ── Ticker Tape ───────────────────────────────────────────────────── */}
+      <div style={{ background: "#090909", borderBottom: "1px solid #1a1a1a", overflow: "hidden" }}>
+        <div className="relative h-8 flex items-center">
+          <motion.div
+            className="flex items-center gap-6 whitespace-nowrap absolute"
+            animate={{ x: [0, -1200] }}
+            transition={{ repeat: Infinity, duration: 30, ease: "linear" }}
+          >
+            {[...tickerPrices, ...tickerPrices].map((t, i) => (
+              <span key={i} className="flex items-center gap-2 text-[11px]">
+                <span className="font-black text-white">{t.symbol.replace("-USD", "")}</span>
+                <span className="text-white/60">${t.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                <span style={{ color: t.change > 0 ? "#4ade80" : t.change < 0 ? "#ef4444" : "#6b7280" }}>
+                  {t.change > 0 ? "+" : ""}{t.change.toFixed(2)}%
+                </span>
+                <span className="text-white/10">·</span>
+              </span>
+            ))}
+          </motion.div>
         </div>
+      </div>
 
-        {/* Market pulse — buzz scores grid */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Pulse du marché</h2>
-            {loadingAll && <div className="w-3 h-3 border border-white/20 border-t-white/60 rounded-full animate-spin" />}
-          </div>
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-            {sortedSentiments.map(s => {
-              const buzzColor = s.buzz_score >= 60 ? "#f97316" : s.buzz_score >= 30 ? "#facc15" : "#6b7280"
-              const isActive = activeSymbol === s.symbol
-              return (
-                <button key={s.symbol} onClick={() => selectSymbol(s.symbol)}
-                  className={cn(
-                    "rounded-xl p-3 text-left transition border",
-                    isActive
-                      ? "border-white/20 bg-white/8"
-                      : "border-white/[0.05] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/10"
-                  )}>
-                  <p className="text-xs font-black text-white mb-1">{s.symbol.replace("-USD", "")}</p>
-                  {s.loading ? (
-                    <div className="h-3 bg-white/5 rounded animate-pulse" />
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-1 mb-1">
-                        <Flame size={10} style={{ color: buzzColor }} />
-                        <span className="text-[10px] font-bold" style={{ color: buzzColor }}>{s.buzz_score}</span>
-                      </div>
-                      {s.reddit_mentions > 0 && (
-                        <p className="text-[9px] text-gray-600">{s.reddit_mentions} mentions</p>
+      {/* ── Body: 3-column grid ───────────────────────────────────────────── */}
+      <div className="flex flex-col lg:grid lg:grid-cols-[280px_1fr_300px] min-h-[calc(100vh-32px)]">
+
+        {/* ── LEFT SIDEBAR ──────────────────────────────────────────────── */}
+        <div
+          className="lg:sticky lg:top-0 lg:h-screen overflow-y-auto space-y-3 p-4"
+          style={{ background: "#080808", borderRight: "1px solid #1a1a1a" }}
+        >
+          {/* Symbol selector */}
+          <div
+            className="rounded-3xl p-4"
+            style={{ background: "#0d0d0d", border: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            <p className="text-xs font-bold text-white/40 uppercase tracking-widest mb-3">📡 Flux par actif</p>
+            <div className="grid grid-cols-3 gap-1.5">
+              {SYMBOLS.map(sym => {
+                const buzz = buzzMap[sym] ?? 0
+                const isActive = activeSymbol === sym
+                const inWl = watchlist.includes(sym)
+                return (
+                  <div key={sym} className="relative">
+                    <button
+                      onClick={() => selectSymbol(sym)}
+                      className="w-full rounded-xl p-2 text-left transition border"
+                      style={{
+                        background: isActive ? "rgba(74,222,128,0.08)" : "rgba(255,255,255,0.02)",
+                        borderColor: isActive ? "#4ade80" : "rgba(255,255,255,0.06)",
+                      }}
+                    >
+                      <p className="text-[10px] font-black text-white truncate">{sym.replace("-USD", "")}</p>
+                      {buzz > 50 && (
+                        <span className="text-[8px] font-bold text-orange-400">🔥 {buzz}</span>
                       )}
-                    </>
-                  )}
-                </button>
-              )
-            })}
+                    </button>
+                    <button
+                      onClick={() => toggleWatchlist(sym)}
+                      className="absolute -top-1 -right-1 text-[10px] rounded-full w-4 h-4 flex items-center justify-center transition"
+                      style={{ background: inWl ? "#4ade80" : "rgba(255,255,255,0.1)", color: inWl ? "#000" : "#666" }}
+                    >
+                      ⭐
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
           </div>
+
+          {/* Trending Topics */}
+          <TrendingTopics
+            onTopicClick={handleTopicClick}
+            activeTopics={activeTopic ? [activeTopic] : []}
+          />
+
+          {/* Economic Calendar */}
+          <EconomicCalendar />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Left: symbol selector + article list */}
-          <div className="lg:col-span-2 space-y-4">
+        {/* ── CENTRAL FEED ──────────────────────────────────────────────── */}
+        <div className="flex-1 p-5 min-w-0">
 
-            {/* Filters */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="relative flex-1 min-w-[200px]">
-                <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
-                <input type="text" value={query} onChange={e => setQuery(e.target.value)}
-                  placeholder="Filtrer les actualités..."
-                  className="w-full pl-8 pr-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.07] text-white text-xs placeholder-gray-600 outline-none focus:border-white/20 transition" />
-              </div>
-              <div className="flex gap-1">
-                {SOURCES.map(src => (
-                  <button key={src} onClick={() => setActiveSource(src)}
-                    className={cn(
-                      "px-3 py-1.5 rounded-lg text-xs font-semibold transition border",
-                      activeSource === src
-                        ? "bg-white/10 text-white border-white/15"
-                        : "text-gray-600 border-transparent hover:text-gray-400"
-                    )}>{src}</button>
-                ))}
-              </div>
-            </div>
-
-            {/* Article list */}
-            {!activeSymbol && (
-              <div className="text-center py-12 rounded-2xl" style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
-                <p className="text-gray-600 text-sm mb-2">Sélectionne un actif pour voir ses actualités</p>
-                <p className="text-gray-700 text-xs">Clique sur l'un des actifs ci-dessus</p>
-              </div>
-            )}
-
-            {activeSymbol && loadingArticles && (
-              <div className="space-y-2">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="h-16 rounded-xl bg-white/[0.03] animate-pulse" />
-                ))}
-              </div>
-            )}
-
-            {activeSymbol && !loadingArticles && (
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                    {filtered.length} article{filtered.length !== 1 ? "s" : ""} · {activeSymbol.replace("-USD", "")}
-                  </h3>
-                  <button onClick={() => loadArticles(activeSymbol)}
-                    className="flex items-center gap-1 text-[10px] text-gray-600 hover:text-white transition">
-                    <RefreshCw size={10} />Actualiser
-                  </button>
+          {/* Briefing card */}
+          {briefing && (
+            <div
+              className="rounded-2xl mb-4 overflow-hidden"
+              style={{ background: "#0d0d0d", border: "1px solid rgba(255,255,255,0.08)" }}
+            >
+              <button
+                className="w-full flex items-center justify-between p-4 text-left"
+                onClick={() => setBriefingOpen(o => !o)}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">📋</span>
+                  <span className="text-xs font-bold text-white">Briefing du {briefing.date}</span>
+                  {briefing.trade_idea && (
+                    <span className="text-[9px] text-white/40 hidden sm:inline truncate max-w-[200px]">
+                      {briefing.bullets[0]}
+                    </span>
+                  )}
                 </div>
-                {filtered.length === 0 ? (
-                  <p className="text-center text-gray-700 text-xs py-8">Aucune actualité trouvée</p>
-                ) : (
-                  <div className="space-y-2">
-                    {filtered.map((article, i) => {
-                      const ago = Math.round((Date.now() - new Date(article.published_at).getTime()) / 60000)
-                      const isReddit = article.source.includes("Reddit")
-                      return (
-                        <a key={i} href={article.url} target="_blank" rel="noopener noreferrer"
-                          className="group flex items-start gap-3 p-3 rounded-xl transition border"
-                          style={{ background: "var(--bg-surface)", borderColor: "var(--border-subtle)" }}
-                          onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)")}
-                          onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--border-subtle)")}>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-gray-300 group-hover:text-white transition leading-snug line-clamp-2">{article.title}</p>
-                            <div className="flex items-center gap-2 mt-1.5">
-                              <span className={cn("text-[9px] px-1.5 py-0.5 rounded font-semibold",
-                                isReddit ? "bg-orange-500/10 text-orange-400" : "bg-blue-500/10 text-blue-400"
-                              )}>{article.source}</span>
-                              <span className="text-[9px] text-gray-600">
-                                {ago < 60 ? `${ago}m` : ago < 1440 ? `${Math.round(ago / 60)}h` : `${Math.round(ago / 1440)}j`}
-                              </span>
-                              {article.reddit_score != null && article.reddit_score > 0 && (
-                                <span className="text-[9px] text-orange-400 font-semibold">↑ {article.reddit_score}</span>
-                              )}
-                              {article.reddit_comments != null && article.reddit_comments > 0 && (
-                                <span className="text-[9px] text-gray-600">💬 {article.reddit_comments}</span>
-                              )}
-                            </div>
-                          </div>
-                          <span className="text-gray-700 group-hover:text-gray-300 transition text-sm flex-shrink-0">↗</span>
-                        </a>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+                <span className="text-white/40 text-sm">{briefingOpen ? "▲" : "▼"}</span>
+              </button>
 
-          {/* Right: trending + most mentioned */}
-          <div className="space-y-4">
-            {/* Most active on Reddit */}
-            <div className="rounded-2xl p-4" style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">🔥 Buzz Reddit 24h</h3>
-              <div className="space-y-2">
-                {sortedSentiments.slice(0, 8).map((s, i) => {
-                  const buzzColor = s.buzz_score >= 60 ? "#f97316" : s.buzz_score >= 30 ? "#facc15" : "#6b7280"
-                  return (
-                    <button key={s.symbol} onClick={() => selectSymbol(s.symbol)}
-                      className="w-full flex items-center gap-3 hover:bg-white/[0.03] rounded-lg px-2 py-1.5 transition">
-                      <span className="text-[10px] text-gray-600 w-4">{i + 1}</span>
-                      <span className="text-xs font-bold text-white flex-1 text-left">{s.symbol.replace("-USD", "")}</span>
-                      <div className="flex items-center gap-1.5">
-                        {s.reddit_mentions > 0 && (
-                          <span className="text-[9px] text-gray-500">{s.reddit_mentions}m</span>
-                        )}
-                        <div className="w-16 h-1.5 rounded-full bg-white/5 overflow-hidden">
-                          <div className="h-full rounded-full" style={{ width: `${s.buzz_score}%`, background: buzzColor }} />
-                        </div>
-                        <span className="text-[9px] font-bold" style={{ color: buzzColor }}>{s.buzz_score}</span>
+              <AnimatePresence>
+                {briefingOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-4 pb-4 space-y-3">
+                      <div className="space-y-1.5">
+                        {briefing.bullets.map((b, i) => (
+                          <p key={i} className="text-[11px] text-white/60 flex gap-2">
+                            <span className="text-green-400 flex-shrink-0">•</span>
+                            {b}
+                          </p>
+                        ))}
                       </div>
-                    </button>
-                  )
-                })}
-              </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-[9px] font-bold text-white/30 uppercase mb-1">Asie</p>
+                          <p className="text-[10px] text-white/50">{briefing.asia_summary}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-bold text-white/30 uppercase mb-1">À surveiller</p>
+                          {briefing.watch_today.map((w, i) => (
+                            <p key={i} className="text-[10px] text-white/50">· {w}</p>
+                          ))}
+                        </div>
+                      </div>
+                      <div
+                        className="rounded-xl p-3"
+                        style={{ background: "rgba(74,222,128,0.06)", border: "1px solid rgba(74,222,128,0.15)" }}
+                      >
+                        <p className="text-[9px] font-bold text-green-400 mb-1">💡 IDÉE DE TRADE</p>
+                        <p className="text-[11px] text-white/70">{briefing.trade_idea}</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
+          )}
 
-            {/* Quick links */}
-            <div className="rounded-2xl p-4" style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Navigation rapide</h3>
-              <div className="space-y-1">
-                {[
-                  { href: "/dashboard", label: "📊 Dashboard" },
-                  { href: "/signaux", label: "📡 Signaux IA" },
-                  { href: "/analyses", label: "🔬 Analyses" },
-                  { href: "/blog", label: "📝 Blog" },
-                ].map(link => (
-                  <a key={link.href} href={link.href}
-                    className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-white/[0.05] transition text-xs text-gray-400 hover:text-white">
-                    {link.label}
-                    <span className="text-gray-600">→</span>
-                  </a>
-                ))}
-              </div>
-            </div>
+          {/* Feed tabs */}
+          <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
+            {FEED_TABS.map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className="flex-shrink-0 px-3 py-1.5 text-[11px] font-semibold transition whitespace-nowrap"
+                style={{
+                  color: activeTab === tab.key ? "#4ade80" : "rgba(255,255,255,0.4)",
+                  borderBottom: activeTab === tab.key ? "2px solid #4ade80" : "2px solid transparent",
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
+
+          {/* Active topic badge */}
+          {activeTopic && (
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-[10px] text-white/40">Filtré par:</span>
+              <button
+                onClick={() => setActiveTopic(null)}
+                className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-semibold"
+                style={{ background: "rgba(74,222,128,0.1)", color: "#4ade80" }}
+              >
+                {activeTopic} ✕
+              </button>
+            </div>
+          )}
+
+          {/* Articles */}
+          {!activeSymbol && (
+            <div
+              className="text-center py-16 rounded-2xl"
+              style={{ background: "#0d0d0d", border: "1px solid rgba(255,255,255,0.06)" }}
+            >
+              <p className="text-2xl mb-3">←</p>
+              <p className="text-sm text-white/40 mb-1">Sélectionne un actif</p>
+              <p className="text-xs text-white/20">Clique sur un symbole dans la sidebar</p>
+            </div>
+          )}
+
+          {activeSymbol && loadingArticles && (
+            <div className="space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-24 rounded-2xl animate-pulse" style={{ background: "#0d0d0d" }} />
+              ))}
+            </div>
+          )}
+
+          {activeSymbol && !loadingArticles && (
+            <div>
+              <p className="text-[10px] text-white/30 mb-3 uppercase tracking-wider">
+                {filteredArticles.length} article{filteredArticles.length !== 1 ? "s" : ""} · {activeSymbol.replace("-USD", "")}
+              </p>
+              {filteredArticles.length === 0 ? (
+                <p className="text-center text-white/20 text-sm py-12">Aucune actualité pour ce filtre</p>
+              ) : (
+                <div className="space-y-2">
+                  {filteredArticles.map((article, i) => (
+                    <NewsCard key={i} article={article} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── RIGHT PANEL ───────────────────────────────────────────────── */}
+        <div
+          className="lg:sticky lg:top-0 lg:h-screen overflow-y-auto space-y-3 p-4"
+          style={{ background: "#080808", borderLeft: "1px solid #1a1a1a" }}
+        >
+          <FearGreedGauge data={fearGreed} />
+          <MarketPulse />
+          <SocialPulse sentiments={sentiments} onSelect={selectSymbol} />
+          <EarningsCalendar />
         </div>
       </div>
     </div>
