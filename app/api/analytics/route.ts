@@ -47,18 +47,15 @@ export async function GET(req: NextRequest) {
   const [
     { data: allUsers },
     { data: events },
-    { data: plansFree },
-    { data: plansPro },
-    { data: plansPremium },
+    { data: profiles },
   ] = await Promise.all([
     supabase.auth.admin.listUsers({ perPage: 1000 }),
-    supabase.from("analytics_events").select("event, metadata, created_at, user_id").order("created_at", { ascending: false }).limit(500),
-    supabase.from("profiles").select("id").eq("plan", "free"),
-    supabase.from("profiles").select("id").eq("plan", "pro"),
-    supabase.from("profiles").select("id").eq("plan", "premium"),
+    supabase.from("analytics_events").select("event, metadata, created_at, user_id").order("created_at", { ascending: false }).limit(200),
+    supabase.from("profiles").select("email, plan, stripe_customer_id, plan_started_at, payment_failed"),
   ])
 
   const users = allUsers?.users ?? []
+  const profileMap = new Map((profiles ?? []).map((p: any) => [p.email, p]))
   const now = Date.now()
   const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
   const weekAgo = new Date(now - 7 * 86400000)
@@ -82,9 +79,24 @@ export async function GET(req: NextRequest) {
     if (growth[key] !== undefined) growth[key]++
   }
 
-  const proCount = plansPro?.length ?? 0
-  const premiumCount = plansPremium?.length ?? 0
-  const mrr = proCount * 14.99 + premiumCount * 29.99
+  const plansFree = users.filter(u => !profileMap.get(u.email ?? "")?.plan || profileMap.get(u.email ?? "")?.plan === "free").length
+  const plansPro = users.filter(u => profileMap.get(u.email ?? "")?.plan === "pro").length
+  const plansPremium = users.filter(u => profileMap.get(u.email ?? "")?.plan === "premium").length
+  const mrr = plansPro * 14.99 + plansPremium * 29.99
+
+  // Full user list with plan info
+  const userList = users.map(u => {
+    const p = profileMap.get(u.email ?? "")
+    return {
+      id: u.id,
+      email: u.email,
+      plan: p?.plan ?? "free",
+      payment_failed: p?.payment_failed ?? false,
+      plan_started_at: p?.plan_started_at ?? null,
+      created_at: u.created_at,
+      last_sign_in_at: u.last_sign_in_at ?? null,
+    }
+  }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
   return NextResponse.json({
     users: {
@@ -93,12 +105,13 @@ export async function GET(req: NextRequest) {
       newThisWeek,
     },
     plans: {
-      free: plansFree?.length ?? 0,
-      pro: proCount,
-      premium: premiumCount,
+      free: plansFree,
+      pro: plansPro,
+      premium: plansPremium,
     },
     mrr: Math.round(mrr * 100) / 100,
     growth: Object.entries(growth).map(([date, count]) => ({ date, count })),
-    recentEvents: events?.slice(0, 50) ?? [],
+    recentEvents: events?.slice(0, 100) ?? [],
+    userList,
   })
 }
