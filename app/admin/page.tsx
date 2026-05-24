@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts"
 
-const ADMIN_EMAIL = "olfagni@gmail.com"
+const ADMIN_EMAIL = "amine_cm@icloud.com"
 
 function KPI({ label, value, sub, color = "text-white", trend }: {
   label: string; value: string | number; sub?: string; color?: string; trend?: number

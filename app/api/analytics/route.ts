@@ -5,7 +5,7 @@ function makeSupabase() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
 }
 
-const ADMIN_EMAIL = "olfagni@gmail.com"
+const ADMIN_EMAIL = "amine_cm@icloud.com"
 
 export async function POST(req: NextRequest) {
   // Track an event (no auth required — anonymous OK)
