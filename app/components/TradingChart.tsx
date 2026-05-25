@@ -109,12 +109,13 @@ function ToggleBtn({
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function TradingChart({
-  symbol, position, signals = [],
+  symbol, position, signals = [], livePrice,
   bars: _bars, support: _support, resistance: _resistance,
 }: {
   symbol: string
   position?: Position | null
   signals?: Signal[]
+  livePrice?: number
   bars?: any; support?: any; resistance?: any
 }) {
   // DOM refs
@@ -171,6 +172,24 @@ export default function TradingChart({
 
   signalsRef.current  = signals
   positionRef.current = position
+
+  // ── Live price → update last candle without re-fetch ─────────────────────
+  useEffect(() => {
+    if (!livePrice || !bars.length || !candleSeries.current || !chartsInitialized) return
+    const last = bars[bars.length - 1]
+    candleSeries.current.update({
+      time:  last.ts as Time,
+      open:  last.open,
+      high:  Math.max(last.high, livePrice),
+      low:   Math.min(last.low,  livePrice),
+      close: livePrice,
+    })
+    volumeSeries.current?.update({
+      time:  last.ts as Time,
+      value: last.volume,
+      color: livePrice >= last.open ? "rgba(74,222,128,0.4)" : "rgba(248,113,113,0.4)",
+    })
+  }, [livePrice, chartsInitialized])
 
   // ── ESC to exit fullscreen ────────────────────────────────────────────────
   useEffect(() => {

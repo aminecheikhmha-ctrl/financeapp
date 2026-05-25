@@ -872,6 +872,7 @@ export default function Dashboard() {
               symbol={ticker}
               position={position}
               signals={orderHistory}
+              livePrice={activeData?.price}
             />
           </div>
 
