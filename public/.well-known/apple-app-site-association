@@ -1,0 +1,9 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [{
+      "appID": "TEAM_ID.io.tradex.app",
+      "paths": ["/dashboard*", "/signaux*", "/apprendre*", "/portfolio*", "/blog*", "/forum*"]
+    }]
+  }
+}

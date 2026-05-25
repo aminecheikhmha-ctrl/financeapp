@@ -1,14 +1,21 @@
 import type { NextConfig } from "next"
 
+const isCapacitor = process.env.CAPACITOR_BUILD === "1"
+
 const nextConfig: NextConfig = {
+  // Static export uniquement pour build mobile offline (non recommandé — utilise server.url)
+  output: isCapacitor ? "export" : undefined,
+  trailingSlash: isCapacitor,
   compress: true,
   poweredByHeader: false,
   reactStrictMode: true,
 
   images: {
+    unoptimized: isCapacitor,
     remotePatterns: [
       { protocol: "https", hostname: "img.youtube.com" },
       { protocol: "https", hostname: "i.ytimg.com" },
+      { protocol: "https", hostname: "financeapp-kappa-six.vercel.app" },
     ],
     formats: ["image/avif", "image/webp"],
   },

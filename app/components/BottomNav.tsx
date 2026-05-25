@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase"
 import { usePathname, useRouter } from "next/navigation"
 import { LayoutDashboard, TrendingUp, Briefcase, BookOpen, MoreHorizontal, Users, MessageSquare, FileText, Bot, Settings, LogOut, Newspaper } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { haptic } from "@/lib/capacitor"
 
 const PUBLIC_ROUTES = ["/", "/login", "/signup", "/onboarding", "/pricing", "/preuves"]
 
@@ -174,6 +175,7 @@ export default function BottomNav() {
                 key={tab.href}
                 href={tab.href}
                 aria-label={tab.label}
+                onClick={() => haptic("light")}
                 className={cn(
                   "flex-1 flex flex-col items-center justify-center gap-0.5 transition-all active:scale-90",
                   active ? "text-white" : "text-white/30"
@@ -199,7 +201,7 @@ export default function BottomNav() {
 
           {/* More/Profil tab — opens slide-up */}
           <button
-            onClick={() => setMenuOpen(!menuOpen)}
+            onClick={() => { haptic("light"); setMenuOpen(!menuOpen) }}
             aria-label="Menu profil"
             className={cn(
               "flex-1 flex flex-col items-center justify-center gap-0.5 transition-all active:scale-90",

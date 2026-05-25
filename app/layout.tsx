@@ -12,6 +12,8 @@ import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import ChatBot from "./components/ChatBot"
 import CookieBanner from "./components/CookieBanner"
+import NativePushSetup from "./components/NativePushSetup"
+import AppSplashScreen from "./components/AppSplashScreen"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -66,6 +68,8 @@ export default function RootLayout({
     <html lang="fr">
       <body className={`${inter.variable} font-sans bg-[#050505] text-white`}>
         <ToastProvider>
+          <AppSplashScreen />
+          <NativePushSetup />
           <ServiceWorker />
           {/* Public marketing navbar (unauthenticated only) */}
           <Navbar />

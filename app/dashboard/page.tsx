@@ -301,9 +301,10 @@ export default function Dashboard() {
       })
       const data = await res.json()
       if (data.success) {
+        const { haptic } = await import("@/lib/capacitor")
+        await haptic("success")
         setOrderMsg(`✅ ${side === "buy" ? "Acheté" : "Vendu"} à $${data.price.toFixed(2)}`)
         toast.success(`Ordre exécuté ✓ — ${side === "buy" ? "Acheté" : "Vendu"} à $${data.price.toFixed(2)}`)
-        // Save TP/SL immediately on buy
         if (side === "buy" && (orderTp || orderSl)) {
           await fetch("/api/trading/positions", {
             method: "PATCH",
@@ -317,11 +318,15 @@ export default function Dashboard() {
         }
         setTimeout(() => { setOrderModal(null); setOrderMsg(""); loadPosition(); loadOrders(); loadAccount() }, 1500)
       } else {
+        const { haptic } = await import("@/lib/capacitor")
+        await haptic("error")
         const errMsg = data.error ?? "Erreur"
         setOrderMsg(`❌ ${errMsg}`)
         toast.error(`Erreur : ${errMsg}`)
       }
     } catch {
+      const { haptic } = await import("@/lib/capacitor")
+      await haptic("error")
       setOrderMsg("❌ Erreur réseau")
       toast.error("Erreur réseau")
     }
