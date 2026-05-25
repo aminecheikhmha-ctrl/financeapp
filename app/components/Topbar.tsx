@@ -3,8 +3,9 @@
 import { useEffect, useState, useRef } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
-import { Search, Bell, ChevronDown, LogOut, Settings, User } from "lucide-react"
+import { Bell, ChevronDown, LogOut, Settings, User } from "lucide-react"
 import { cn } from "@/lib/utils"
+import GlobalSearch from "@/app/components/GlobalSearch"
 
 const PUBLIC_ROUTES = ["/", "/login", "/signup", "/onboarding", "/pricing", "/preuves"]
 
@@ -29,14 +30,10 @@ export default function Topbar() {
   const [user,        setUser]        = useState<any>(null)
   const [username,    setUsername]    = useState<string | null>(null)
   const [avatarColor, setAvatarColor] = useState("#4ade80")
-  const [search,      setSearch]      = useState("")
-  const [results,     setResults]     = useState<any[]>([])
-  const [showSearch,  setShowSearch]  = useState(false)
-  const [showDrop,    setShowDrop]    = useState(false)
+  const [showDrop, setShowDrop] = useState(false)
   const [marketOpen,  setMarketOpen]  = useState(false)
 
-  const searchRef = useRef<any>(null)
-  const dropRef   = useRef<HTMLDivElement>(null)
+  const dropRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     // US market: Mon-Fri 9:30-16:00 ET
@@ -64,17 +61,6 @@ export default function Topbar() {
     return () => listener.subscription.unsubscribe()
   }, [])
 
-  useEffect(() => {
-    if (!search.trim()) { setResults([]); return }
-    const t = setTimeout(async () => {
-      try {
-        const r = await fetch(`/api/search?q=${search}`)
-        setResults(await r.json())
-      } catch { setResults([]) }
-    }, 250)
-    return () => clearTimeout(t)
-  }, [search])
-
   // Close dropdown on outside click
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -82,20 +68,6 @@ export default function Topbar() {
     }
     document.addEventListener("mousedown", handler)
     return () => document.removeEventListener("mousedown", handler)
-  }, [])
-
-  // Cmd+K
-  useEffect(() => {
-    function handler(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault()
-        searchRef.current?.focus()
-        setShowSearch(true)
-      }
-      if (e.key === "Escape") setShowSearch(false)
-    }
-    window.addEventListener("keydown", handler)
-    return () => window.removeEventListener("keydown", handler)
   }, [])
 
   async function handleLogout() {
@@ -124,37 +96,8 @@ export default function Topbar() {
       <h1 className="text-[15px] font-semibold text-white/70 flex-shrink-0">{pageTitle}</h1>
 
       {/* Search — centre */}
-      <div className="flex-1 max-w-md mx-auto relative">
-        <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
-          <input
-            ref={searchRef}
-            type="text"
-            value={search}
-            onChange={e => { setSearch(e.target.value); setShowSearch(true) }}
-            onFocus={() => setShowSearch(true)}
-            onBlur={() => setTimeout(() => setShowSearch(false), 150)}
-            placeholder="Rechercher un actif… (⌘K)"
-            className="w-full h-9 bg-white/5 border border-white/8 rounded-lg pl-8 pr-3 text-[13px] text-white placeholder-white/25 focus:outline-none focus:border-white/15 focus:bg-white/7 transition-all"
-          />
-        </div>
-        {showSearch && results.length > 0 && (
-          <div className="absolute top-full mt-1.5 left-0 right-0 rounded-xl overflow-hidden shadow-2xl z-50" style={{ background: "#111", border: "1px solid rgba(255,255,255,0.1)" }}>
-            {results.slice(0, 6).map(r => (
-              <button
-                key={r.symbol}
-                onMouseDown={() => { router.push(`/dashboard?symbol=${r.symbol}`); setSearch(""); setShowSearch(false) }}
-                className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.05] transition border-b border-white/[0.04] last:border-0"
-              >
-                <div className="text-left">
-                  <p className="text-[13px] font-semibold text-white">{r.symbol}</p>
-                  <p className="text-[11px] text-white/40 truncate max-w-[200px]">{r.name}</p>
-                </div>
-                <span className="text-[11px] text-green-400/60">→</span>
-              </button>
-            ))}
-          </div>
-        )}
+      <div className="flex-1 max-w-md mx-auto">
+        <GlobalSearch />
       </div>
 
       {/* Right side */}
