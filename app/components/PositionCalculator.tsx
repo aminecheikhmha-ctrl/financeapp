@@ -12,6 +12,7 @@ type Props = {
 
 export default function PositionCalculator({ currentPrice, symbol, accountSize = 100000, onApply }: Props) {
   const [riskPct,    setRiskPct]    = useState(1)
+  const [capital,    setCapital]    = useState(accountSize)
   const [entryPrice, setEntryPrice] = useState(currentPrice)
   const [slPrice,    setSlPrice]    = useState(parseFloat((currentPrice * 0.97).toFixed(2)))
   const [tpPrice,    setTpPrice]    = useState(parseFloat((currentPrice * 1.05).toFixed(2)))
@@ -24,7 +25,11 @@ export default function PositionCalculator({ currentPrice, symbol, accountSize =
     setTpPrice(parseFloat((currentPrice * 1.05).toFixed(2)))
   }, [currentPrice])
 
-  const riskAmount     = accountSize * (riskPct / 100)
+  useEffect(() => {
+    setCapital(accountSize)
+  }, [accountSize])
+
+  const riskAmount     = capital * (riskPct / 100)
   const slDistance     = Math.abs(entryPrice - slPrice)
   const qty            = slDistance > 0 ? Math.floor(riskAmount / slDistance) : 0
   const totalInvested  = qty * entryPrice
@@ -58,6 +63,18 @@ export default function PositionCalculator({ currentPrice, symbol, accountSize =
             className="overflow-hidden">
             <div className="mt-2 p-4 rounded-2xl space-y-4"
               style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+
+              {/* Capital */}
+              <div>
+                <p className="text-[9px] uppercase tracking-widest mb-1.5" style={{ color: "rgba(255,255,255,0.3)" }}>Capital disponible ($)</p>
+                <input
+                  type="number"
+                  value={capital}
+                  onChange={e => setCapital(parseFloat(e.target.value) || 0)}
+                  className="w-full h-9 px-3 rounded-xl text-sm font-bold text-white outline-none"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}
+                />
+              </div>
 
               {/* Risk % slider */}
               <div>

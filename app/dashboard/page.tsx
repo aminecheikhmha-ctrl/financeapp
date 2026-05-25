@@ -1638,6 +1638,7 @@ export default function Dashboard() {
               <PositionCalculator
                 currentPrice={activeData?.price ?? 0}
                 symbol={ticker}
+                accountSize={account?.cash}
                 onApply={(qty, tp, sl) => {
                   setOrderQty(String(qty))
                   setOrderTp(tp.toFixed(2))
