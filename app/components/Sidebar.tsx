@@ -274,7 +274,7 @@ export default function Sidebar() {
           aria-label={collapsed ? "Agrandir" : "Réduire"}
         >
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-md shadow-green-500/20">
-            <span className="text-white font-black text-[11px]">F</span>
+            <span className="text-white font-black text-[11px]">T</span>
           </div>
           {!collapsed && (
             <span className="font-bold text-[15px] text-white tracking-tight">TradEx</span>

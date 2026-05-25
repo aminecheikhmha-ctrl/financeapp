@@ -51,7 +51,7 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between">
           <a href="/" className="flex items-center gap-2.5 group flex-shrink-0">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/30">
-              <span className="text-white font-black text-sm">F</span>
+              <span className="text-white font-black text-sm">T</span>
             </div>
             <span className="text-white font-black text-lg tracking-tight group-hover:text-green-400 transition">
               TradEx
@@ -81,7 +81,7 @@ export default function Navbar() {
         {/* Logo */}
         <a href="/" className="flex items-center gap-2.5 group flex-shrink-0">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/30">
-            <span className="text-white font-black text-sm">F</span>
+            <span className="text-white font-black text-sm">T</span>
           </div>
           <span className="text-white font-black text-lg tracking-tight group-hover:text-green-400 transition">
             TradEx
