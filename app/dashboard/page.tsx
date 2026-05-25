@@ -1397,289 +1397,266 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* RIGHT — panel Watchlist / Ordre */}
-        <aside className="hidden md:flex w-[300px] flex-shrink-0 border-l border-white/5 flex-col overflow-hidden md:sticky md:top-0 md:h-screen" style={{ background: "#0c0c0c" }}>
+        {/* RIGHT — sidebar */}
+        <div className="w-full md:w-72 md:flex-shrink-0 border-t md:border-t-0 md:border-l border-white/[0.05] flex flex-col overflow-y-auto md:sticky md:top-0 md:h-screen" style={{ background: "#0c0c0c" }}>
 
-          {/* Tabs */}
-          <div className="flex border-b border-white/5 flex-shrink-0">
-            {([
-              { key: "watchlist", label: "⭐ Watchlist" },
-              { key: "order",     label: "💼 Ordre"     },
-            ] as { key: "watchlist" | "order"; label: string }[]).map(tab => (
-              <button key={tab.key} onClick={() => setRightPanel(tab.key)}
-                className={`flex-1 py-3 text-xs font-bold transition-all relative ${
-                  rightPanel === tab.key ? "text-white" : "text-white/30 hover:text-white/60"
-                }`}>
-                {tab.label}
-                {rightPanel === tab.key && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-400" />}
-              </button>
-            ))}
+          {/* Cash */}
+          <div className="px-4 pt-4 pb-3 border-b border-white/[0.05]">
+            <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-1">
+              {userProfile?.level === "débutant" ? "Capital virtuel disponible" : "Cash disponible"}
+            </p>
+            <p className="text-xl font-black text-white tabular-nums">
+              {account ? `$${account.cash.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
+            </p>
+            {userProfile?.level === "débutant" && (
+              <p className="text-[10px] text-gray-600 mt-1">💡 Argent fictif — achète sans aucun risque réel</p>
+            )}
           </div>
 
-          {/* WATCHLIST panel */}
-          {rightPanel === "watchlist" && (
-            <div className="flex-1 overflow-y-auto">
-              {/* Position actuelle */}
-              {position && (
-                <div className="px-4 py-3 border-b border-white/5">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-[9px] text-white/30 uppercase tracking-widest">Position · {ticker.replace("-USD", "")}</p>
-                    <button onClick={() => setTpSlModal(true)} className="text-[9px] text-white/30 hover:text-white transition px-2 py-0.5 rounded border border-white/10">⚙️ TP/SL</button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { l: "Quantité",  v: String(position.qty) },
-                      { l: "Moy. achat", v: `$${position.avg_price.toFixed(2)}` },
-                      { l: "Valeur", v: activeData ? `$${(activeData.price * position.qty).toFixed(2)}` : "—", c: undefined },
-                    { l: "P&L", v: positionPnl != null ? `${positionPnl >= 0 ? "+" : ""}$${positionPnl.toFixed(2)}` : "—", c: positionPnl != null ? ((positionPnl >= 0 ? "#4ade80" : "#f87171") as string) : undefined },
-                  ].map((k) => (
-                      <div key={k.l}>
-                        <p className="text-[9px] text-white/20 uppercase tracking-widest">{k.l}</p>
-                        <p className="text-sm font-bold mt-0.5" style={{ color: k.c ?? "white" }}>{k.v}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Watchlist items */}
-              <div className="divide-y divide-white/[0.04]">
-                {effectiveWatchlist.map(sym => {
-                  const item  = tickersData[sym]
-                  const isPos = (item?.change ?? 0) >= 0
-                  const isAct = sym === ticker
-                  return (
-                    <button key={sym} onClick={() => { setTicker(sym); import("@/lib/capacitor").then(m => m.haptic("light")) }}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors text-left"
-                      style={{ background: isAct ? "rgba(34,197,94,0.05)" : "transparent" }}>
-                      <div className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black text-black flex-shrink-0"
-                        style={{ background: isPos ? "#22c55e" : "#ef4444" }}>
-                        {sym.replace("-USD", "")[0]}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-bold ${isAct ? "text-green-400" : "text-white"}`}>{sym.replace("-USD", "")}</p>
-                        <p className="text-[10px] text-white/25 tabular-nums">{item ? `$${item.price.toFixed(2)}` : "···"}</p>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        {item ? (
-                          <p className={`text-xs font-bold tabular-nums ${isPos ? "text-green-400" : "text-red-400"}`}>
-                            {isPos ? "+" : ""}{item.change.toFixed(2)}%
-                          </p>
-                        ) : (
-                          <p className="text-white/15 text-xs">—</p>
-                        )}
-                      </div>
-                    </button>
-                  )
-                })}
+          {/* Position */}
+          {position ? (
+            <div className="px-4 py-3 border-b border-white/[0.05]">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[9px] text-gray-600 uppercase tracking-widest">Ma Position · {ticker.replace("-USD", "")}</p>
+                <button onClick={() => setTpSlModal(true)} className="text-[9px] text-gray-600 hover:text-gray-300 transition px-2 py-0.5 rounded border border-white/10">⚙️ TP/SL</button>
               </div>
-
-              {/* Analytics compact */}
-              <div className="px-4 py-3 border-t border-white/5">
-                <button onClick={() => setAnalyticsOpen(!analyticsOpen)}
-                  className="w-full flex items-center justify-between px-3 py-2.5 bg-white/[0.03] border border-white/5 rounded-xl hover:bg-white/5 transition">
-                  <span className="text-white font-bold text-xs">📊 Analytics 30j</span>
-                  <span className="text-white/30 text-[10px]">{analyticsOpen ? "▲" : "▼"}</span>
-                </button>
-                {analyticsOpen && perfSnapshots.length > 0 && (() => {
-                  const thisWeek   = perfSnapshots.slice(-7)
-                  const lastWeek   = perfSnapshots.slice(-14, -7)
-                  const weekPnl    = thisWeek.reduce((s, d) => s + (d.daily_pnl ?? 0), 0)
-                  const lastWeekPnl = lastWeek.reduce((s, d) => s + (d.daily_pnl ?? 0), 0)
-                  let streak = 0
-                  for (let i = perfSnapshots.length - 1; i >= 0; i--) {
-                    if ((perfSnapshots[i].daily_pnl ?? 0) > 0) streak++; else break
-                  }
-                  return (
-                    <div className="mt-2 bg-white/[0.02] border border-white/5 rounded-xl p-3 space-y-3">
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        <div>
-                          <p className={`text-sm font-black ${weekPnl >= 0 ? "text-green-400" : "text-red-400"}`}>{weekPnl >= 0 ? "+" : ""}${Math.abs(weekPnl).toFixed(0)}</p>
-                          <p className="text-white/25 text-[9px]">Cette sem.</p>
-                        </div>
-                        <div>
-                          <p className={`text-sm font-black ${weekPnl >= lastWeekPnl ? "text-green-400" : "text-red-400"}`}>{weekPnl >= lastWeekPnl ? "▲" : "▼"}</p>
-                          <p className="text-white/25 text-[9px]">vs S-1</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-black text-orange-400">🔥{streak}</p>
-                          <p className="text-white/25 text-[9px]">Jours prof.</p>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-0.5">
-                        {perfSnapshots.map((s, i) => (
-                          <div key={i} title={`${s.date}: ${(s.daily_pnl ?? 0) >= 0 ? "+" : ""}$${(s.daily_pnl ?? 0).toFixed(0)}`}
-                            className={`w-4 h-4 rounded-sm ${(s.daily_pnl ?? 0) > 0 ? "bg-green-500/60" : (s.daily_pnl ?? 0) < 0 ? "bg-red-500/50" : "bg-white/5"}`} />
-                        ))}
-                      </div>
-                      <a href="/reports" className="block text-center text-[10px] text-green-400 font-bold hover:text-green-300 transition">Rapport complet →</a>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <div>
+                  <p className="text-[9px] text-gray-600 uppercase tracking-widest">Quantité</p>
+                  <p className="text-sm font-bold text-white mt-0.5">{position.qty}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] text-gray-600 uppercase tracking-widest">Moy. achat</p>
+                  <p className="text-sm font-bold text-white mt-0.5">${position.avg_price.toFixed(2)}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] text-gray-600 uppercase tracking-widest">Valeur</p>
+                  <p className="text-sm font-bold text-white mt-0.5">{activeData ? `$${(activeData.price * position.qty).toFixed(2)}` : "—"}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] text-gray-600 uppercase tracking-widest">P&L</p>
+                  <p className={`text-sm font-bold mt-0.5 ${(positionPnl ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                    {(positionPnl ?? 0) >= 0 ? "+" : ""}${positionPnl?.toFixed(2)}
+                    <span className="text-[10px] ml-1 opacity-70">({positionPnlPct?.toFixed(1)}%)</span>
+                  </p>
+                </div>
+              </div>
+              {(position.take_profit != null || position.stop_loss != null) && (
+                <div className="flex gap-2 mt-1">
+                  {position.take_profit != null && (
+                    <div className="flex-1 bg-green-500/5 border border-green-500/15 rounded-lg px-2 py-1.5">
+                      <p className="text-[9px] text-green-500/60 uppercase tracking-widest">TP</p>
+                      <p className="text-xs font-bold text-green-400">${position.take_profit.toFixed(2)}</p>
                     </div>
-                  )
-                })()}
-              </div>
-
-              {/* Alerts */}
-              <div data-tour="alerts" className="border-t border-white/5">
-                <AlertsPanel symbol={ticker} currentPrice={activeData?.price} token={token} />
-              </div>
-
-              {/* Perf alerts */}
-              {perfAlerts.length > 0 && (
-                <div className="px-4 pt-3 space-y-2">
-                  {perfAlerts.map((alert, i) => (
-                    <div key={i} className={`px-3 py-2.5 rounded-xl border text-xs font-semibold ${
-                      alert.startsWith("⚠️") ? "bg-orange-500/8 border-orange-500/20 text-orange-300" :
-                      "bg-green-500/8 border-green-500/20 text-green-300"
-                    }`}>{alert}</div>
-                  ))}
+                  )}
+                  {position.stop_loss != null && (
+                    <div className="flex-1 bg-red-500/5 border border-red-500/15 rounded-lg px-2 py-1.5">
+                      <p className="text-[9px] text-red-500/60 uppercase tracking-widest">SL</p>
+                      <p className="text-xs font-bold text-red-400">${position.stop_loss.toFixed(2)}</p>
+                    </div>
+                  )}
                 </div>
               )}
-
-              {/* Footer */}
-              <div className="px-4 py-3 mt-auto border-t border-white/5">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                  <span className="text-[9px] text-white/20">Yahoo Finance · Groq AI · Live</span>
+            </div>
+          ) : (
+            <div className="px-4 py-3 border-b border-white/[0.05]">
+              {userProfile?.level === "débutant" ? (
+                <div className="space-y-1">
+                  <p className="text-xs text-gray-500 font-semibold">Tu n&apos;as pas encore acheté {ticker.replace("-USD", "")}</p>
+                  <p className="text-[10px] text-gray-700">Clique sur &quot;Acheter&quot; pour simuler ton premier achat ↓</p>
                 </div>
-              </div>
+              ) : (
+                <p className="text-[9px] text-gray-700 uppercase tracking-widest">Aucune position ouverte sur {ticker.replace("-USD", "")}</p>
+              )}
             </div>
           )}
 
-          {/* ORDER panel */}
-          {rightPanel === "order" && (
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* Position Calculator */}
+          <div className="px-4 py-3 border-b border-white/[0.05]">
+            <PositionCalculator
+              currentPrice={activeData?.price ?? 0}
+              symbol={ticker}
+              accountSize={account?.cash}
+              onApply={(qty, tp, sl) => {
+                setOrderQty(String(qty))
+                setOrderTp(String(tp))
+                setOrderSl(String(sl))
+                openBuy()
+              }}
+            />
+          </div>
 
-              {/* Cash dispo */}
-              <div className="flex items-center justify-between px-3 py-2 rounded-xl"
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <span className="text-[10px] text-white/30 uppercase tracking-widest">Cash dispo</span>
-                <span className="text-sm font-black text-white tabular-nums">
-                  {account ? `$${account.cash.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
-                </span>
-              </div>
+          {/* Buy / Sell buttons */}
+          <div data-tour="buy-btn" className="px-4 py-3 border-b border-white/[0.05] space-y-2">
+            <button onClick={isDemo ? () => setShowSignupModal(true) : openBuy}
+              className="w-full py-3 rounded-xl btn-primary text-sm tracking-wide">
+              Acheter {ticker.replace("-USD", "")}
+            </button>
+            {position && (
+              <button onClick={isDemo ? () => setShowSignupModal(true) : () => { setOrderModal("sell"); setOrderQty(String(position.qty)) }}
+                className="w-full py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 text-sm font-bold transition">
+                Vendre {position.qty} parts
+              </button>
+            )}
+          </div>
 
-              {/* Buy / Sell toggle */}
-              <div className="grid grid-cols-2 gap-2" data-tour="buy-btn">
-                <button onClick={() => setOrderSide("buy")}
-                  className={`py-2.5 rounded-xl text-sm font-black transition-all ${
-                    orderSide === "buy" ? "bg-green-500 text-black" : "bg-white/5 text-white/40 hover:text-white hover:bg-white/8"
-                  }`}>
-                  🟢 Acheter
-                </button>
-                <button onClick={() => setOrderSide("sell")}
-                  className={`py-2.5 rounded-xl text-sm font-black transition-all ${
-                    orderSide === "sell" ? "bg-red-500 text-white" : "bg-white/5 text-white/40 hover:text-white hover:bg-white/8"
-                  }`}>
-                  🔴 Vendre
-                </button>
-              </div>
+          {/* Price alerts */}
+          <div data-tour="alerts">
+          <AlertsPanel
+            symbol={ticker}
+            currentPrice={activeData?.price}
+            token={token}
+          />
+          </div>
 
-              {/* Market status if closed */}
-              <MarketStatusBar symbol={ticker} showDetail />
-
-              {/* Quantité */}
-              <div>
-                <div className="flex justify-between text-[10px] text-white/30 mb-2">
-                  <span>Quantité</span>
-                </div>
-                <div className="relative">
-                  <input type="number" min={1} value={orderQty}
-                    onChange={e => setOrderQty(e.target.value)}
-                    className="w-full h-11 px-3 pr-16 rounded-xl text-sm font-bold text-white outline-none"
-                    style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)" }} />
-                  <div className="absolute right-1 top-1 bottom-1 flex">
-                    <button onClick={() => setOrderQty(q => String(Math.max(1, Number(q) - 1)))}
-                      className="px-2.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition font-black text-sm">−</button>
-                    <button onClick={() => setOrderQty(q => String(Number(q) + 1))}
-                      className="px-2.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition font-black text-sm">+</button>
-                  </div>
-                </div>
-                <div className="flex gap-1 mt-2">
-                  {[1, 5, 10, 25].map(n => (
-                    <button key={n} onClick={() => setOrderQty(String(n))}
-                      className={`flex-1 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                        orderQty === String(n) ? "bg-white/10 text-white" : "text-white/25 hover:text-white/50 hover:bg-white/5"
-                      }`}>{n}</button>
-                  ))}
-                </div>
-              </div>
-
-              {/* TP / SL */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <p className="text-[10px] text-green-400/60 uppercase tracking-widest mb-1">Take Profit</p>
-                  <input type="number" value={orderTp} onChange={e => setOrderTp(e.target.value)}
-                    placeholder="Optionnel"
-                    className="w-full h-9 px-3 rounded-lg text-xs font-bold text-white outline-none placeholder-white/15"
-                    style={{ background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.15)" }} />
-                  <div className="flex gap-1 mt-1">
-                    {[3, 5, 10].map(pct => (
-                      <button key={pct} onClick={() => setOrderTp(((activeData?.price ?? 0) * (1 + pct / 100)).toFixed(2))}
-                        className="flex-1 py-0.5 rounded bg-green-500/10 text-green-400 text-[9px] hover:bg-green-500/20 transition">+{pct}%</button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-[10px] text-red-400/60 uppercase tracking-widest mb-1">Stop Loss</p>
-                  <input type="number" value={orderSl} onChange={e => setOrderSl(e.target.value)}
-                    placeholder="Optionnel"
-                    className="w-full h-9 px-3 rounded-lg text-xs font-bold text-white outline-none placeholder-white/15"
-                    style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)" }} />
-                  <div className="flex gap-1 mt-1">
-                    {[3, 5, 10].map(pct => (
-                      <button key={pct} onClick={() => setOrderSl(((activeData?.price ?? 0) * (1 - pct / 100)).toFixed(2))}
-                        className="flex-1 py-0.5 rounded bg-red-500/10 text-red-400 text-[9px] hover:bg-red-500/20 transition">-{pct}%</button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Calculateur */}
-              <PositionCalculator
-                currentPrice={activeData?.price ?? 0}
-                symbol={ticker}
-                accountSize={account?.cash}
-                onApply={(qty, tp, sl) => {
-                  setOrderQty(String(qty))
-                  setOrderTp(tp.toFixed(2))
-                  setOrderSl(sl.toFixed(2))
-                }}
-              />
-
-              {/* Résumé */}
-              <div className="p-3 rounded-xl space-y-1.5"
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+          {/* Market stats */}
+          {activeData && (
+            <div className="px-4 py-3 border-b border-white/[0.05]">
+              <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-2">Marché</p>
+              <div className="space-y-1.5">
                 {[
-                  { l: "Prix actuel", v: `$${activeData?.price?.toFixed(2) ?? "—"}` },
-                  { l: "Quantité",    v: `${orderQty} parts` },
-                ].map(r => (
-                  <div key={r.l} className="flex justify-between text-xs">
-                    <span className="text-white/40">{r.l}</span>
-                    <span className="font-bold text-white">{r.v}</span>
+                  { l: "Prix actuel", v: `$${activeData.price.toFixed(2)}`, c: up ? "text-green-400" : "text-red-400" },
+                  { l: "Variation 24h", v: `${up ? "+" : ""}${activeData.change.toFixed(2)}%`, c: up ? "text-green-400" : "text-red-400" },
+                  { l: "Haut du jour", v: activeData.high ? `$${activeData.high.toFixed(2)}` : "—" },
+                  { l: "Bas du jour", v: activeData.low ? `$${activeData.low.toFixed(2)}` : "—" },
+                  { l: "Clôture préc.", v: activeData.previousClose ? `$${activeData.previousClose.toFixed(2)}` : "—" },
+                  { l: "Market Cap", v: fmt(activeData.marketCap) },
+                  { l: "Volume", v: fmt(activeData.volume, "") },
+                ].map(k => (
+                  <div key={k.l} className="flex justify-between items-center">
+                    <span className="text-[10px] text-gray-600">{k.l}</span>
+                    <span className={`text-[10px] font-semibold tabular-nums ${k.c ?? "text-gray-300"}`}>{k.v}</span>
                   </div>
                 ))}
-                <div className="flex justify-between text-xs border-t border-white/5 pt-1.5">
-                  <span className="text-white/40">Total</span>
-                  <span className="font-black text-white">${((Number(orderQty) || 0) * (activeData?.price ?? 0)).toFixed(2)}</span>
-                </div>
               </div>
-
-              {/* Bouton confirmer */}
-              <button
-                onClick={() => isDemo ? setShowSignupModal(true) : (() => { setOrderModal(orderSide); setOrderMsg("") })()}
-                disabled={!orderQty || orderQty === "0"}
-                className="w-full py-3.5 rounded-2xl text-sm font-black transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40"
-                style={{
-                  background: orderSide === "buy"
-                    ? "linear-gradient(135deg, #22c55e, #16a34a)"
-                    : "linear-gradient(135deg, #ef4444, #dc2626)",
-                  color: orderSide === "buy" ? "black" : "white",
-                }}>
-                {orderSide === "buy" ? "🟢 Acheter" : "🔴 Vendre"} {orderQty || 0} {ticker.replace("-USD", "")}
-              </button>
             </div>
           )}
-        </aside>
+
+          {/* Order history */}
+          {orderHistory.length > 0 && (
+            <div className="px-4 py-3 flex-1">
+              <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-2">Mes ordres · {ticker.replace("-USD", "")}</p>
+              <div className="space-y-1.5">
+                {[...orderHistory].reverse().slice(0, 8).map((o, i) => (
+                  <div key={i} className={`flex items-center justify-between px-2.5 py-2 rounded-lg border ${
+                    o.type === "buy" ? "bg-green-500/5 border-green-500/10" : "bg-red-500/5 border-red-500/10"
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-black ${o.type === "buy" ? "text-green-400" : "text-red-400"}`}>
+                        {o.type === "buy" ? "▲" : "▼"}
+                      </span>
+                      <div>
+                        <p className={`text-[10px] font-bold ${o.type === "buy" ? "text-green-400" : "text-red-400"}`}>
+                          {o.type === "buy" ? "Achat" : "Vente"} ×{o.qty}
+                        </p>
+                        <p className="text-[9px] text-gray-600">{o.date}</p>
+                      </div>
+                    </div>
+                    <p className="text-[10px] font-bold text-white tabular-nums">${o.price.toFixed(2)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Performance alerts */}
+          {perfAlerts.length > 0 && (
+            <div className="px-4 pt-3 space-y-2">
+              {perfAlerts.map((alert, i) => (
+                <div key={i} className={`px-3 py-2.5 rounded-xl border text-xs font-semibold ${
+                  alert.startsWith("⚠️") ? "bg-orange-500/8 border-orange-500/20 text-orange-300" :
+                  alert.startsWith("🔥") ? "bg-green-500/8 border-green-500/20 text-green-300" :
+                  "bg-blue-500/8 border-blue-500/20 text-blue-300"
+                }`}>{alert}</div>
+              ))}
+            </div>
+          )}
+
+          {/* Analytics widget */}
+          <div className="px-4 pt-3">
+            <button onClick={() => setAnalyticsOpen(!analyticsOpen)}
+              className="w-full flex items-center justify-between px-3 py-2.5 bg-[#111] border border-white/5 rounded-xl hover:bg-white/3 transition">
+              <span className="text-white font-bold text-xs">📊 Analytics 30 jours</span>
+              <span className="text-gray-600 text-[10px]">{analyticsOpen ? "▲" : "▼"}</span>
+            </button>
+            {analyticsOpen && perfSnapshots.length > 0 && (() => {
+              const thisWeek = perfSnapshots.slice(-7)
+              const lastWeek = perfSnapshots.slice(-14, -7)
+              const weekPnl = thisWeek.reduce((s, d) => s + (d.daily_pnl ?? 0), 0)
+              const lastWeekPnl = lastWeek.reduce((s, d) => s + (d.daily_pnl ?? 0), 0)
+              let streak = 0
+              for (let i = perfSnapshots.length - 1; i >= 0; i--) {
+                if ((perfSnapshots[i].daily_pnl ?? 0) > 0) streak++
+                else break
+              }
+              return (
+                <div className="mt-1.5 bg-[#111] border border-white/5 rounded-xl p-3 space-y-3">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="text-center">
+                      <p className={`text-base font-black ${weekPnl >= 0 ? "text-green-400" : "text-red-400"}`}>
+                        {weekPnl >= 0 ? "+" : ""}${Math.abs(weekPnl).toFixed(0)}
+                      </p>
+                      <p className="text-gray-600 text-[9px]">Cette semaine</p>
+                    </div>
+                    <div className="text-center">
+                      <p className={`text-base font-black ${weekPnl >= lastWeekPnl ? "text-green-400" : "text-red-400"}`}>
+                        {weekPnl >= lastWeekPnl ? "▲" : "▼"}
+                      </p>
+                      <p className="text-gray-600 text-[9px]">vs S-1</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-base font-black text-orange-400">🔥 {streak}</p>
+                      <p className="text-gray-600 text-[9px]">Jours prof.</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-0.5">
+                    {perfSnapshots.map((s, i) => (
+                      <div key={i} title={`${s.date}: ${(s.daily_pnl ?? 0) >= 0 ? "+" : ""}$${(s.daily_pnl ?? 0).toFixed(0)}`}
+                        className={`w-4 h-4 rounded-sm ${(s.daily_pnl ?? 0) > 0 ? "bg-green-500/60" : (s.daily_pnl ?? 0) < 0 ? "bg-red-500/50" : "bg-white/5"}`} />
+                    ))}
+                  </div>
+                  <a href="/reports" className="block text-center text-[10px] text-green-400 font-bold hover:text-green-300 transition">
+                    Rapport complet →
+                  </a>
+                </div>
+              )
+            })()}
+          </div>
+
+          {/* Weekly Challenges */}
+          {challenges.length > 0 && (
+            <div className="px-4 py-3 border-t border-white/[0.05]">
+              <h3 className="text-white font-bold text-sm mb-3">🎯 Défis de la semaine</h3>
+              <div className="grid grid-cols-1 gap-2">
+                {challenges.map((c: any) => (
+                  <div key={c.id} className={`rounded-xl p-3 border flex items-center gap-3 ${c.completed ? "bg-green-500/5 border-green-500/20" : "bg-[#111] border-white/5"}`}>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg flex-shrink-0 ${c.completed ? "bg-green-500/20" : "bg-white/5"}`}>
+                      {c.completed ? "✅" : "🎯"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs font-bold ${c.completed ? "text-green-400" : "text-white"}`}>{c.title}</p>
+                      <p className="text-gray-600 text-[10px] truncate">{c.description}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-xs font-black text-yellow-400">+{c.reward_xp} XP</p>
+                      {c.progress !== undefined && !c.completed && (
+                        <p className="text-[10px] text-gray-600">{c.progress}%</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
+          <div className="px-4 py-3 mt-auto border-t border-white/[0.05]">
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+              <span className="text-[9px] text-gray-700">Yahoo Finance · Groq AI · Live</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ── Modal Ordre ───────────────────────────────────────────────────── */}
