@@ -62,13 +62,13 @@ Gratuit (achats intégrés)
 - Premium annuel : 479,99 €/an (économisez 18%)
 
 ## URL de support
-https://financeapp-kappa-six.vercel.app/support
+https://tradex-kappa-six.vercel.app/support
 
 ## URL de confidentialité
-https://financeapp-kappa-six.vercel.app/legal/privacy
+https://tradex-kappa-six.vercel.app/legal/privacy
 
 ## URL des CGU
-https://financeapp-kappa-six.vercel.app/legal/terms
+https://tradex-kappa-six.vercel.app/legal/terms
 
 ## Captures d'écran requises (iPhone 6.7")
 1. Dashboard avec graphe en chandelier et signaux IA

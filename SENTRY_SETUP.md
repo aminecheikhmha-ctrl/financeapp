@@ -16,7 +16,7 @@ npx @sentry/wizard@latest -i nextjs
 NEXT_PUBLIC_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx
 SENTRY_AUTH_TOKEN=xxx  # Dans Sentry → Settings → Auth Tokens
 SENTRY_ORG=ton-org
-SENTRY_PROJECT=financeapp
+SENTRY_PROJECT=tradex
 ```
 
 ## 4. Déployer

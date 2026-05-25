@@ -31,7 +31,7 @@ export default function TermsPage() {
         </div>
 
         <Section title="1. Objet">
-          <p>Les présentes CGU régissent l&apos;utilisation de TradEx, plateforme éducative de simulation de trading accessible sur financeapp-kappa-six.vercel.app et ses sous-domaines.</p>
+          <p>Les présentes CGU régissent l&apos;utilisation de TradEx, plateforme éducative de simulation de trading accessible sur tradex-kappa-six.vercel.app et ses sous-domaines.</p>
         </Section>
 
         <Section title="2. Acceptation des conditions">

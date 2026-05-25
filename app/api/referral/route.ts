@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
   const total = referrals?.length ?? 0
   const converted = referrals?.filter(r => r.status === "completed").length ?? 0
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://financeapp-kappa-six.vercel.app"
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://tradex-kappa-six.vercel.app"
   return NextResponse.json({
     code,
     url: `${appUrl}/signup?ref=${code}`,

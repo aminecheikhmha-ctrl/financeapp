@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js"
 import { notFound } from "next/navigation"
 import ArticleClient from "./ArticleClient"
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://financeapp-kappa-six.vercel.app"
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://tradex-kappa-six.vercel.app"
 
 function makeSupabase() {
   return createClient(

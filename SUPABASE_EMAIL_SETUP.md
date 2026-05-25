@@ -20,7 +20,7 @@ Remplacer le contenu HTML par :
 Aller dans : **Authentication → URL Configuration → Redirect URLs**
 
 Ajouter :
-- `https://financeapp-kappa-six.vercel.app/auth/callback`
+- `https://tradex-kappa-six.vercel.app/auth/callback`
 - `http://localhost:3000/auth/callback`
 - `http://localhost:3001/auth/callback`
 - `http://localhost:3002/auth/callback`

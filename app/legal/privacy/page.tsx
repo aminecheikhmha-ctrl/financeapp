@@ -6,7 +6,7 @@ export const metadata: Metadata = {
 }
 
 const LAST_UPDATED = "18 mai 2026"
-const CONTACT_EMAIL = "privacy@financeapp.io"
+const CONTACT_EMAIL = "privacy@tradex.io"
 const COMPANY = "TradEx SAS"
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

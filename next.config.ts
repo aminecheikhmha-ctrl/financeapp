@@ -15,7 +15,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "img.youtube.com" },
       { protocol: "https", hostname: "i.ytimg.com" },
-      { protocol: "https", hostname: "financeapp-kappa-six.vercel.app" },
+      { protocol: "https", hostname: "tradex-kappa-six.vercel.app" },
       { protocol: "https", hostname: "**.supabase.co" },
     ],
   },

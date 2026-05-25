@@ -5,7 +5,7 @@ import { Resend } from "resend"
 export const runtime = "nodejs"
 
 const ADMIN_EMAIL = "amine_cm@icloud.com"
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://financeapp-kappa-six.vercel.app"
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://tradex-kappa-six.vercel.app"
 
 function makeSupabase() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     const batch = emails.slice(i, i + BATCH)
     try {
       await resend.emails.send({
-        from: "TradEx <hello@financeapp.io>",
+        from: "TradEx <hello@tradex.io>",
         to: batch,
         subject,
         html,

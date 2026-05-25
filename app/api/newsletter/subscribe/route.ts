@@ -32,9 +32,9 @@ export async function POST(req: NextRequest) {
   // Welcome email (best effort)
   try {
     const resend = new Resend(process.env.RESEND_API_KEY ?? "placeholder")
-    const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://financeapp-kappa-six.vercel.app"
+    const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://tradex-kappa-six.vercel.app"
     await resend.emails.send({
-      from: "TradEx <hello@financeapp.io>",
+      from: "TradEx <hello@tradex.io>",
       to: email,
       subject: "✅ Bienvenue dans la newsletter TradEx !",
       html: `<!DOCTYPE html>

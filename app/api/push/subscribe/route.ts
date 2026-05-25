@@ -6,7 +6,7 @@ export const runtime = "nodejs"
 
 function setupVapid() {
   webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT ?? "mailto:contact@financeapp.io",
+    process.env.VAPID_SUBJECT ?? "mailto:contact@tradex.io",
     process.env.VAPID_PUBLIC_KEY ?? "",
     process.env.VAPID_PRIVATE_KEY ?? ""
   )

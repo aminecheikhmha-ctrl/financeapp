@@ -28,7 +28,7 @@ STRIPE_PRO_PRICE_ID=price_...
 STRIPE_PREMIUM_PRICE_ID=price_...
 RESEND_API_KEY=re_...
 CRON_SECRET=un-secret-aléatoire-long
-NEXT_PUBLIC_APP_URL=https://financeapp-kappa-six.vercel.app
+NEXT_PUBLIC_APP_URL=https://tradex-kappa-six.vercel.app
 ```
 
 ---
@@ -37,7 +37,7 @@ NEXT_PUBLIC_APP_URL=https://financeapp-kappa-six.vercel.app
 
 Dashboard Stripe → Developers → Webhooks → Add endpoint
 
-- **URL**: `https://financeapp-kappa-six.vercel.app/api/stripe/webhook`
+- **URL**: `https://tradex-kappa-six.vercel.app/api/stripe/webhook`
 - **Events à écouter**:
   - `checkout.session.completed`
   - `customer.subscription.deleted`

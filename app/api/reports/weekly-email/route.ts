@@ -6,7 +6,7 @@ import Groq from "groq-sdk"
 export const runtime = "nodejs"
 export const maxDuration = 60
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://financeapp-kappa-six.vercel.app"
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://tradex-kappa-six.vercel.app"
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization")
@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
 
       const pnlSign = weeklyPnlPct >= 0 ? "+" : ""
       await resend.emails.send({
-        from: "TradEx <hello@financeapp.io>",
+        from: "TradEx <hello@tradex.io>",
         to: u.email,
         subject: `📊 Ton rapport hebdo : ${pnlSign}${weeklyPnlPct.toFixed(1)}% cette semaine`,
         html,

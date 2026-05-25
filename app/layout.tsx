@@ -22,7 +22,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://financeapp-kappa-six.vercel.app"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://tradex-kappa-six.vercel.app"),
   title: {
     default: "TradEx — Trading intelligent avec l'IA",
     template: "%s | TradEx",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "fr_FR",
-    url: "https://financeapp.io",
+    url: "https://tradex.io",
     siteName: "TradEx",
     title: "TradEx — Trading intelligent avec l'IA",
     description: "Signaux de trading en temps réel, analyses IA et académie de trading — tout en un.",

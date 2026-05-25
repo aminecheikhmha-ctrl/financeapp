@@ -195,7 +195,7 @@ export default function ReportsPage() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `financeapp-trades-${new Date().getFullYear()}.csv`
+      a.download = `tradex-trades-${new Date().getFullYear()}.csv`
       a.click()
       URL.revokeObjectURL(url)
     } catch {}
@@ -273,7 +273,7 @@ export default function ReportsPage() {
       const imgH = (canvas.height / canvas.width) * imgW
       pdf.addImage(imgData, "JPEG", 14, 26, imgW, Math.min(imgH, pageH - 30))
 
-      pdf.save(`financeapp-rapport-${report.period.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.pdf`)
+      pdf.save(`tradex-rapport-${report.period.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.pdf`)
     } catch {}
     setPdfLoading(false)
   }

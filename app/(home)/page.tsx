@@ -113,7 +113,7 @@ export default function HomePage() {
               </div>
               <div className="flex-1 flex justify-center">
                 <div className="px-4 py-1 rounded-lg text-[11px] font-mono" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.2)" }}>
-                  financeapp.io/dashboard
+                  tradex.io/dashboard
                 </div>
               </div>
             </div>

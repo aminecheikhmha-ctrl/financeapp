@@ -23,7 +23,7 @@
 ## Folder Structure
 
 ```
-financeapp/
+tradex/
 ├── app/                        # Next.js App Router root
 │   ├── (home)/                 # Landing / marketing page
 │   ├── admin/                  # Admin panel (protected)
@@ -120,7 +120,7 @@ financeapp/
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Client-side Stripe.js | Stripe publishable key |
 | `RESEND_API_KEY` | `lib/resend.ts` | Resend email API key |
 | `CRON_SECRET` | `app/api/cron/*` | Bearer token to authenticate cron calls |
-| `NEXT_PUBLIC_APP_URL` | Emails, OG images, redirects | Canonical app URL (e.g. `https://financeapp.io`) |
+| `NEXT_PUBLIC_APP_URL` | Emails, OG images, redirects | Canonical app URL (e.g. `https://tradex.io`) |
 
 ---
 

@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       const { Resend } = await import("resend")
       const resend = new Resend(process.env.RESEND_API_KEY)
       await resend.emails.send({
-        from: "TradEx <hello@financeapp.io>",
+        from: "TradEx <hello@tradex.io>",
         to: email,
         subject: "Message de l'équipe TradEx",
         html: `<div style="font-family:sans-serif;background:#080808;color:#fff;padding:32px;border-radius:12px;max-width:560px;margin:0 auto">

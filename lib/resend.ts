@@ -5,8 +5,8 @@ function getResend() {
   return new Resend(process.env.RESEND_API_KEY ?? "placeholder")
 }
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://financeapp-kappa-six.vercel.app"
-const FROM = "TradEx <hello@financeapp.io>"
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://tradex-kappa-six.vercel.app"
+const FROM = "TradEx <hello@tradex.io>"
 
 // ─── Email Templates ──────────────────────────────────────────────────────────
 

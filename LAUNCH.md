@@ -38,7 +38,7 @@
 ## Emails (Resend)
 
 - [ ] Domaine d'envoi vérifié (DNS MX/SPF/DKIM)
-- [ ] From address : `hello@financeapp.io`
+- [ ] From address : `hello@tradex.io`
 - [ ] Test email de bienvenue envoyé
 - [ ] Test alerte prix envoyée
 
@@ -102,7 +102,7 @@ Configurer dans `vercel.json` :
 
 ## Business
 
-- [ ] Support email actif : support@financeapp.io
+- [ ] Support email actif : support@tradex.io
 - [ ] Politique de remboursement rédigée
 - [ ] Plans et pricing corrects
 

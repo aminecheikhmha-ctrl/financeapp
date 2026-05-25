@@ -204,7 +204,7 @@ export default function CertificatePage() {
               <div>
                 <div className="h-px w-24 mb-1" style={{ background: "#1a1a1a" }} />
                 <p className="text-xs font-bold" style={{ color: "#4ade80" }}>TradEx</p>
-                <p className="text-[10px]" style={{ color: "#333" }}>financeapp.io</p>
+                <p className="text-[10px]" style={{ color: "#333" }}>tradex.io</p>
               </div>
               <div className="text-center">
                 <p className="text-[10px]" style={{ color: "#444" }}>Complété le</p>

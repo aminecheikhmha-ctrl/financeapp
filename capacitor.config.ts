@@ -9,7 +9,7 @@ const config: CapacitorConfig = {
     url:
       process.env.NODE_ENV === "development"
         ? "http://localhost:3000"
-        : "https://financeapp-kappa-six.vercel.app",
+        : "https://tradex-kappa-six.vercel.app",
     cleartext: true,
     androidScheme: "https",
   },

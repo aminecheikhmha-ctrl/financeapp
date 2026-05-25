@@ -18,7 +18,7 @@ export default function ShareTradeButton({ symbol, gainPct, entryPrice, exitPric
   const emoji = isWin ? "🚀" : "📉"
 
   const text = `${emoji} J'ai ${isWin ? "gagné" : "perdu"} ${sign}${gainPct.toFixed(2)}% sur ${symbol} avec TradEx !\n\nEntrée : $${entryPrice.toFixed(2)} → Sortie : $${exitPrice.toFixed(2)}${duration ? `\nDurée : ${duration}` : ""}\n\nTrader avec l'IA 👇`
-  const url = "https://financeapp-kappa-six.vercel.app"
+  const url = "https://tradex-kappa-six.vercel.app"
   const encoded = encodeURIComponent(text)
   const encodedUrl = encodeURIComponent(url)
 

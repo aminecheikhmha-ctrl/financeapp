@@ -26,7 +26,7 @@ Configurer dans **Vercel → Settings → Environment Variables** (pour tous les
 
 | Variable | Description |
 |---|---|
-| `NEXT_PUBLIC_APP_URL` | URL de production (ex: `https://financeapp.io`) |
+| `NEXT_PUBLIC_APP_URL` | URL de production (ex: `https://tradex.io`) |
 | `CRON_SECRET` | Secret partagé pour sécuriser les routes `/api/cron/*` |
 
 ### IA
@@ -64,7 +64,7 @@ Générer les clés VAPID : `npx web-push generate-vapid-keys`
 ```bash
 # 1. Cloner et installer
 git clone <repo>
-cd financeapp
+cd tradex
 npm install
 
 # 2. Variables locales
@@ -253,7 +253,7 @@ Le service worker (`public/sw.js`) est enregistré automatiquement via le compos
 - [ ] `og-image.png` présent dans `public/`
 - [ ] DNS configuré (domaine pointant vers Vercel)
 - [ ] HTTPS activé (automatique avec Vercel)
-- [ ] Crons testés manuellement via `curl -H "Authorization: Bearer <CRON_SECRET>" https://financeapp.io/api/cron/signals`
+- [ ] Crons testés manuellement via `curl -H "Authorization: Bearer <CRON_SECRET>" https://tradex.io/api/cron/signals`
 
 ---
 

@@ -109,7 +109,7 @@ export async function GET(req: NextRequest) {
           borderTop: "1px solid rgba(255,255,255,0.08)",
           paddingTop: 20,
         }}>
-          <span style={{ color: "#4b5563", fontSize: 15 }}>financeapp-kappa-six.vercel.app</span>
+          <span style={{ color: "#4b5563", fontSize: 15 }}>tradex-kappa-six.vercel.app</span>
           <div style={{
             display: "flex", alignItems: "center", gap: 8,
             padding: "8px 16px", borderRadius: 10,

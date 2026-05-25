@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const base = process.env.NEXT_PUBLIC_APP_URL || "https://financeapp-kappa-six.vercel.app"
+  const base = process.env.NEXT_PUBLIC_APP_URL || "https://tradex-kappa-six.vercel.app"
   const supabase = makeSupabase()
   const results: { symbol: string; status: string; score?: number }[] = []
 

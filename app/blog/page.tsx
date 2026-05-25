@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Blog TradEx — Apprendre à trader",
     description: "Articles, guides et analyses pour apprendre le trading.",
-    url: "https://financeapp-kappa-six.vercel.app/blog",
+    url: "https://tradex-kappa-six.vercel.app/blog",
     images: [{ url: "/api/og?title=Blog+TradEx+%E2%80%94+Apprendre+%C3%A0+trader&category=trading", width: 1200, height: 630 }],
   },
 }
