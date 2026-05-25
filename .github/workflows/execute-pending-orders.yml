@@ -1,0 +1,16 @@
+name: Execute Pending Orders
+
+on:
+  schedule:
+    - cron: "*/5 14-21 * * 1-5"  # Toutes les 5 min, 9h30-16h ET (14h-21h UTC), Lun-Ven
+  workflow_dispatch:
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Execute pending orders
+        run: |
+          curl -f -s \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            ${{ secrets.APP_URL }}/api/cron/execute-pending-orders

@@ -249,9 +249,14 @@ function CourseComplete({ course, progress, totalXP, timeSpent, onContinue }: {
             </div>
           ))}
         </div>
+        <a href={`/apprendre/${course.id}/certificate`}
+          className="w-full py-3.5 rounded-xl font-black text-sm transition-all text-center block"
+          style={{ background: "rgba(250,204,21,0.12)", color: "#facc15", border: "1px solid rgba(250,204,21,0.3)" }}>
+          🏆 Télécharger mon certificat
+        </a>
         <button onClick={onContinue}
           className="w-full py-3.5 rounded-xl font-black text-sm transition-all"
-          style={{ background: "rgba(74,222,128,0.15)", color: "#4ade80", border: "1px solid rgba(74,222,128,0.3)" }}>
+          style={{ background: "rgba(74,222,128,0.12)", color: "#4ade80", border: "1px solid rgba(74,222,128,0.25)" }}>
           ← Retour à l'Académie
         </button>
       </div>
@@ -540,6 +545,17 @@ export default function CoursePage() {
               </div>
               <p className="text-[10px]" style={{ color: "#333" }}>{progress.size}/{course.chapters.length} chapitres complétés</p>
             </div>
+
+            {/* Certificate button when course is 100% done */}
+            {donePct === 100 && (
+              <div className="px-3 py-3 border-b flex-shrink-0" style={{ borderColor: "#111" }}>
+                <a href={`/apprendre/${course.id}/certificate`}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black transition-all text-center"
+                  style={{ background: "rgba(250,204,21,0.1)", color: "#facc15", border: "1px solid rgba(250,204,21,0.25)" }}>
+                  🏆 Mon certificat
+                </a>
+              </div>
+            )}
 
             {/* Chapter list */}
             <div className="overflow-y-auto flex-1" style={{ scrollbarWidth: "thin" }}>

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/app/components/Toast"
+import ShareTradeCard from "@/app/components/ShareTradeCard"
+import MarketStatusBar from "@/app/components/MarketStatusBar"
 
 type Account = { cash: number }
 type Position = {
@@ -38,7 +40,9 @@ export default function PortfolioPage() {
   const [orderLoading, setOrderLoading] = useState(false)
   const [orderMsg, setOrderMsg] = useState("")
   const [searchSym, setSearchSym] = useState("")
-  const [tab, setTab] = useState<"positions" | "orders">("positions")
+  const [tab, setTab]               = useState<"positions" | "orders">("positions")
+  const [shareTrade, setShareTrade] = useState<Order | null>(null)
+  const [pendingOrders, setPendingOrders] = useState<Order[]>([])
 
   useEffect(() => { loadData() }, [])
 
@@ -58,7 +62,9 @@ export default function PortfolioPage() {
       const data = await res.json()
       setAccount(data.account)
       setPositions(data.positions ?? [])
-      setOrders(data.orders ?? [])
+      const allOrders: Order[] = data.orders ?? []
+      setPendingOrders(allOrders.filter(o => o.status === "pending"))
+      setOrders(allOrders.filter(o => o.status !== "pending"))
 
       // Fetch prix actuels
       if (data.positions?.length > 0) {
@@ -72,6 +78,24 @@ export default function PortfolioPage() {
       }
     } catch {}
     setLoading(false)
+  }
+
+  async function cancelOrder(orderId: string) {
+    const token = await getToken()
+    if (!token) return
+    const { data: { user } } = await supabase.auth.getUser(token)
+    if (!user) return
+    const { error } = await supabase
+      .from("orders")
+      .update({ status: "cancelled" })
+      .eq("id", orderId)
+      .eq("user_id", user.id)
+      .eq("status", "pending")
+    if (!error) {
+      setPendingOrders(prev => prev.filter(o => o.id !== orderId))
+      toast.success("Ordre annulé")
+      loadData()
+    }
   }
 
   async function placeOrder() {
@@ -183,6 +207,59 @@ export default function PortfolioPage() {
                 </div>
               ))}
             </div>
+
+            {/* Market status */}
+            <div className="mb-4">
+              <MarketStatusBar symbol="SPY" showDetail />
+            </div>
+
+            {/* Pending orders */}
+            {pendingOrders.length > 0 && (
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold">
+                    ⏳ Ordres en attente ({pendingOrders.length})
+                  </p>
+                  <div className="flex-1 h-px bg-white/5" />
+                </div>
+                <div className="space-y-2">
+                  {pendingOrders.map(order => {
+                    const isBuy       = order.side === "buy"
+                    const scheduledAt = (order as any).scheduled_for
+                    return (
+                      <div key={order.id} className="flex items-center gap-4 px-4 py-3 rounded-2xl"
+                        style={{ background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.15)" }}>
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base"
+                          style={{ background: "rgba(245,158,11,0.1)" }}>⏳</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-white">
+                              {isBuy ? "Achat" : "Vente"} {order.qty} {order.symbol.replace("-USD", "")}
+                            </span>
+                            <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full text-yellow-400"
+                              style={{ background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.2)" }}>
+                              EN ATTENTE
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-white/30 mt-0.5">
+                            Réf. ${order.price.toFixed(2)}
+                            {scheduledAt && ` · ${new Date(scheduledAt).toLocaleDateString("fr-FR", { weekday: "short", hour: "2-digit", minute: "2-digit" })}`}
+                          </p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-sm font-bold text-white">${(order.qty * order.price).toFixed(0)}</p>
+                          <p className="text-[10px] text-white/25">Estimé</p>
+                        </div>
+                        <button onClick={() => cancelOrder(order.id)}
+                          className="px-3 py-1.5 rounded-lg text-[10px] font-bold text-red-400/50 hover:text-red-400 hover:bg-red-500/10 transition border border-transparent hover:border-red-500/20">
+                          Annuler
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Tabs */}
             <div className="flex gap-0 border-b border-white/[0.06] mb-5">
@@ -296,6 +373,13 @@ export default function PortfolioPage() {
                           <div className="text-right flex-shrink-0 w-20">
                             <p className="text-[14px] font-bold text-white tabular-nums">${order.total.toFixed(2)}</p>
                           </div>
+                          <button
+                            onClick={() => setShareTrade(order)}
+                            className="flex-shrink-0 h-7 px-2.5 rounded-lg text-[11px] font-semibold text-blue-400 hover:bg-blue-500/10 transition"
+                            style={{ border: "1px solid rgba(96,165,250,0.2)" }}
+                          >
+                            ↗ Partager
+                          </button>
                         </div>
                       )
                     })}
@@ -306,6 +390,9 @@ export default function PortfolioPage() {
           </>
         )}
       </div>
+
+      {/* Share Trade Modal */}
+      {shareTrade && <ShareTradeCard order={shareTrade} onClose={() => setShareTrade(null)} />}
 
       {/* Order Modal */}
       {orderModal && (

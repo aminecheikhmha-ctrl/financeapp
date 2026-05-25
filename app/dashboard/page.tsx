@@ -8,6 +8,9 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "rec
 import dynamic from "next/dynamic"
 const TradingChart = dynamic(() => import("@/app/components/TradingChart"), { ssr: false })
 import AlertsPanel from "@/app/components/AlertsPanel"
+import PositionCalculator from "@/app/components/PositionCalculator"
+import MarketStatusBar from "@/app/components/MarketStatusBar"
+import { getMarketStatus } from "@/lib/market-hours"
 import OnboardingChecklist from "@/app/components/OnboardingChecklist"
 import Tour from "@/app/components/Tour"
 import TooltipHint from "@/app/components/Tooltip"
@@ -303,8 +306,13 @@ export default function Dashboard() {
       if (data.success) {
         const { haptic } = await import("@/lib/capacitor")
         await haptic("success")
-        setOrderMsg(`✅ ${side === "buy" ? "Acheté" : "Vendu"} à $${data.price.toFixed(2)}`)
-        toast.success(`Ordre exécuté ✓ — ${side === "buy" ? "Acheté" : "Vendu"} à $${data.price.toFixed(2)}`)
+        const isPending = data.status === "pending"
+        setOrderMsg(isPending
+          ? `⏳ Ordre planifié — exécution à l'ouverture`
+          : `✅ ${side === "buy" ? "Acheté" : "Vendu"} à $${data.price.toFixed(2)}`)
+        toast.success(isPending
+          ? "Ordre planifié ✓ — exécution à l'ouverture du marché"
+          : `Ordre exécuté ✓ — ${side === "buy" ? "Acheté" : "Vendu"} à $${data.price.toFixed(2)}`)
         if (side === "buy" && (orderTp || orderSl)) {
           await fetch("/api/trading/positions", {
             method: "PATCH",
@@ -794,6 +802,8 @@ export default function Dashboard() {
                       <p className="text-xs font-bold text-gray-200">{k.v}</p>
                     </div>
                   ))}
+                  {/* Market status badge */}
+                  <MarketStatusBar symbol={ticker} />
                 </div>
               </>
             ) : (
@@ -1411,6 +1421,20 @@ export default function Dashboard() {
             </div>
           )}
 
+          {/* Position Calculator */}
+          <div className="px-4 py-3 border-b border-white/[0.05]">
+            <PositionCalculator
+              currentPrice={activeData?.price ?? 0}
+              symbol={ticker}
+              onApply={(qty, tp, sl) => {
+                setOrderQty(String(qty))
+                setOrderTp(String(tp))
+                setOrderSl(String(sl))
+                openBuy()
+              }}
+            />
+          </div>
+
           {/* Buy / Sell buttons */}
           <div data-tour="buy-btn" className="px-4 py-3 border-b border-white/[0.05] space-y-2">
             <button onClick={isDemo ? () => setShowSignupModal(true) : openBuy}
@@ -1585,33 +1609,69 @@ export default function Dashboard() {
       </div>
 
       {/* ── Modal Ordre ───────────────────────────────────────────────────── */}
-      {orderModal && (
+      {orderModal && (() => {
+        const mktStatus = getMarketStatus(ticker)
+        const isPending = !mktStatus.isOpen
+        return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 px-0 sm:px-4">
           <div className="bg-[#111] border border-white/10 rounded-t-2xl sm:rounded-2xl p-5 w-full max-w-[95vw] sm:max-w-sm shadow-2xl mx-auto">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${orderModal === "buy" ? "bg-green-500/20" : "bg-red-500/20"}`}>
-                  <span className={`text-sm font-black ${orderModal === "buy" ? "text-green-400" : "text-red-400"}`}>{orderModal === "buy" ? "B" : "S"}</span>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isPending ? "bg-yellow-500/20" : orderModal === "buy" ? "bg-green-500/20" : "bg-red-500/20"}`}>
+                  <span className={`text-sm font-black ${isPending ? "text-yellow-400" : orderModal === "buy" ? "text-green-400" : "text-red-400"}`}>
+                    {isPending ? "⏳" : orderModal === "buy" ? "B" : "S"}
+                  </span>
                 </div>
                 <div>
                   <p className="text-base font-black">{orderModal === "buy" ? "Acheter" : "Vendre"} {ticker.replace("-USD", "")}</p>
-                  <p className="text-[10px] text-gray-500">{activeData?.name} · Marché au prix actuel</p>
+                  <p className="text-[10px] text-gray-500">
+                    {activeData?.name} · {isPending ? "Ordre différé" : "Marché au prix actuel"}
+                  </p>
                 </div>
               </div>
               <button onClick={() => { setOrderModal(null); setOrderMsg("") }} className="text-gray-600 hover:text-white transition text-lg leading-none">×</button>
             </div>
 
+            {/* Banner marché fermé */}
+            {isPending && (
+              <div className="mb-4 p-3 rounded-xl flex items-start gap-3"
+                style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
+                <span className="text-lg flex-shrink-0">🕐</span>
+                <div>
+                  <p className="text-xs font-bold text-yellow-400 mb-0.5">Marché fermé — Ordre différé</p>
+                  <p className="text-[11px] text-white/40 leading-relaxed">
+                    {mktStatus.message}. Ton ordre sera placé automatiquement à la prochaine ouverture au prix du marché.
+                  </p>
+                  {mktStatus.nextOpen && (
+                    <p className="text-[10px] text-yellow-400/60 mt-1">
+                      Exécution prévue : {mktStatus.nextOpen.toLocaleDateString("fr-FR", { weekday: "long", hour: "2-digit", minute: "2-digit" })} ET
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Prix + cash */}
             <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3 mb-4 flex justify-between items-center">
               <div>
-                <p className="text-[9px] text-gray-600 uppercase tracking-widest">Prix actuel</p>
+                <p className="text-[9px] text-gray-600 uppercase tracking-widest">
+                  {isPending ? "Dernier prix connu" : "Prix actuel"}
+                </p>
                 <p className="text-lg font-black text-white">${activeData?.price.toFixed(2)}</p>
+                {isPending && (
+                  <p className="text-[10px] text-yellow-400/60 mt-0.5">⚠️ Prix d'exécution peut différer</p>
+                )}
               </div>
               <div className="text-right">
-                <p className="text-[9px] text-gray-600 uppercase tracking-widest">Cash</p>
-                <p className={`text-sm font-bold ${(account?.cash ?? 0) < (activeData?.price ?? 0) * parseFloat(orderQty || "0") ? "text-red-400" : "text-green-400"}`}>
-                  ${(account?.cash ?? 0).toFixed(2)}
-                </p>
+                <p className="text-[9px] text-gray-600 uppercase tracking-widest">Type</p>
+                <span className="text-xs font-bold px-2 py-1 rounded-lg"
+                  style={{
+                    background: isPending ? "rgba(245,158,11,0.12)" : "rgba(34,197,94,0.12)",
+                    color: isPending ? "#fbbf24" : "#4ade80",
+                    border: `1px solid ${isPending ? "rgba(245,158,11,0.2)" : "rgba(34,197,94,0.2)"}`,
+                  }}>
+                  {isPending ? "⏳ Différé" : "⚡ Marché"}
+                </span>
               </div>
             </div>
 
@@ -1674,19 +1734,33 @@ export default function Dashboard() {
                 <button onClick={() => { setOrderModal(null); setOrderMsg("") }}
                   className="px-4 py-2.5 rounded-xl border border-white/10 text-gray-500 hover:text-white transition text-sm">Annuler</button>
                 <button onClick={() => placeOrder(orderModal)} disabled={orderLoading}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-black transition disabled:opacity-50 flex items-center justify-center gap-2 ${
-                    orderModal === "buy" ? "bg-green-500 hover:bg-green-400 text-white" : "bg-red-500 hover:bg-red-400 text-white"
-                  }`}>
+                  className="flex-1 py-2.5 rounded-xl text-sm font-black transition disabled:opacity-50 flex items-center justify-center gap-2 text-white"
+                  style={{
+                    background: orderLoading ? undefined : isPending
+                      ? "linear-gradient(135deg, #d97706, #b45309)"
+                      : orderModal === "buy"
+                        ? "linear-gradient(135deg, #22c55e, #16a34a)"
+                        : "linear-gradient(135deg, #ef4444, #dc2626)",
+                  }}>
                   {orderLoading && (
                     <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   )}
-                  {orderLoading ? "En cours..." : orderModal === "buy" ? "Confirmer l'achat" : "Confirmer la vente"}
+                  {orderLoading ? "En cours..." : isPending
+                    ? `⏳ Planifier l'${orderModal === "buy" ? "achat" : "vente"}`
+                    : orderModal === "buy" ? "🟢 Confirmer l'achat" : "🔴 Confirmer la vente"
+                  }
                 </button>
               </div>
+              {isPending && !orderLoading && (
+                <p className="text-[10px] text-white/20 text-center mt-2">
+                  Tu peux annuler depuis ton portfolio avant l&apos;ouverture
+                </p>
+              )}
             </div>
           </div>
         </div>
-      )}
+        )
+      })()}
 
       {/* ── Modal TP/SL ───────────────────────────────────────────────────── */}
       {tpSlModal && (

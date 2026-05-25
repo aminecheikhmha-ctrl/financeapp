@@ -56,6 +56,7 @@ export default function SocialPage() {
   const [activeTab, setActiveTab] = useState<"feed" | "top" | "trades">("feed")
   const [loading, setLoading] = useState(true)
   const [followStatus, setFollowStatus] = useState<Record<string, boolean>>({})
+  const [copying,     setCopying]      = useState<Set<string>>(new Set())
 
   useEffect(() => {
     async function init() {
@@ -105,6 +106,31 @@ export default function SocialPage() {
     }
     init()
   }, [router])
+
+  async function toggleCopy(userId: string) {
+    const { data } = await supabase.auth.getSession()
+    if (!data.session) return
+    const isCopying = copying.has(userId)
+    if (isCopying) {
+      await supabase.from("social_follows")
+        .update({ copy_trades: false })
+        .eq("follower_id", data.session.user.id)
+        .eq("following_id", userId)
+    } else {
+      await supabase.from("social_follows")
+        .upsert({
+          follower_id:      data.session.user.id,
+          following_id:     userId,
+          copy_trades:      true,
+          copy_amount_pct:  10,
+        }, { onConflict: "follower_id,following_id" })
+    }
+    setCopying(prev => {
+      const next = new Set(prev)
+      if (isCopying) next.delete(userId); else next.add(userId)
+      return next
+    })
+  }
 
   async function handleFollow(userId: string) {
     const { data } = await supabase.auth.getSession()
@@ -279,8 +305,8 @@ export default function SocialPage() {
                         </p>
                       </div>
 
-                      {/* Return + Follow */}
-                      <div className="text-right flex-shrink-0">
+                      {/* Return + Follow + Copy */}
+                      <div className="text-right flex-shrink-0 space-y-1">
                         <p
                           className={`font-black text-lg ${
                             (trader.avg_pnl_pct ?? 0) >= 0 ? "text-green-400" : "text-red-400"
@@ -289,16 +315,29 @@ export default function SocialPage() {
                           {(trader.avg_pnl_pct ?? 0) >= 0 ? "+" : ""}
                           {(trader.avg_pnl_pct ?? 0).toFixed(1)}%
                         </p>
-                        <button
-                          onClick={() => handleFollow(trader.user_id)}
-                          className={`text-xs px-3 py-1 rounded-lg font-bold transition mt-1 ${
-                            followStatus[trader.user_id]
-                              ? "bg-white/10 text-gray-400"
-                              : "bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30"
-                          }`}
-                        >
-                          {followStatus[trader.user_id] ? "Suivi ✓" : "Suivre"}
-                        </button>
+                        <div className="flex items-center gap-1.5 justify-end">
+                          <button
+                            onClick={() => handleFollow(trader.user_id)}
+                            className={`text-xs px-3 py-1 rounded-lg font-bold transition ${
+                              followStatus[trader.user_id]
+                                ? "bg-white/10 text-gray-400"
+                                : "bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30"
+                            }`}
+                          >
+                            {followStatus[trader.user_id] ? "Suivi ✓" : "Suivre"}
+                          </button>
+                          <button
+                            onClick={() => toggleCopy(trader.user_id)}
+                            title={copying.has(trader.user_id) ? "Arrêter la copie" : "Copier les trades (10% du capital)"}
+                            className={`text-xs px-2.5 py-1 rounded-lg font-bold transition ${
+                              copying.has(trader.user_id)
+                                ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                                : "bg-white/5 text-gray-500 border border-white/10 hover:bg-blue-500/10 hover:text-blue-400"
+                            }`}
+                          >
+                            {copying.has(trader.user_id) ? "📋 10%" : "📋"}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))

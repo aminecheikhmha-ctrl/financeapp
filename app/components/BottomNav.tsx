@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { usePathname, useRouter } from "next/navigation"
-import { LayoutDashboard, TrendingUp, Briefcase, BookOpen, MoreHorizontal, Users, MessageSquare, FileText, Bot, Settings, LogOut, Newspaper } from "lucide-react"
+import { LayoutDashboard, TrendingUp, Briefcase, BookOpen, MoreHorizontal, Users, MessageSquare, FileText, Bot, Settings, LogOut, Newspaper, Star, GitCompare } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { haptic } from "@/lib/capacitor"
 
@@ -18,11 +18,13 @@ const TABS = [
 ]
 
 const MENU_ITEMS = [
+  { href: "/watchlist",           Icon: Star,           label: "Watchlist" },
+  { href: "/compare",             Icon: GitCompare,     label: "Comparer"  },
   { href: "/social",              Icon: Users,          label: "Social"    },
   { href: "/forum",               Icon: MessageSquare,  label: "Forum"     },
   { href: "/reports",             Icon: FileText,       label: "Rapports"  },
   { href: "/coach",               Icon: Bot,            label: "Coach IA"  },
-  { href: "/parametres",             Icon: Settings,     label: "Paramètres"},
+  { href: "/parametres",          Icon: Settings,       label: "Paramètres"},
 ]
 
 export default function BottomNav() {

@@ -4,161 +4,186 @@ import { useEffect, useState } from "react"
 
 type ServiceStatus = {
   name: string
-  key: string
-  status: "up" | "down" | "degraded" | "checking"
-  latency: number | null
-  lastChecked: string
+  status: "operational" | "degraded" | "down" | "checking"
+  latency?: number
+  message?: string
+  icon: string
 }
 
-const SERVICES = [
-  { name: "Base de données", key: "supabase", icon: "🗄️" },
-  { name: "Yahoo Finance API", key: "yahoo", icon: "📈" },
-  { name: "Groq AI", key: "groq", icon: "🤖" },
-  { name: "Stripe", key: "stripe", icon: "💳" },
-  { name: "Resend (Emails)", key: "resend", icon: "📧" },
+const SERVICES: { name: string; icon: string; check: () => Promise<void> }[] = [
+  {
+    name: "API Yahoo Finance",
+    icon: "📈",
+    check: async () => {
+      const res = await fetch("/api/quote?symbol=AAPL")
+      if (!res.ok) throw new Error()
+    },
+  },
+  {
+    name: "Supabase Database",
+    icon: "🗄️",
+    check: async () => {
+      const res = await fetch("/api/trading/account", { headers: { Authorization: "Bearer test" } })
+      if (res.status === 500) throw new Error()
+    },
+  },
+  {
+    name: "Groq AI",
+    icon: "🧠",
+    check: async () => {
+      const res = await fetch("/api/signals")
+      if (!res.ok) throw new Error()
+    },
+  },
+  {
+    name: "Signaux IA",
+    icon: "📡",
+    check: async () => {
+      const res = await fetch("/api/signals")
+      if (!res.ok) throw new Error()
+    },
+  },
+  {
+    name: "News Feed",
+    icon: "📰",
+    check: async () => {
+      const res = await fetch("/api/news")
+      if (!res.ok) throw new Error()
+    },
+  },
 ]
 
-export default function StatusPage() {
-  const [statuses, setStatuses] = useState<ServiceStatus[]>(
-    SERVICES.map(s => ({ ...s, status: "checking", latency: null, lastChecked: "" }))
-  )
-  const [lastUpdate, setLastUpdate] = useState("")
-  const [checking, setChecking] = useState(true)
+const STATUS_CONFIG = {
+  operational: { color: "#22c55e", bg: "rgba(34,197,94,0.1)",  border: "rgba(34,197,94,0.2)",  label: "Opérationnel", dot: "#22c55e" },
+  degraded:    { color: "#f59e0b", bg: "rgba(245,158,11,0.1)", border: "rgba(245,158,11,0.2)", label: "Dégradé",       dot: "#f59e0b" },
+  down:        { color: "#ef4444", bg: "rgba(239,68,68,0.1)",  border: "rgba(239,68,68,0.2)",  label: "Hors ligne",   dot: "#ef4444" },
+  checking:    { color: "#60a5fa", bg: "rgba(96,165,250,0.1)", border: "rgba(96,165,250,0.2)", label: "Vérification", dot: "#60a5fa" },
+}
 
-  async function checkServices() {
+export default function StatusPage() {
+  const [services, setServices] = useState<ServiceStatus[]>(
+    SERVICES.map(s => ({ name: s.name, status: "checking" as const, icon: s.icon }))
+  )
+  const [lastCheck, setLastCheck] = useState<Date | null>(null)
+  const [checking,  setChecking]  = useState(true)
+
+  async function checkAll() {
     setChecking(true)
-    const checks = await Promise.all(
-      SERVICES.map(async (service) => {
+    setServices(prev => prev.map(s => ({ ...s, status: "checking" as const })))
+
+    const results = await Promise.all(
+      SERVICES.map(async (svc, i) => {
         const start = Date.now()
         try {
-          let url = ""
-          if (service.key === "yahoo") url = "/api/price?symbol=AAPL"
-          else if (service.key === "supabase") url = "/api/user-profile"
-          else if (service.key === "groq") url = "/api/ai/market-regime"
-          else if (service.key === "stripe") url = "/api/stripe/checkout"
-          else if (service.key === "resend") url = "/api/emails/welcome"
-          else url = "/api/search?q=test"
-
-          const res = await fetch(url, { signal: AbortSignal.timeout(5000) })
+          await svc.check()
           const latency = Date.now() - start
-          // 401/403 = auth error but service is UP
-          const up = res.status < 500
-          return {
-            ...service,
-            status: up ? (latency > 2000 ? "degraded" : "up") : "down",
-            latency,
-            lastChecked: new Date().toLocaleTimeString("fr-FR"),
-          } as ServiceStatus
+          return { ...services[i], name: svc.name, icon: svc.icon, status: latency > 3000 ? "degraded" : "operational", latency } as ServiceStatus
         } catch {
-          return {
-            ...service,
-            status: "down" as const,
-            latency: null,
-            lastChecked: new Date().toLocaleTimeString("fr-FR"),
-          }
+          return { name: svc.name, icon: svc.icon, status: "down", latency: Date.now() - start, message: "Service indisponible" } as ServiceStatus
         }
       })
     )
-    setStatuses(checks)
-    setLastUpdate(new Date().toLocaleString("fr-FR"))
+
+    setServices(results)
+    setLastCheck(new Date())
     setChecking(false)
   }
 
-  useEffect(() => {
-    checkServices()
-    const interval = setInterval(checkServices, 60000)
-    return () => clearInterval(interval)
-  }, [])
+  useEffect(() => { checkAll() }, [])
 
-  const allUp = statuses.every(s => s.status === "up")
-  const anyDown = statuses.some(s => s.status === "down")
-  const overallStatus = checking ? "checking" : anyDown ? "down" : allUp ? "up" : "degraded"
-
-  const overallConfig = {
-    checking: { label: "Vérification...", color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20", dot: "bg-blue-400" },
-    up:       { label: "Tous les systèmes opérationnels", color: "text-green-400", bg: "bg-green-500/10 border-green-500/20", dot: "bg-green-400" },
-    degraded: { label: "Performances dégradées", color: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/20", dot: "bg-orange-400" },
-    down:     { label: "Incident en cours", color: "text-red-400", bg: "bg-red-500/10 border-red-500/20", dot: "bg-red-400" },
-  }[overallStatus]
-
-  function statusConfig(s: "up" | "down" | "degraded" | "checking") {
-    return {
-      up:       { label: "Opérationnel", color: "text-green-400", badge: "bg-green-500/10 border-green-500/20" },
-      down:     { label: "Incident", color: "text-red-400", badge: "bg-red-500/10 border-red-500/20" },
-      degraded: { label: "Dégradé", color: "text-orange-400", badge: "bg-orange-500/10 border-orange-500/20" },
-      checking: { label: "...", color: "text-gray-400", badge: "bg-white/5 border-white/10" },
-    }[s]
-  }
+  const allOperational = services.every(s => s.status === "operational")
+  const hasDown        = services.some(s => s.status === "down")
+  const overallStatus  = checking ? "checking" : hasDown ? "down" : allOperational ? "operational" : "degraded"
+  const overall        = STATUS_CONFIG[overallStatus]
 
   return (
-    <div className="min-h-screen bg-[#080808] text-white pb-20">
-      <div className="max-w-2xl mx-auto px-4 pt-8 md:pt-12">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-2">
-          <a href="/dashboard" className="text-gray-600 hover:text-white transition text-sm">← Dashboard</a>
-        </div>
-        <h1 className="text-2xl md:text-3xl font-black text-white mb-1">Statut des services</h1>
-        <p className="text-gray-500 text-sm mb-6">
-          {lastUpdate ? `Dernière vérification : ${lastUpdate}` : "Vérification en cours..."}
-        </p>
+    <div className="min-h-screen page-enter" style={{ background: "var(--bg-canvas)" }}>
+      <div className="max-w-2xl mx-auto px-6 py-12">
 
-        {/* Overall status */}
-        <div className={`border rounded-2xl p-5 mb-6 ${overallConfig.bg}`}>
-          <div className="flex items-center gap-3">
-            <div className="relative flex h-3 w-3 flex-shrink-0">
-              {overallStatus === "up" && <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: "#4ade80" }} />}
-              <span className={`relative inline-flex rounded-full h-3 w-3 ${overallConfig.dot}`} />
+        {/* Header */}
+        <div className="text-center mb-12">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}>
+              <span className="text-black font-black">F</span>
             </div>
-            <p className={`font-bold text-base ${overallConfig.color}`}>{overallConfig.label}</p>
-            <button
-              onClick={checkServices}
-              disabled={checking}
-              className="ml-auto text-xs text-gray-500 hover:text-white transition disabled:opacity-50 px-3 py-1.5 bg-white/5 rounded-lg border border-white/10"
-            >
-              {checking ? "..." : "↻ Actualiser"}
-            </button>
+            <span className="font-black text-white text-xl">FinanceApp Status</span>
           </div>
+
+          {/* Overall status badge */}
+          <div className="inline-flex items-center gap-2.5 px-5 py-3 rounded-2xl mb-4"
+            style={{ background: overall.bg, border: `1px solid ${overall.border}` }}>
+            <span className="relative flex h-3 w-3">
+              {overallStatus === "operational" && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                  style={{ background: overall.dot }} />
+              )}
+              <span className="relative inline-flex rounded-full h-3 w-3"
+                style={{ background: overall.dot }} />
+            </span>
+            <span className="font-black text-sm" style={{ color: overall.color }}>
+              {overallStatus === "operational" ? "Tous les systèmes opérationnels" :
+               overallStatus === "degraded"    ? "Performances dégradées" :
+               overallStatus === "checking"    ? "Vérification en cours..." :
+               "Incident en cours"}
+            </span>
+          </div>
+
+          {lastCheck && (
+            <p className="text-xs text-white/25">
+              Dernière vérification : {lastCheck.toLocaleTimeString("fr-FR")}
+              <button onClick={checkAll} disabled={checking}
+                className="ml-2 text-green-400 hover:text-green-300 transition disabled:opacity-40">
+                ↻ Actualiser
+              </button>
+            </p>
+          )}
         </div>
 
         {/* Services list */}
-        <div className="space-y-3">
-          {statuses.map((service, i) => {
-            const cfg = statusConfig(service.status)
-            const svc = SERVICES[i]
+        <div className="rounded-2xl overflow-hidden mb-8"
+          style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
+          {services.map((service, i) => {
+            const cfg = STATUS_CONFIG[service.status]
             return (
-              <div key={service.key} className="bg-[#0f0f0f] border border-white/8 rounded-2xl px-5 py-4 flex items-center gap-4">
-                <span className="text-2xl flex-shrink-0">{svc.icon}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-white font-semibold text-sm">{service.name}</p>
-                  {service.latency !== null && (
-                    <p className="text-gray-600 text-xs">{service.latency}ms de latence</p>
-                  )}
-                  {service.lastChecked && (
-                    <p className="text-gray-700 text-[10px]">Vérifié à {service.lastChecked}</p>
+              <div key={service.name}
+                className="flex items-center gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors"
+                style={{ borderBottom: i < services.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none" }}>
+
+                <span className="text-xl flex-shrink-0">{service.icon}</span>
+
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-white">{service.name}</p>
+                  {service.message && (
+                    <p className="text-[11px] mt-0.5" style={{ color: "#f87171" }}>{service.message}</p>
                   )}
                 </div>
-                <span className={`flex-shrink-0 text-xs font-bold px-3 py-1 rounded-full border ${cfg.badge} ${cfg.color}`}>
-                  {cfg.label}
-                </span>
+
+                {service.latency && service.status !== "checking" && (
+                  <span className="text-[10px] text-white/25 tabular-nums">{service.latency}ms</span>
+                )}
+
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+                  style={{ background: cfg.bg, border: `1px solid ${cfg.border}` }}>
+                  {service.status === "checking" ? (
+                    <div className="w-2 h-2 rounded-full border border-blue-400/50 border-t-blue-400 animate-spin" />
+                  ) : (
+                    <span className="w-2 h-2 rounded-full" style={{ background: cfg.dot }} />
+                  )}
+                  <span className="text-[10px] font-bold" style={{ color: cfg.color }}>{cfg.label}</span>
+                </div>
               </div>
             )
           })}
         </div>
 
-        {/* Info */}
-        <div className="mt-8 bg-[#0f0f0f] border border-white/8 rounded-2xl p-5">
-          <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-3">Informations</p>
-          <div className="space-y-2 text-gray-400 text-sm">
-            <p>🕐 Les vérifications sont effectuées toutes les 60 secondes depuis votre navigateur.</p>
-            <p>📊 Les temps de réponse &lt; 500ms sont normaux, &lt; 2000ms acceptables.</p>
-            <p>✉️ Pour signaler un incident : <a href="mailto:support@financeapp.io" className="text-green-400 hover:underline">support@financeapp.io</a></p>
-          </div>
-        </div>
-
-        {/* Footer links */}
-        <div className="mt-6 text-center">
-          <a href="/legal/privacy" className="text-gray-700 hover:text-gray-500 text-xs mr-4">Confidentialité</a>
-          <a href="/legal/terms" className="text-gray-700 hover:text-gray-500 text-xs">CGU</a>
+        {/* Footer CTA */}
+        <div className="text-center">
+          <a href="/dashboard"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-black transition-all hover:scale-[1.02]"
+            style={{ background: "#22c55e" }}>
+            → Aller au Dashboard
+          </a>
         </div>
       </div>
     </div>

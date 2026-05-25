@@ -9,15 +9,18 @@ import { cn } from "@/lib/utils"
 import {
   LayoutDashboard, TrendingUp, BarChart2, Briefcase,
   BookOpen, Users, MessageSquare, FileText, Bot,
-  Bell, Settings, ChevronRight, LogOut, Zap, Newspaper
+  Bell, Settings, ChevronRight, LogOut, Zap, Newspaper,
+  Star, GitCompare
 } from "lucide-react"
 
 const PRINCIPAL = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/portfolio", icon: Briefcase,        label: "Portfolio" },
-  { href: "/signaux",   icon: TrendingUp,       label: "Signaux"   },
-  { href: "/analyses",  icon: BarChart2,        label: "Analyses"  },
-  { href: "/news",      icon: Newspaper,        label: "News"      },
+  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard"  },
+  { href: "/portfolio", icon: Briefcase,        label: "Portfolio"  },
+  { href: "/watchlist", icon: Star,             label: "Watchlist"  },
+  { href: "/compare",   icon: GitCompare,       label: "Comparer"   },
+  { href: "/signaux",   icon: TrendingUp,       label: "Signaux"    },
+  { href: "/analyses",  icon: BarChart2,        label: "Analyses"   },
+  { href: "/news",      icon: Newspaper,        label: "News"       },
 ]
 
 const COMMUNAUTE = [

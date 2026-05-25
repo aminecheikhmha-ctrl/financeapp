@@ -222,6 +222,8 @@ export default function Apprendre() {
   const [totalXP, setTotalXP]             = useState(0)
   const [leaderboard, setLeaderboard]     = useState<{ username: string; xp: number; avatar_color: string }[]>([])
   const [popularIds, setPopularIds]       = useState<string[]>([])
+  const [streak,     setStreak]           = useState(0)
+  const [streakBonus, setStreakBonus]     = useState(false)
 
   useEffect(() => {
     async function init() {
@@ -269,10 +271,40 @@ export default function Apprendre() {
         setPopularIds(sorted.slice(0, 3))
       }
 
+      checkAndUpdateStreak()
       setReady(true)
     }
     init()
   }, [])
+
+  function checkAndUpdateStreak() {
+    if (typeof window === "undefined") return
+    const today = new Date().toISOString().slice(0, 10)
+    const stored = localStorage.getItem("academy_streak")
+    let count = 0
+    let bonus = false
+    if (stored) {
+      try {
+        const { date, count: prev } = JSON.parse(stored)
+        const yesterday = new Date()
+        yesterday.setDate(yesterday.getDate() - 1)
+        const yesterdayStr = yesterday.toISOString().slice(0, 10)
+        if (date === today) {
+          count = prev
+        } else if (date === yesterdayStr) {
+          count = prev + 1
+          bonus = count % 7 === 0
+        } else {
+          count = 1
+        }
+      } catch { count = 1 }
+    } else {
+      count = 1
+    }
+    localStorage.setItem("academy_streak", JSON.stringify({ date: today, count }))
+    setStreak(count)
+    setStreakBonus(bonus)
+  }
 
   async function fetchProgress(userId: string) {
     const { data } = await supabase
@@ -493,6 +525,59 @@ export default function Apprendre() {
             <span className="text-purple-400/40 text-lg flex-shrink-0">→</span>
           </motion.div>
         </motion.div>
+
+        {/* ── STREAK WIDGET ────────────────────────────────────────────────── */}
+        {streak > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.32 }}
+            className="rounded-2xl p-4 mb-7 flex items-center gap-4 relative overflow-hidden"
+            style={{
+              background: streakBonus
+                ? "linear-gradient(135deg, rgba(250,204,21,0.08), rgba(250,204,21,0.03))"
+                : "linear-gradient(135deg, rgba(249,115,22,0.07), rgba(239,68,68,0.03))",
+              border: `1px solid ${streakBonus ? "rgba(250,204,21,0.25)" : "rgba(249,115,22,0.2)"}`,
+            }}>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-6xl opacity-[0.05] select-none pointer-events-none">🔥</div>
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+              style={{
+                background: streakBonus ? "rgba(250,204,21,0.12)" : "rgba(249,115,22,0.12)",
+                border: `1px solid ${streakBonus ? "rgba(250,204,21,0.25)" : "rgba(249,115,22,0.25)"}`,
+              }}>
+              🔥
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <p className="text-white font-black text-base">
+                  {streak} jour{streak > 1 ? "s" : ""} de suite !
+                </p>
+                {streakBonus && (
+                  <span className="text-[9px] font-black px-2 py-0.5 rounded-full animate-pulse"
+                    style={{ background: "rgba(250,204,21,0.15)", color: "#facc15", border: "1px solid rgba(250,204,21,0.3)" }}>
+                    +50 XP BONUS 🎉
+                  </span>
+                )}
+              </div>
+              <p className="text-xs" style={{ color: "#555" }}>
+                {streak % 7 === 0 && streak > 0
+                  ? "Milestone semaine atteint !"
+                  : `${7 - (streak % 7)} jour${7 - (streak % 7) > 1 ? "s" : ""} avant le prochain bonus`}
+              </p>
+              <div className="flex gap-1 mt-2">
+                {Array.from({ length: 7 }).map((_, i) => (
+                  <div key={i} className="flex-1 h-1 rounded-full"
+                    style={{ background: i < (streak % 7 || (streak > 0 && streak % 7 === 0 ? 7 : 0)) ? "#f97316" : "rgba(255,255,255,0.06)" }} />
+                ))}
+              </div>
+            </div>
+            <div className="text-right flex-shrink-0">
+              <p className="text-3xl font-black" style={{ color: streakBonus ? "#facc15" : "#f97316" }}>
+                {streak}
+              </p>
+              <p className="text-[9px] uppercase tracking-widest" style={{ color: "#444" }}>jours</p>
+            </div>
+          </motion.div>
+        )}
 
         {/* ── CONTINUE BANNER ─────────────────────────────────────────────── */}
         {inProgress && (() => {
