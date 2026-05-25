@@ -1,4 +1,4 @@
-# Setup Sentry pour FinanceApp
+# Setup Sentry pour TradEx
 
 ## 1. Installer le package
 ```bash

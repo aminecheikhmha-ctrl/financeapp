@@ -7,7 +7,7 @@ Aller dans : **Supabase Dashboard → Authentication → Email Templates → Con
 Remplacer le contenu HTML par :
 
 ```html
-<h2 style="font-family:Inter,sans-serif;color:white">Confirme ton compte FinanceApp 🚀</h2>
+<h2 style="font-family:Inter,sans-serif;color:white">Confirme ton compte TradEx 🚀</h2>
 <p style="color:#888">Tu es à un clic de commencer à trader avec l'IA.</p>
 <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#22c55e;color:black;font-weight:bold;padding:12px 24px;border-radius:12px;text-decoration:none;margin:20px 0">
   ✅ Confirmer mon compte

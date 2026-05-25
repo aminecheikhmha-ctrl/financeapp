@@ -1,4 +1,4 @@
-# FinanceApp — Launch Checklist
+# TradEx — Launch Checklist
 
 ## Technique
 

@@ -1,4 +1,4 @@
-# Guide de déploiement — FinanceApp
+# Guide de déploiement — TradEx
 
 ## Pré-requis
 

@@ -1,4 +1,4 @@
-# FinanceApp — Production Checklist
+# TradEx — Production Checklist
 
 ## ✅ Technique
 - [ ] `npm run build` → 0 erreur TypeScript

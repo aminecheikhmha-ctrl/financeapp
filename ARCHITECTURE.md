@@ -1,4 +1,4 @@
-# FinanceApp — Architecture
+# TradEx — Architecture
 
 ## Stack
 

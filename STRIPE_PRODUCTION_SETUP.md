@@ -5,13 +5,13 @@
 ### Dashboard Stripe → Products → Add product
 
 **Pro (14,99€/mois)**
-- Name: FinanceApp Pro
+- Name: TradEx Pro
 - Billing: Recurring, Monthly
 - Price: 14.99 EUR
 - Copy the Price ID → `STRIPE_PRO_PRICE_ID`
 
 **Premium (29,99€/mois)**
-- Name: FinanceApp Premium
+- Name: TradEx Premium
 - Billing: Recurring, Monthly
 - Price: 29.99 EUR
 - Copy the Price ID → `STRIPE_PREMIUM_PRICE_ID`
