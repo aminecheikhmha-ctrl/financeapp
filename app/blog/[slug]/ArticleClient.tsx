@@ -227,7 +227,7 @@ export default function ArticleClient({
             >
               <h3 className="text-white font-black text-lg mb-2">Pratiquer ce que tu viens d'apprendre →</h3>
               <p className="text-gray-400 text-sm mb-4">
-                Applique ces concepts en temps réel avec les signaux IA et le paper trading FinanceApp.
+                Applique ces concepts en temps réel avec les signaux IA et le paper trading TradEx.
               </p>
               <a
                 href="/dashboard"

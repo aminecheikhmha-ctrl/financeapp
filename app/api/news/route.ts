@@ -222,7 +222,7 @@ async function fetchReddit(symbol: string): Promise<NewsArticle[]> {
       const res = await fetch(
         `https://www.reddit.com/r/${sub}/search.json?q=${encodeURIComponent(clean)}&sort=hot&limit=10&t=week&restrict_sr=1`,
         {
-          headers: { "User-Agent": "FinanceApp/1.0" },
+          headers: { "User-Agent": "TradEx/1.0" },
           signal: AbortSignal.timeout(5000),
         }
       )

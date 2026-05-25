@@ -516,7 +516,7 @@ export default function Dashboard() {
                 <span className="text-[10px] text-green-400 font-black tracking-wider">MODE DÉMO</span>
               </div>
               <div>
-                <p className="text-sm font-bold text-white">Tu explores FinanceApp avec de vraies données de marché</p>
+                <p className="text-sm font-bold text-white">Tu explores TradEx avec de vraies données de marché</p>
                 <p className="text-[11px] text-white/40">Graphes live · Signaux IA · $100,000 fictifs · Crée un compte pour trader</p>
               </div>
             </div>

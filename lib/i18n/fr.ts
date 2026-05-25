@@ -1,4 +1,4 @@
-// French strings for FinanceApp
+// French strings for TradEx
 // Structure ready to duplicate for EN/ES later
 
 export const fr = {

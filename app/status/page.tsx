@@ -107,7 +107,7 @@ export default function StatusPage() {
               style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}>
               <span className="text-black font-black">F</span>
             </div>
-            <span className="font-black text-white text-xl">FinanceApp Status</span>
+            <span className="font-black text-white text-xl">TradEx Status</span>
           </div>
 
           {/* Overall status badge */}

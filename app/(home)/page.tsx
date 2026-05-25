@@ -1,11 +1,11 @@
 import FAQItem from "@/app/components/FAQItem"
 
 export const metadata = {
-  title: "FinanceApp — Trading intelligent avec l'IA | Signaux, Analyses, Académie",
+  title: "TradEx — Trading intelligent avec l'IA | Signaux, Analyses, Académie",
   description: "Signaux de trading IA en temps réel, analyses algorithmiques sur 160+ actifs, paper trading et académie interactive. Tradez plus intelligemment.",
   keywords: ["signaux trading", "trading IA", "analyse technique", "RSI MACD", "paper trading", "académie trading"],
   openGraph: {
-    title: "FinanceApp — Trading intelligent avec l'IA",
+    title: "TradEx — Trading intelligent avec l'IA",
     description: "Signaux en temps réel · Analyses IA · Paper Trading · Académie interactive",
     type: "website",
     locale: "fr_FR",
@@ -277,7 +277,7 @@ export default function HomePage() {
             {[
               { name: "Thomas M.", role: "Trader débutant", text: "Les signaux IA m'ont permis de comprendre l'analyse technique en pratiquant sur de vraies données. L'académie est exceptionnelle.", stars: 5 },
               { name: "Sarah K.", role: "Investisseuse active", text: "Le screener est incroyable. Je trouve des opportunités que je ne voyais pas avant. Le rapport qualité/prix est imbattable.", stars: 5 },
-              { name: "Marc D.", role: "Trader intermédiaire", text: "J'utilise FinanceApp tous les jours. Les alertes de prix et les signaux confluents m'ont vraiment aidé à améliorer mes trades.", stars: 5 },
+              { name: "Marc D.", role: "Trader intermédiaire", text: "J'utilise TradEx tous les jours. Les alertes de prix et les signaux confluents m'ont vraiment aidé à améliorer mes trades.", stars: 5 },
               { name: "Amina B.", role: "Étudiante en finance", text: "Parfait pour apprendre. Le tuteur IA répond à toutes mes questions et les simulations sont très réalistes.", stars: 5 },
               { name: "Pierre L.", role: "Day trader", text: "Les graphes sont au niveau TradingView mais intégrés aux signaux IA. Game changer pour mon workflow quotidien.", stars: 5 },
               { name: "Julie R.", role: "Investisseuse long terme", text: "J'ai commencé en free et upgradé rapidement. Les analyses macro et le calendrier économique sont parfaits pour ma stratégie.", stars: 5 },
@@ -301,7 +301,7 @@ export default function HomePage() {
           <h2 className="text-4xl font-black text-white text-center mb-12">Questions fréquentes</h2>
           <div className="space-y-3">
             {[
-              { q: "Est-ce que FinanceApp utilise de vraies données de marché ?", a: "Oui, toutes les données proviennent de Yahoo Finance en temps réel. Les prix, variations et volumes sont mis à jour en continu." },
+              { q: "Est-ce que TradEx utilise de vraies données de marché ?", a: "Oui, toutes les données proviennent de Yahoo Finance en temps réel. Les prix, variations et volumes sont mis à jour en continu." },
               { q: "Le paper trading c'est quoi exactement ?", a: "C'est du trading simulé avec $100,000 fictifs. Tu apprends à trader sans risquer un seul euro. Parfait pour débuter ou tester de nouvelles stratégies." },
               { q: "Les signaux IA sont-ils fiables ?", a: "Nos signaux combinent 20+ indicateurs techniques avec un score de confluence algorithmique. Plus la confluence est haute, plus le signal est fiable." },
               { q: "Je suis débutant, est-ce fait pour moi ?", a: "Absolument ! L'académie interactive avec 15 cours, des simulations sur données réelles et un tuteur IA personnel t'accompagne de zéro à trader actif." },
@@ -339,7 +339,7 @@ export default function HomePage() {
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm" style={{ background: "linear-gradient(135deg, #4ade80, #059669)", color: "black" }}>F</div>
-                <span className="font-bold text-white">FinanceApp</span>
+                <span className="font-bold text-white">TradEx</span>
               </div>
               <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.3)" }}>Trading intelligent avec l&apos;IA. Signaux, analyses et académie pour tous les traders.</p>
             </div>
@@ -359,8 +359,8 @@ export default function HomePage() {
             ))}
           </div>
           <div className="flex items-center justify-between flex-wrap gap-4" style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "1.5rem" }}>
-            <p className="text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>© 2026 FinanceApp. Tous droits réservés.</p>
-            <p className="text-xs" style={{ color: "rgba(255,255,255,0.15)" }}>⚠️ Le trading comporte des risques. FinanceApp est un outil éducatif, pas un conseiller financier.</p>
+            <p className="text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>© 2026 TradEx. Tous droits réservés.</p>
+            <p className="text-xs" style={{ color: "rgba(255,255,255,0.15)" }}>⚠️ Le trading comporte des risques. TradEx est un outil éducatif, pas un conseiller financier.</p>
           </div>
         </div>
       </footer>

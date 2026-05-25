@@ -326,7 +326,7 @@ export default function AdminPage() {
           </div>
           <div>
             <h1 className="text-white font-black text-lg leading-none">Admin</h1>
-            <p className="text-gray-600 text-xs mt-0.5">FinanceApp</p>
+            <p className="text-gray-600 text-xs mt-0.5">TradEx</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -581,7 +581,7 @@ export default function AdminPage() {
                 <div>
                   <label className="text-gray-400 text-xs font-semibold uppercase tracking-wide mb-2 block">Sujet</label>
                   <input value={broadcastSubject} onChange={e => setBroadcastSubject(e.target.value)}
-                    placeholder="Ex: Nouvelles fonctionnalités FinanceApp 🚀"
+                    placeholder="Ex: Nouvelles fonctionnalités TradEx 🚀"
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-gray-200 text-sm outline-none focus:border-green-500/50" />
                 </div>
                 <div>

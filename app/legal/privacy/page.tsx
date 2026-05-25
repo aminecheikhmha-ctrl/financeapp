@@ -2,12 +2,12 @@ import type { Metadata } from "next"
 
 export const metadata: Metadata = {
   title: "Politique de confidentialité",
-  description: "Politique de confidentialité et traitement des données personnelles de FinanceApp",
+  description: "Politique de confidentialité et traitement des données personnelles de TradEx",
 }
 
 const LAST_UPDATED = "18 mai 2026"
 const CONTACT_EMAIL = "privacy@financeapp.io"
-const COMPANY = "FinanceApp SAS"
+const COMPANY = "TradEx SAS"
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -29,7 +29,7 @@ export default function PrivacyPage() {
 
         <div className="bg-[#0f0f0f] border border-white/8 rounded-2xl p-6 mb-8">
           <p className="text-gray-300 text-sm leading-relaxed">
-            {COMPANY} (&quot;FinanceApp&quot;, &quot;nous&quot;, &quot;notre&quot;) s&apos;engage à protéger votre vie privée.
+            {COMPANY} (&quot;TradEx&quot;, &quot;nous&quot;, &quot;notre&quot;) s&apos;engage à protéger votre vie privée.
             Cette politique explique comment nous collectons, utilisons et protégeons vos données personnelles
             conformément au Règlement Général sur la Protection des Données (RGPD).
           </p>
@@ -48,7 +48,7 @@ export default function PrivacyPage() {
             <li><strong className="text-white">Données techniques :</strong> adresse IP, navigateur, système d&apos;exploitation, cookies de session</li>
             <li><strong className="text-white">Données de paiement :</strong> gérées directement par Stripe — nous ne stockons aucune donnée bancaire</li>
           </ul>
-          <p className="mt-2">⚠️ FinanceApp est une plateforme de <strong className="text-white">paper trading uniquement</strong>. Aucun argent réel n&apos;est investi ou géré.</p>
+          <p className="mt-2">⚠️ TradEx est une plateforme de <strong className="text-white">paper trading uniquement</strong>. Aucun argent réel n&apos;est investi ou géré.</p>
         </Section>
 
         <Section title="3. Finalités du traitement">

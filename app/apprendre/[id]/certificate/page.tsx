@@ -82,7 +82,7 @@ export default function CertificatePage() {
   }
 
   async function handleShare() {
-    const text = `🎓 J'ai complété le cours "${course?.title}" sur FinanceApp !`
+    const text = `🎓 J'ai complété le cours "${course?.title}" sur TradEx !`
     await shareNative("Mon certificat", text, window.location.href)
   }
 
@@ -158,7 +158,7 @@ export default function CertificatePage() {
             {/* Header */}
             <div className="relative z-10 text-center mb-8">
               <p className="text-xs font-black uppercase tracking-[0.3em] mb-2" style={{ color: "#4ade80" }}>
-                FinanceApp Academy
+                TradEx Academy
               </p>
               <div className="h-px mx-auto w-32 mb-4" style={{ background: "linear-gradient(90deg, transparent, #4ade80, transparent)" }} />
               <h1 className="text-3xl font-black text-white uppercase tracking-wider">
@@ -203,7 +203,7 @@ export default function CertificatePage() {
             <div className="relative z-10 mt-8 flex items-end justify-between">
               <div>
                 <div className="h-px w-24 mb-1" style={{ background: "#1a1a1a" }} />
-                <p className="text-xs font-bold" style={{ color: "#4ade80" }}>FinanceApp</p>
+                <p className="text-xs font-bold" style={{ color: "#4ade80" }}>TradEx</p>
                 <p className="text-[10px]" style={{ color: "#333" }}>financeapp.io</p>
               </div>
               <div className="text-center">

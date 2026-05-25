@@ -30,7 +30,7 @@ const TOUR_STEPS: TourStep[] = [
   },
   {
     id: "ia-tab",
-    title: "🤖 L'IA FinanceApp",
+    title: "🤖 L'IA TradEx",
     content: "Clique ici pour obtenir une analyse et une prédiction de prix générées par intelligence artificielle — en un clic.",
     selector: "[data-tour='ia-tab']",
     cardSide: "bottom",

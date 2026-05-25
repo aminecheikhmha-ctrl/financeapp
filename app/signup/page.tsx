@@ -75,7 +75,7 @@ export default function Signup() {
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center">
             <span className="text-white font-black text-sm">F</span>
           </div>
-          <span className="text-white font-black text-lg">FinanceApp</span>
+          <span className="text-white font-black text-lg">TradEx</span>
         </a>
 
         <div className="mb-2">
@@ -148,7 +148,7 @@ export default function Signup() {
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-green-400 to-emerald-400">pour réussir</span>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed">
-              Rejoins 10 000+ traders qui utilisent FinanceApp au quotidien.
+              Rejoins 10 000+ traders qui utilisent TradEx au quotidien.
             </p>
           </div>
 

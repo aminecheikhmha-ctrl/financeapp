@@ -51,7 +51,7 @@ export default function ShareTradeCard({ order, onClose }: Props) {
       } else {
         await shareNative(
           `Mon trade ${order.symbol}`,
-          `🚀 ${isBuy ? "J'ai acheté" : "J'ai vendu"} ${order.qty} ${order.symbol} à $${order.price.toFixed(2)} sur FinanceApp`,
+          `🚀 ${isBuy ? "J'ai acheté" : "J'ai vendu"} ${order.qty} ${order.symbol} à $${order.price.toFixed(2)} sur TradEx`,
           ""
         )
       }
@@ -95,7 +95,7 @@ export default function ShareTradeCard({ order, onClose }: Props) {
                 <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center">
                   <span className="text-white font-black text-[9px]">F</span>
                 </div>
-                <span className="text-xs font-bold text-white/50">FinanceApp</span>
+                <span className="text-xs font-bold text-white/50">TradEx</span>
               </div>
               <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
                 style={isBuy

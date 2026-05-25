@@ -104,7 +104,7 @@ function LoginForm() {
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center">
             <span className="text-white font-black text-sm">F</span>
           </div>
-          <span className="text-white font-black text-lg">FinanceApp</span>
+          <span className="text-white font-black text-lg">TradEx</span>
         </a>
 
         <h1 className="text-3xl font-black text-white mb-1">Bon retour 👋</h1>
@@ -247,7 +247,7 @@ function LoginForm() {
               </div>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed">
-              "Les signaux IA sont incroyables. J'ai fait +18% ce mois-ci grâce à FinanceApp."
+              "Les signaux IA sont incroyables. J'ai fait +18% ce mois-ci grâce à TradEx."
             </p>
           </div>
         </div>

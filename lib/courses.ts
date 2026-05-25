@@ -873,7 +873,7 @@ export const COURSES: Course[] = [
         duration: "10 min",
         type: "interactive",
         key_concepts: ["Confluence", "Filtre de signal", "Score technique", "Éviter les faux signaux"],
-        practical_example: "FinanceApp utilise 17 indicateurs pondérés. 80% de confluence = signal fort, 70% de faux signaux filtrés.",
+        practical_example: "TradEx utilise 17 indicateurs pondérés. 80% de confluence = signal fort, 70% de faux signaux filtrés.",
         xp_reward: 100,
         interactive_config: {
           lesson_mode: "identify_macd_crossover",

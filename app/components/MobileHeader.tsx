@@ -61,7 +61,7 @@ export default function MobileHeader() {
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center">
             <span className="text-white font-black text-xs">F</span>
           </div>
-          <span className="font-black text-sm tracking-tight bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">FinanceApp</span>
+          <span className="font-black text-sm tracking-tight bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">TradEx</span>
         </a>
 
         {/* Search tap target */}

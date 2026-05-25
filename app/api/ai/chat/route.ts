@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
     ? recentOrders.map((o: any) => `${o.side} ${o.symbol} à ${o.price}`).join(", ")
     : "aucun"
 
-  const systemPrompt = `Tu es l'assistant IA de FinanceApp, un expert en trading et finance de marché.
+  const systemPrompt = `Tu es l'assistant IA de TradEx, un expert en trading et finance de marché.
 Tu as accès au contexte complet de l'utilisateur.
 
 Utilisateur: ${username}

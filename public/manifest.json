@@ -1,6 +1,6 @@
 {
-  "name": "FinanceApp",
-  "short_name": "FinanceApp",
+  "name": "TradEx",
+  "short_name": "TradEx",
   "description": "Trading intelligent avec l'IA — Signaux en temps réel, analyses IA et académie de trading",
   "start_url": "/dashboard",
   "display": "standalone",

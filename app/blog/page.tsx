@@ -3,14 +3,14 @@ import { createClient } from "@supabase/supabase-js"
 import BlogPageClient from "./BlogPageClient"
 
 export const metadata: Metadata = {
-  title: "Blog FinanceApp — Apprendre à trader",
+  title: "Blog TradEx — Apprendre à trader",
   description: "Articles, guides et analyses pour apprendre le trading, l'analyse technique, la crypto et les stratégies d'investissement.",
   keywords: ["trading", "blog", "analyse technique", "RSI", "MACD", "crypto", "bourse", "investissement", "stratégie"],
   openGraph: {
-    title: "Blog FinanceApp — Apprendre à trader",
+    title: "Blog TradEx — Apprendre à trader",
     description: "Articles, guides et analyses pour apprendre le trading.",
     url: "https://financeapp-kappa-six.vercel.app/blog",
-    images: [{ url: "/api/og?title=Blog+FinanceApp+%E2%80%94+Apprendre+%C3%A0+trader&category=trading", width: 1200, height: 630 }],
+    images: [{ url: "/api/og?title=Blog+TradEx+%E2%80%94+Apprendre+%C3%A0+trader&category=trading", width: 1200, height: 630 }],
   },
 }
 

@@ -44,7 +44,7 @@ async function generateArticle(title: string, category: string): Promise<string>
     messages: [
       {
         role: "system",
-        content: `Tu es un expert en trading et finance qui rédige des articles de blog professionnels en français pour FinanceApp.
+        content: `Tu es un expert en trading et finance qui rédige des articles de blog professionnels en français pour TradEx.
 Tes articles sont clairs, structurés, pratiques et accessibles.
 Utilise le markdown avec des titres (##, ###), des listes, et du **gras** pour les termes importants.
 Rédige entre 800 et 1200 mots. Inclus toujours : une introduction, 3-5 sections, une conclusion avec un appel à l'action.`

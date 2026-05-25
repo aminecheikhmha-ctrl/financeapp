@@ -18,7 +18,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
-  const title    = searchParams.get("title")    ?? "FinanceApp Blog"
+  const title    = searchParams.get("title")    ?? "TradEx Blog"
   const category = searchParams.get("category") ?? "trading"
   const color    = CATEGORY_COLORS[category] ?? "#4ade80"
 
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
           }}>
             <span style={{ color: "#fff", fontWeight: 900, fontSize: 20 }}>F</span>
           </div>
-          <span style={{ color: "#fff", fontWeight: 900, fontSize: 22 }}>FinanceApp</span>
+          <span style={{ color: "#fff", fontWeight: 900, fontSize: 22 }}>TradEx</span>
           <div style={{
             marginLeft: 12,
             padding: "4px 12px", borderRadius: 20,
@@ -97,7 +97,7 @@ export async function GET(req: NextRequest) {
             {title}
           </div>
           <div style={{ color: "#6b7280", fontSize: 18, marginTop: 8 }}>
-            Blog FinanceApp — Apprendre à trader intelligemment
+            Blog TradEx — Apprendre à trader intelligemment
           </div>
         </div>
 

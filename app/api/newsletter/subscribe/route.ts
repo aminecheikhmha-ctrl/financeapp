@@ -34,9 +34,9 @@ export async function POST(req: NextRequest) {
     const resend = new Resend(process.env.RESEND_API_KEY ?? "placeholder")
     const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://financeapp-kappa-six.vercel.app"
     await resend.emails.send({
-      from: "FinanceApp <hello@financeapp.io>",
+      from: "TradEx <hello@financeapp.io>",
       to: email,
-      subject: "✅ Bienvenue dans la newsletter FinanceApp !",
+      subject: "✅ Bienvenue dans la newsletter TradEx !",
       html: `<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#080808;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
@@ -45,11 +45,11 @@ export async function POST(req: NextRequest) {
     <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#4ade80,#059669);display:inline-flex;align-items:center;justify-content:center">
       <span style="color:#fff;font-weight:900;font-size:14px">F</span>
     </div>
-    <span style="color:#fff;font-weight:900;font-size:16px;vertical-align:middle;margin-left:8px">FinanceApp</span>
+    <span style="color:#fff;font-weight:900;font-size:16px;vertical-align:middle;margin-left:8px">TradEx</span>
   </div>
   <h1 style="color:#fff;font-size:24px;font-weight:900;margin:0 0 8px">Bienvenue ! 🎉</h1>
   <p style="color:#9ca3af;font-size:14px;line-height:1.6">
-    Tu es maintenant abonné(e) à la newsletter FinanceApp. Tu recevras chaque semaine :
+    Tu es maintenant abonné(e) à la newsletter TradEx. Tu recevras chaque semaine :
   </p>
   <ul style="color:#9ca3af;font-size:14px;line-height:2">
     <li>📡 Les meilleurs signaux de trading de la semaine</li>

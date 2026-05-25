@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 
 export const metadata: Metadata = {
   title: "Conditions Générales d'Utilisation",
-  description: "CGU de FinanceApp — plateforme de paper trading éducative",
+  description: "CGU de TradEx — plateforme de paper trading éducative",
 }
 
 const LAST_UPDATED = "18 mai 2026"
@@ -27,19 +27,19 @@ export default function TermsPage() {
 
         <div className="bg-amber-500/8 border border-amber-500/20 rounded-2xl p-5 mb-8">
           <p className="text-amber-300 text-sm font-semibold mb-1">⚠️ Important — Paper Trading uniquement</p>
-          <p className="text-amber-200/70 text-sm">FinanceApp est une plateforme d&apos;éducation financière utilisant exclusivement du capital virtuel. Aucun ordre réel n&apos;est passé sur les marchés financiers. Les performances passées ne préjugent pas des résultats futurs.</p>
+          <p className="text-amber-200/70 text-sm">TradEx est une plateforme d&apos;éducation financière utilisant exclusivement du capital virtuel. Aucun ordre réel n&apos;est passé sur les marchés financiers. Les performances passées ne préjugent pas des résultats futurs.</p>
         </div>
 
         <Section title="1. Objet">
-          <p>Les présentes CGU régissent l&apos;utilisation de FinanceApp, plateforme éducative de simulation de trading accessible sur financeapp-kappa-six.vercel.app et ses sous-domaines.</p>
+          <p>Les présentes CGU régissent l&apos;utilisation de TradEx, plateforme éducative de simulation de trading accessible sur financeapp-kappa-six.vercel.app et ses sous-domaines.</p>
         </Section>
 
         <Section title="2. Acceptation des conditions">
-          <p>En créant un compte ou en utilisant FinanceApp, vous acceptez les présentes CGU dans leur intégralité. Si vous n&apos;acceptez pas ces conditions, vous ne devez pas utiliser le service.</p>
+          <p>En créant un compte ou en utilisant TradEx, vous acceptez les présentes CGU dans leur intégralité. Si vous n&apos;acceptez pas ces conditions, vous ne devez pas utiliser le service.</p>
         </Section>
 
         <Section title="3. Description du service">
-          <p>FinanceApp est une plateforme éducative proposant :</p>
+          <p>TradEx est une plateforme éducative proposant :</p>
           <ul className="list-disc list-inside space-y-1 ml-2">
             <li>Du paper trading (simulation avec capital virtuel de 100 000 $)</li>
             <li>Des signaux de trading générés par intelligence artificielle (à titre éducatif)</li>
@@ -63,7 +63,7 @@ export default function TermsPage() {
         </Section>
 
         <Section title="5. Plans et abonnements">
-          <p>FinanceApp propose plusieurs niveaux d&apos;accès :</p>
+          <p>TradEx propose plusieurs niveaux d&apos;accès :</p>
           <ul className="list-disc list-inside space-y-1 ml-2">
             <li><strong className="text-white">Plan Free :</strong> accès limité gratuit sans limite de durée</li>
             <li><strong className="text-white">Plan Pro :</strong> abonnement mensuel avec accès étendu</li>
@@ -85,20 +85,20 @@ export default function TermsPage() {
         </Section>
 
         <Section title="7. Propriété intellectuelle">
-          <p>L&apos;ensemble du contenu de FinanceApp (code, design, cours, signaux, analyses) est la propriété exclusive de FinanceApp SAS et protégé par les lois sur la propriété intellectuelle. Toute reproduction sans autorisation est interdite.</p>
+          <p>L&apos;ensemble du contenu de TradEx (code, design, cours, signaux, analyses) est la propriété exclusive de TradEx SAS et protégé par les lois sur la propriété intellectuelle. Toute reproduction sans autorisation est interdite.</p>
         </Section>
 
         <Section title="8. Disclaimer — Pas de conseil financier">
-          <p>FinanceApp fournit des informations à titre éducatif uniquement. Les signaux, analyses et scores générés par l&apos;IA ne constituent pas des conseils en investissement. Toute décision d&apos;investissement réel doit être prise avec l&apos;aide d&apos;un professionnel agréé AMF.</p>
-          <p>FinanceApp ne peut être tenu responsable des pertes financières résultant d&apos;une utilisation des informations fournies sur des marchés réels.</p>
+          <p>TradEx fournit des informations à titre éducatif uniquement. Les signaux, analyses et scores générés par l&apos;IA ne constituent pas des conseils en investissement. Toute décision d&apos;investissement réel doit être prise avec l&apos;aide d&apos;un professionnel agréé AMF.</p>
+          <p>TradEx ne peut être tenu responsable des pertes financières résultant d&apos;une utilisation des informations fournies sur des marchés réels.</p>
         </Section>
 
         <Section title="9. Limitation de responsabilité">
-          <p>FinanceApp s&apos;efforce de maintenir un service disponible 24h/24 mais ne garantit pas l&apos;absence d&apos;interruptions. La responsabilité de FinanceApp est limitée au montant des abonnements payés au cours des 12 derniers mois.</p>
+          <p>TradEx s&apos;efforce de maintenir un service disponible 24h/24 mais ne garantit pas l&apos;absence d&apos;interruptions. La responsabilité de TradEx est limitée au montant des abonnements payés au cours des 12 derniers mois.</p>
         </Section>
 
         <Section title="10. Résiliation">
-          <p>Vous pouvez fermer votre compte à tout moment depuis les paramètres de votre profil. FinanceApp se réserve le droit de suspendre ou supprimer un compte en cas de violation des présentes CGU.</p>
+          <p>Vous pouvez fermer votre compte à tout moment depuis les paramètres de votre profil. TradEx se réserve le droit de suspendre ou supprimer un compte en cas de violation des présentes CGU.</p>
         </Section>
 
         <Section title="11. Modification des CGU">
