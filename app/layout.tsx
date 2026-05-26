@@ -25,25 +25,25 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://tradex-kappa-six.vercel.app"),
   title: {
-    default: "TradEx — Trading intelligent avec l'IA",
-    template: "%s | TradEx",
+    default: "Tradex — Trading intelligent avec l'IA",
+    template: "%s | Tradex",
   },
   description: "Signaux de trading IA en temps réel. Paper trading, analyses sur 160+ actifs et académie interactive.",
   keywords: ["trading", "bourse", "crypto", "signaux", "analyse technique", "IA", "investissement", "paper trading", "RSI", "MACD"],
-  authors: [{ name: "TradEx" }],
-  creator: "TradEx",
+  authors: [{ name: "Tradex" }],
+  creator: "Tradex",
   robots: { index: true, follow: true, googleBot: { index: true, follow: true } },
   openGraph: {
     type: "website",
     locale: "fr_FR",
-    siteName: "TradEx",
-    title: "TradEx — Trading intelligent avec l'IA",
+    siteName: "Tradex",
+    title: "Tradex — Trading intelligent avec l'IA",
     description: "Signaux en temps réel · Analyses IA · Paper Trading · Académie",
-    images: [{ url: "/api/og", width: 1200, height: 630, alt: "TradEx Trading IA" }],
+    images: [{ url: "/api/og", width: 1200, height: 630, alt: "Tradex Trading IA" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "TradEx — Trading IA",
+    title: "Tradex — Trading IA",
     description: "Signaux en temps réel · Paper Trading · Académie",
     images: ["/api/og"],
   },
@@ -56,9 +56,9 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "TradEx",
+    title: "Tradex",
   },
-  applicationName: "TradEx",
+  applicationName: "Tradex",
   formatDetection: { telephone: false },
 }
 

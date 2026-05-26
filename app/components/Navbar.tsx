@@ -54,7 +54,7 @@ export default function Navbar() {
               <span className="text-white font-black text-sm">T</span>
             </div>
             <span className="text-white font-black text-lg tracking-tight group-hover:text-green-400 transition">
-              TradEx
+              Tradex
             </span>
           </a>
           <div className="flex items-center gap-3">
@@ -84,7 +84,7 @@ export default function Navbar() {
             <span className="text-white font-black text-sm">T</span>
           </div>
           <span className="text-white font-black text-lg tracking-tight group-hover:text-green-400 transition">
-            TradEx
+            Tradex
           </span>
         </a>
 

@@ -105,9 +105,9 @@ export default function StatusPage() {
           <div className="flex items-center justify-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center"
               style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}>
-              <span className="text-black font-black">F</span>
+              <span className="text-black font-black">T</span>
             </div>
-            <span className="font-black text-white text-xl">TradEx Status</span>
+            <span className="font-black text-white text-xl">Tradex Status</span>
           </div>
 
           {/* Overall status badge */}

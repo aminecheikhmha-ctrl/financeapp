@@ -276,7 +276,7 @@ export default function Sidebar() {
             <span className="text-white font-black text-[11px]">T</span>
           </div>
           {!collapsed && (
-            <span className="font-bold text-[15px] text-white tracking-tight">TradEx</span>
+            <span className="font-bold text-[15px] text-white tracking-tight">Tradex</span>
           )}
         </button>
         {!collapsed && (

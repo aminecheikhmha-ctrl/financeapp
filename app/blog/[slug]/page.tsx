@@ -73,12 +73,12 @@ async function getSimilarPosts(category: string, excludeSlug: string) {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
   const post = await getPost(slug)
-  if (!post) return { title: "Article introuvable | TradEx" }
+  if (!post) return { title: "Article introuvable | Tradex" }
 
   const ogUrl = `${BASE_URL}/api/og?title=${encodeURIComponent(post.title)}&category=${encodeURIComponent(post.category)}`
 
   return {
-    title: `${post.title} | TradEx Blog`,
+    title: `${post.title} | Tradex Blog`,
     description: post.excerpt,
     keywords: [...(post.tags ?? []), "trading", "bourse", "finance", post.category],
     openGraph: {
@@ -116,7 +116,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     dateModified: post.updated_at ?? post.created_at,
     publisher: {
       "@type": "Organization",
-      name: "TradEx",
+      name: "Tradex",
       url: BASE_URL,
       logo: { "@type": "ImageObject", url: `${BASE_URL}/icon-192.png` },
     },

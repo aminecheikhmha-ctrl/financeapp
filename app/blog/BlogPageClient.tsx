@@ -144,7 +144,7 @@ export default function BlogPageClient({ initialPosts }: { initialPosts: Post[] 
       <div className="max-w-7xl mx-auto px-4 md:px-6 pt-16 pb-10">
         <div className="text-center max-w-2xl mx-auto">
           <span className="inline-flex items-center gap-1.5 text-xs font-bold text-green-400 bg-green-500/10 border border-green-500/20 px-3 py-1 rounded-full mb-4">
-            📰 Blog TradEx
+            📰 Blog Tradex
           </span>
           <h1 className="text-4xl md:text-5xl font-black text-white mb-3 leading-tight">
             Apprendre à trader,{" "}

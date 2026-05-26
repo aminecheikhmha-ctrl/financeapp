@@ -393,7 +393,7 @@ export default function Apprendre() {
           <div className="relative z-10 flex flex-col md:flex-row gap-6 md:gap-10">
             {/* Left */}
             <div className="flex-1">
-              <p className="text-green-400 text-xs font-black uppercase tracking-widest mb-2">🎓 Académie TradEx</p>
+              <p className="text-green-400 text-xs font-black uppercase tracking-widest mb-2">🎓 Académie Tradex</p>
               <h1 className="text-3xl md:text-4xl font-black text-white mb-3 leading-tight">
                 Apprends à trader<br/>
                 <span className="text-green-400">comme un professionnel</span>

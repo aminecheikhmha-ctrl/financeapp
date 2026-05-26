@@ -1,8 +1,8 @@
 {
-  "name": "TradEx — Trading IA",
-  "short_name": "TradEx",
+  "name": "Tradex — Trading IA",
+  "short_name": "Tradex",
   "description": "Signaux de trading IA en temps réel. Paper trading, analyses sur 160+ actifs et académie interactive.",
-  "start_url": "/dashboard",
+  "start_url": "/dashboard?utm_source=pwa",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#050505",
@@ -10,6 +10,7 @@
   "categories": ["finance", "business", "education"],
   "lang": "fr",
   "scope": "/",
+  "id": "io.tradex.app",
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
@@ -17,32 +18,14 @@
     { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    {
-      "name": "Dashboard",
-      "url": "/dashboard",
-      "description": "Voir les marchés en temps réel",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Signaux",
-      "url": "/signaux",
-      "description": "Signaux IA du moment",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Portfolio",
-      "url": "/portfolio",
-      "description": "Mon portfolio",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
-    }
+    { "name": "Dashboard",  "url": "/dashboard",  "description": "Marchés en temps réel",  "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Signaux IA", "url": "/signaux",    "description": "Signaux du moment",       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Portfolio",  "url": "/portfolio",   "description": "Mon portfolio",           "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Académie",   "url": "/apprendre",   "description": "Cours de trading",        "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
   ],
   "share_target": {
     "action": "/share",
     "method": "GET",
-    "params": {
-      "title": "title",
-      "text": "text",
-      "url": "url"
-    }
+    "params": { "title": "title", "text": "text", "url": "url" }
   }
 }

@@ -58,10 +58,10 @@ export default function MobileHeader() {
       <header className="md:hidden fixed top-0 left-0 right-0 z-50 h-16 border-b border-white/[0.06] flex items-center px-4 gap-3" style={{ background: "rgba(8,8,8,0.88)", backdropFilter: "blur(20px)" }}>
         {/* Logo */}
         <a href="/dashboard" className="flex items-center gap-2 flex-shrink-0">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center">
-            <span className="text-white font-black text-xs">F</span>
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center" style={{ boxShadow: "0 0 12px rgba(34,197,94,0.3)" }}>
+            <span className="text-black font-black text-xs">T</span>
           </div>
-          <span className="font-black text-sm tracking-tight bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">TradEx</span>
+          <span className="font-black text-sm tracking-tight text-white">Tradex</span>
         </a>
 
         {/* Search tap target */}

@@ -55,17 +55,17 @@ export async function POST(req: NextRequest) {
     <div style="margin-bottom:24px">
       <div style="display:inline-flex;align-items:center;gap:10px">
         <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#4ade80,#059669);display:flex;align-items:center;justify-content:center">
-          <span style="color:#000;font-weight:900;font-size:18px">F</span>
+          <span style="color:#000;font-weight:900;font-size:18px">T</span>
         </div>
-        <span style="color:#fff;font-weight:900;font-size:20px">TradEx</span>
+        <span style="color:#fff;font-weight:900;font-size:20px">Tradex</span>
       </div>
     </div>
     <div style="background:#0f0f0f;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:32px">
       <p style="color:rgba(255,255,255,0.7);font-size:15px;line-height:1.7;white-space:pre-line">${message}</p>
-      <a href="${APP_URL}/dashboard" style="display:block;width:100%;text-align:center;background:#4ade80;color:#000;font-weight:900;font-size:15px;text-decoration:none;padding:14px 24px;border-radius:12px;margin-top:24px;box-sizing:border-box">Accéder à TradEx →</a>
+      <a href="${APP_URL}/dashboard" style="display:block;width:100%;text-align:center;background:#4ade80;color:#000;font-weight:900;font-size:15px;text-decoration:none;padding:14px 24px;border-radius:12px;margin-top:24px;box-sizing:border-box">Accéder à Tradex →</a>
     </div>
     <p style="color:rgba(255,255,255,0.3);font-size:12px;text-align:center;margin-top:24px">
-      TradEx · <a href="${APP_URL}" style="color:#4ade80;text-decoration:none">${APP_URL}</a>
+      Tradex · <a href="${APP_URL}" style="color:#4ade80;text-decoration:none">${APP_URL}</a>
     </p>
   </div>
 </body></html>`
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     const batch = emails.slice(i, i + BATCH)
     try {
       await resend.emails.send({
-        from: "TradEx <hello@tradex.io>",
+        from: "Tradex <hello@tradex.io>",
         to: batch,
         subject,
         html,

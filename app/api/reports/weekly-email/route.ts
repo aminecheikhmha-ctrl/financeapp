@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
 
       const pnlSign = weeklyPnlPct >= 0 ? "+" : ""
       await resend.emails.send({
-        from: "TradEx <hello@tradex.io>",
+        from: "Tradex <hello@tradex.io>",
         to: u.email,
         subject: `📊 Ton rapport hebdo : ${pnlSign}${weeklyPnlPct.toFixed(1)}% cette semaine`,
         html,
@@ -127,16 +127,16 @@ function generateWeeklyReportHTML(data: {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Rapport hebdo TradEx</title>
+  <title>Rapport hebdo Tradex</title>
 </head>
 <body style="margin:0;padding:0;background:#050505;font-family:Inter,system-ui,sans-serif;color:white;">
   <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
 
     <!-- Header -->
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:32px;">
-      <div style="width:48px;height:48px;background:linear-gradient(135deg,#22c55e,#16a34a);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:black;">F</div>
+      <div style="width:48px;height:48px;background:linear-gradient(135deg,#22c55e,#16a34a);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:black;">T</div>
       <div>
-        <p style="margin:0;font-weight:900;font-size:18px;color:white;">TradEx</p>
+        <p style="margin:0;font-weight:900;font-size:18px;color:white;">Tradex</p>
         <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.3);">Rapport hebdomadaire · ${new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</p>
       </div>
     </div>
@@ -206,7 +206,7 @@ function generateWeeklyReportHTML(data: {
     <!-- Footer -->
     <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:20px;text-align:center;">
       <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.15);">
-        TradEx · Trading intelligent avec l'IA<br/>
+        Tradex · Trading intelligent avec l'IA<br/>
         <a href="${APP_URL}/profil" style="color:rgba(255,255,255,0.15);">Mon profil</a>
       </p>
     </div>

@@ -6,7 +6,7 @@ function getResend() {
 }
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://tradex-kappa-six.vercel.app"
-const FROM = "TradEx <hello@tradex.io>"
+const FROM = "Tradex <hello@tradex.io>"
 
 // ─── Email Templates ──────────────────────────────────────────────────────────
 
@@ -20,9 +20,9 @@ function baseTemplate(content: string): string {
     <div style="margin-bottom:32px">
       <div style="display:inline-flex;align-items:center;gap:10px">
         <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#4ade80,#059669);display:flex;align-items:center;justify-content:center">
-          <span style="color:#000;font-weight:900;font-size:18px">F</span>
+          <span style="color:#000;font-weight:900;font-size:18px">T</span>
         </div>
-        <span style="color:#fff;font-weight:900;font-size:20px">TradEx</span>
+        <span style="color:#fff;font-weight:900;font-size:20px">Tradex</span>
       </div>
     </div>
 
@@ -34,7 +34,7 @@ function baseTemplate(content: string): string {
     <!-- Footer -->
     <div style="margin-top:24px;text-align:center">
       <p style="color:rgba(255,255,255,0.3);font-size:12px;margin:0">
-        TradEx · Trading intelligent avec l'IA<br>
+        Tradex · Trading intelligent avec l'IA<br>
         <a href="${APP_URL}" style="color:#4ade80;text-decoration:none">${APP_URL}</a>
       </p>
     </div>
@@ -71,7 +71,7 @@ export async function sendWelcomeEmail(email: string, username?: string) {
   return getResend().emails.send({
     from: FROM,
     to: email,
-    subject: "Bienvenue sur TradEx 🚀",
+    subject: "Bienvenue sur Tradex 🚀",
     html: baseTemplate(`
       ${heading(`Bienvenue ${name} 👋`)}
       ${para("Ton compte est prêt. Voici comment démarrer :")}
@@ -129,10 +129,10 @@ export async function sendConversionEmail(email: string, daysActive = 7) {
   return getResend().emails.send({
     from: FROM,
     to: email,
-    subject: `${daysActive} jours sur TradEx — passe à Pro maintenant 💎`,
+    subject: `${daysActive} jours sur Tradex — passe à Pro maintenant 💎`,
     html: baseTemplate(`
-      ${heading(`${daysActive} jours avec TradEx 🎉`)}
-      ${para("Tu utilises TradEx depuis une semaine. Il est temps de passer à la vitesse supérieure :")}
+      ${heading(`${daysActive} jours avec Tradex 🎉`)}
+      ${para("Tu utilises Tradex depuis une semaine. Il est temps de passer à la vitesse supérieure :")}
       ${featureList([
         "Signaux illimités en temps réel",
         "Analyses IA sans restriction",
@@ -160,7 +160,7 @@ export async function sendUpgradeEmail(email: string, plan: "pro" | "premium", u
   return getResend().emails.send({
     from: FROM,
     to: email,
-    subject: `Bienvenue sur TradEx ${planLabel} 🎉`,
+    subject: `Bienvenue sur Tradex ${planLabel} 🎉`,
     html: baseTemplate(`
       ${heading(`Bienvenue dans le club ${planLabel}`)}
       ${para(`Félicitations ${name} ! Ton abonnement est actif. Tu as maintenant accès à :`)}
@@ -179,7 +179,7 @@ export async function sendPaymentFailedEmail(email: string, username?: string) {
     subject: "⚠️ Problème de paiement — Action requise",
     html: baseTemplate(`
       ${heading("Problème avec ton paiement ⚠️")}
-      ${para(`Bonjour ${name}, nous n'avons pas pu débiter ta carte pour ton abonnement TradEx.`)}
+      ${para(`Bonjour ${name}, nous n'avons pas pu débiter ta carte pour ton abonnement Tradex.`)}
       <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:12px;padding:16px;margin:16px 0">
         <p style="color:#f87171;font-size:14px;margin:0;font-weight:600">⚠️ Ton accès sera suspendu dans 3 jours si le problème n'est pas résolu.</p>
       </div>

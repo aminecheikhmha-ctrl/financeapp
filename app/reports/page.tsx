@@ -264,7 +264,7 @@ export default function ReportsPage() {
       pdf.setTextColor(255, 255, 255)
       pdf.setFontSize(18)
       pdf.setFont("helvetica", "bold")
-      pdf.text("TradEx", 28, 22)
+      pdf.text("Tradex", 28, 22)
       pdf.setFontSize(11)
       pdf.setTextColor(150, 150, 150)
       pdf.text(`Rapport de performance — Période ${report.period}`, 14, 32)

@@ -72,10 +72,10 @@ export default function Signup() {
       {/* LEFT — Form */}
       <div className="flex-1 flex flex-col justify-center px-8 py-12 max-w-md mx-auto lg:mx-0 lg:px-16 w-full">
         <a href="/" className="flex items-center gap-2 mb-12">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center">
-            <span className="text-white font-black text-sm">F</span>
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center" style={{ boxShadow: "0 0 16px rgba(34,197,94,0.3)" }}>
+            <span className="text-black font-black text-sm">T</span>
           </div>
-          <span className="text-white font-black text-lg">TradEx</span>
+          <span className="text-white font-black text-lg">Tradex</span>
         </a>
 
         <div className="mb-2">
@@ -148,7 +148,7 @@ export default function Signup() {
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-green-400 to-emerald-400">pour réussir</span>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed">
-              Rejoins 10 000+ traders qui utilisent TradEx au quotidien.
+              Rejoins 10 000+ traders qui utilisent Tradex au quotidien.
             </p>
           </div>
 

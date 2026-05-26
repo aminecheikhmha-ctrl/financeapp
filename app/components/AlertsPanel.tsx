@@ -92,7 +92,7 @@ export default function AlertsPanel({
           : WARN
 
         pushToast(label, color)
-        browserNotify("TradEx · Alerte", label)
+        browserNotify("Tradex · Alerte", label)
       }
 
       setAlerts(data)

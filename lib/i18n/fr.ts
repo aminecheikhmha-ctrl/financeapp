@@ -1,4 +1,4 @@
-// French strings for TradEx
+// French strings for Tradex
 // Structure ready to duplicate for EN/ES later
 
 export const fr = {

@@ -66,7 +66,7 @@ export default function PWAInstallBanner() {
             T
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-black text-white">Installer TradEx</p>
+            <p className="text-sm font-black text-white">Installer Tradex</p>
             <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.4)" }}>
               Accès rapide depuis ton écran d&apos;accueil
             </p>

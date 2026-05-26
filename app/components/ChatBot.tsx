@@ -153,7 +153,7 @@ function ChatBotInner() {
           {
             role: "assistant",
             content:
-              "Bonjour ! Je suis ton assistant IA TradEx 🧠 Je connais ton portfolio et tes trades. Que puis-je analyser pour toi ?",
+              "Bonjour ! Je suis ton assistant IA Tradex 🧠 Je connais ton portfolio et tes trades. Que puis-je analyser pour toi ?",
           },
         ])
       }

@@ -64,14 +64,14 @@ export async function POST(req: NextRequest) {
       const { Resend } = await import("resend")
       const resend = new Resend(process.env.RESEND_API_KEY)
       await resend.emails.send({
-        from: "TradEx <hello@tradex.io>",
+        from: "Tradex <hello@tradex.io>",
         to: email,
-        subject: "Message de l'équipe TradEx",
+        subject: "Message de l'équipe Tradex",
         html: `<div style="font-family:sans-serif;background:#080808;color:#fff;padding:32px;border-radius:12px;max-width:560px;margin:0 auto">
-          <h2 style="color:#4ade80;margin:0 0 16px">Message de l'équipe TradEx</h2>
+          <h2 style="color:#4ade80;margin:0 0 16px">Message de l'équipe Tradex</h2>
           <p style="color:rgba(255,255,255,0.7);line-height:1.6">${customMessage?.replace(/\n/g, "<br>") ?? ""}</p>
           <hr style="border:1px solid rgba(255,255,255,0.1);margin:24px 0">
-          <p style="color:rgba(255,255,255,0.4);font-size:12px">L'équipe TradEx</p>
+          <p style="color:rgba(255,255,255,0.4);font-size:12px">L'équipe Tradex</p>
         </div>`,
       })
     }

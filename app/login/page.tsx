@@ -101,10 +101,10 @@ function LoginForm() {
       {/* LEFT — Form */}
       <div className="flex-1 flex flex-col justify-center px-8 py-12 max-w-md mx-auto lg:mx-0 lg:px-16 w-full">
         <a href="/" className="flex items-center gap-2 mb-12">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center">
-            <span className="text-white font-black text-sm">F</span>
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center" style={{ boxShadow: "0 0 16px rgba(34,197,94,0.3)" }}>
+            <span className="text-black font-black text-sm">T</span>
           </div>
-          <span className="text-white font-black text-lg">TradEx</span>
+          <span className="text-white font-black text-lg">Tradex</span>
         </a>
 
         <h1 className="text-3xl font-black text-white mb-1">Bon retour 👋</h1>
@@ -247,7 +247,7 @@ function LoginForm() {
               </div>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed">
-              "Les signaux IA sont incroyables. J'ai fait +18% ce mois-ci grâce à TradEx."
+              "Les signaux IA sont incroyables. J'ai fait +18% ce mois-ci grâce à Tradex."
             </p>
           </div>
         </div>

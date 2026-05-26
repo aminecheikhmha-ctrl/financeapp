@@ -231,7 +231,7 @@ function Step1({ form, setForm, toggleColor }: {
     <div className="space-y-8">
       <div className="text-center">
         <div className="text-6xl mb-4">🎉</div>
-        <h1 className="text-3xl font-black text-white mb-2">Bienvenue sur TradEx</h1>
+        <h1 className="text-3xl font-black text-white mb-2">Bienvenue sur Tradex</h1>
         <p className="text-gray-400">Commençons par faire connaissance</p>
       </div>
 

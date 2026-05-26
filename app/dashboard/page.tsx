@@ -154,6 +154,7 @@ export default function Dashboard() {
       const { data: sessionData } = await supabase.auth.getSession()
       const tok = sessionData.session?.access_token
       if (tok) {
+        fetch("/api/streak", { method: "POST", headers: { Authorization: `Bearer ${tok}` } }).catch(() => {})
         fetch("/api/user-profile", { headers: { Authorization: `Bearer ${tok}` } })
           .then(r => r.json())
           .then(j => {
@@ -549,7 +550,7 @@ export default function Dashboard() {
                 <span className="text-[10px] text-green-400 font-black tracking-wider">MODE DÉMO</span>
               </div>
               <div>
-                <p className="text-sm font-bold text-white">Tu explores TradEx avec de vraies données de marché</p>
+                <p className="text-sm font-bold text-white">Tu explores Tradex avec de vraies données de marché</p>
                 <p className="text-[11px] text-white/40">Graphes live · Signaux IA · $100,000 fictifs · Crée un compte pour trader</p>
               </div>
             </div>

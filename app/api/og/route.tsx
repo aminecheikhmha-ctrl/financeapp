@@ -18,7 +18,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
-  const title    = searchParams.get("title")    ?? "TradEx Blog"
+  const title    = searchParams.get("title")    ?? "Tradex Blog"
   const category = searchParams.get("category") ?? "trading"
   const color    = CATEGORY_COLORS[category] ?? "#4ade80"
 
@@ -57,12 +57,13 @@ export async function GET(req: NextRequest) {
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{
             width: 44, height: 44, borderRadius: 12,
-            background: "linear-gradient(135deg, #4ade80, #059669)",
+            background: "linear-gradient(135deg, #22c55e, #16a34a)",
             display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 0 20px rgba(34,197,94,0.4)",
           }}>
-            <span style={{ color: "#fff", fontWeight: 900, fontSize: 20 }}>F</span>
+            <span style={{ color: "#000", fontWeight: 900, fontSize: 22 }}>T</span>
           </div>
-          <span style={{ color: "#fff", fontWeight: 900, fontSize: 22 }}>TradEx</span>
+          <span style={{ color: "#fff", fontWeight: 900, fontSize: 22 }}>Tradex</span>
           <div style={{
             marginLeft: 12,
             padding: "4px 12px", borderRadius: 20,
@@ -97,7 +98,7 @@ export async function GET(req: NextRequest) {
             {title}
           </div>
           <div style={{ color: "#6b7280", fontSize: 18, marginTop: 8 }}>
-            Blog TradEx — Apprendre à trader intelligemment
+            Blog Tradex — Apprendre à trader intelligemment
           </div>
         </div>
 

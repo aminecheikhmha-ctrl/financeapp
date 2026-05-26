@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
     try {
       const url = `https://www.reddit.com/r/${sub}/search.json?q=${encodeURIComponent(symbol)}&sort=hot&limit=25&t=week&restrict_sr=1`
       const res = await fetch(url, {
-        headers: { "User-Agent": "TradEx/1.0" },
+        headers: { "User-Agent": "Tradex/1.0" },
         signal: AbortSignal.timeout(4000),
       })
       if (!res.ok) continue

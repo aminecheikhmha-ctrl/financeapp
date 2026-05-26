@@ -17,7 +17,7 @@ async function fetchRedditTitles(sub: string): Promise<string[]> {
   try {
     const res = await fetch(
       `https://www.reddit.com/r/${sub}/hot.json?limit=25`,
-      { headers: { "User-Agent": "TradEx/1.0" }, signal: AbortSignal.timeout(5000) }
+      { headers: { "User-Agent": "Tradex/1.0" }, signal: AbortSignal.timeout(5000) }
     )
     if (!res.ok) return []
     const data = await res.json()
