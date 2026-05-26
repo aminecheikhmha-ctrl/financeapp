@@ -115,6 +115,7 @@ export default function Sidebar() {
   const [xp,            setXp]            = useState(0)
   const [levelName,     setLevelName]     = useState("Novice")
   const [userLevel,     setUserLevel]     = useState<string>("")
+  const [unreadCount,   setUnreadCount]   = useState(0)
 
   // Sync --sidebar-w CSS variable so Topbar + main content shift together
   useEffect(() => {
@@ -160,6 +161,14 @@ export default function Sidebar() {
         .eq("user_id", data.user.id).eq("completed", true)
       const total = getTotalChapters()
       if (rows && total > 0) setLearnProgress(Math.round((rows.length / total) * 100))
+
+      // Unread notifications count
+      Promise.resolve(
+        supabase.from("user_notifications")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", data.user.id)
+          .eq("read", false)
+      ).then(({ count }) => setUnreadCount(count ?? 0)).catch(() => {})
     })
 
     fetch("/api/forum/posts?sort=recent&category=all")
@@ -355,16 +364,30 @@ export default function Sidebar() {
 
       {/* Bottom actions */}
       <div className={cn("px-2 py-2 space-y-0.5 border-t border-white/[0.05]", collapsed && "flex flex-col items-center")}>
-        <button
+        <a
+          href="/notifications"
           aria-label="Notifications"
           className={cn(
-            "flex items-center gap-3 px-3 py-2 rounded-lg text-white/35 hover:text-white/70 hover:bg-white/4 transition-all w-full",
-            collapsed && "justify-center px-0 w-10"
+            "flex items-center gap-3 px-3 py-2 rounded-lg transition-all w-full",
+            collapsed && "justify-center px-0 w-10",
+            pathname.startsWith("/notifications") ? "text-white bg-white/8" : "text-white/35 hover:text-white/70 hover:bg-white/4"
           )}
         >
-          <Bell size={16} className="flex-shrink-0" />
-          {!collapsed && <span className="text-[13px] font-medium">Notifications</span>}
-        </button>
+          <div className="relative flex-shrink-0">
+            <Bell size={16} />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-3.5 px-0.5 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center leading-none">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </div>
+          {!collapsed && <span className="text-[13px] font-medium flex-1">Notifications</span>}
+          {!collapsed && unreadCount > 0 && (
+            <span className="min-w-[18px] h-4.5 px-1 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </a>
         <a
           href="/parametres"
           aria-label="Paramètres"

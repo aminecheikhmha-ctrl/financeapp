@@ -31,8 +31,9 @@ export default function Topbar() {
   const [username,    setUsername]    = useState<string | null>(null)
   const [avatarColor, setAvatarColor] = useState("#4ade80")
   const [avatarUrl,   setAvatarUrl]   = useState<string | null>(null)
-  const [showDrop, setShowDrop] = useState(false)
+  const [showDrop,    setShowDrop]    = useState(false)
   const [marketOpen,  setMarketOpen]  = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   const dropRef = useRef<HTMLDivElement>(null)
 
@@ -55,6 +56,12 @@ export default function Topbar() {
         .eq("id", data.user.id)
         .single()
       if (up?.username)     setUsername(up.username)
+      // Unread notifications
+      Promise.resolve(
+        supabase.from("user_notifications")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", data.user.id).eq("read", false)
+      ).then(({ count }) => setUnreadCount(count ?? 0)).catch(() => {})
       if (up?.avatar_color) setAvatarColor(up.avatar_color)
       if (up?.avatar_url)   setAvatarUrl(up.avatar_url)
     })
@@ -111,9 +118,14 @@ export default function Topbar() {
         </div>
 
         {/* Notifications */}
-        <button className="relative p-2 rounded-lg text-white/35 hover:text-white/70 hover:bg-white/5 transition">
+        <a href="/notifications" className="relative p-2 rounded-lg text-white/35 hover:text-white/70 hover:bg-white/5 transition">
           <Bell size={16} />
-        </button>
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </a>
 
         {/* Avatar dropdown */}
         <div className="relative" ref={dropRef}>
@@ -144,7 +156,7 @@ export default function Topbar() {
                 <User size={14} className="text-white/35" />
                 Profil
               </a>
-              <a href="/profil" className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-white/70 hover:text-white hover:bg-white/[0.04] transition border-b border-white/[0.06]">
+              <a href="/parametres" className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-white/70 hover:text-white hover:bg-white/[0.04] transition border-b border-white/[0.06]">
                 <Settings size={14} className="text-white/35" />
                 Paramètres
               </a>

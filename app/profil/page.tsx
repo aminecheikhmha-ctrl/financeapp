@@ -254,14 +254,14 @@ export default function ProfilPage() {
         .then(r => r.json())
         .then(streakRes => {
           if (streakRes?.streak_days != null) {
-            setProfile(prev => prev ? { ...prev, streak_days: streakRes.streak_days } : prev)
+            setProfile((prev: any) => prev ? { ...prev, streak_days: streakRes.streak_days } : prev)
           }
         }).catch(() => {})
 
       // Cours complétés
-      supabase.from("user_progress").select("*").eq("user_id", u.id).eq("completed", true)
-        .then(({ data: rows }) => setCompletedCourses(rows ?? []))
-        .catch(() => {})
+      Promise.resolve(
+        supabase.from("user_progress").select("*").eq("user_id", u.id).eq("completed", true)
+      ).then(({ data: rows }) => setCompletedCourses(rows ?? [])).catch(() => {})
 
       // Achievements (check + fetch en séquence mais non bloquant)
       fetch("/api/achievements/check", {

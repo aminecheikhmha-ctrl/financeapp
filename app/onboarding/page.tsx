@@ -3,615 +3,432 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { motion, AnimatePresence } from "framer-motion"
+import { haptic } from "@/lib/capacitor"
+import TradexLogo from "@/app/components/TradexLogo"
 
-const AVATAR_COLORS = [
-  "#4ade80", "#60a5fa", "#f472b6", "#a78bfa",
-  "#fb923c", "#34d399", "#facc15", "#f87171",
+type OnboardingStep = "welcome" | "level" | "goals" | "assets" | "capital" | "done"
+const STEPS: OnboardingStep[] = ["welcome", "level", "goals", "assets", "capital", "done"]
+
+const LEVELS = [
+  { key: "debutant",       label: "Débutant",      desc: "Je découvre le trading",                          icon: "🌱", color: "#4ade80" },
+  { key: "intermediaire",  label: "Intermédiaire", desc: "Je trade depuis moins de 2 ans",                  icon: "📊", color: "#60a5fa" },
+  { key: "avance",         label: "Avancé",         desc: "Je trade régulièrement depuis 2+ ans",            icon: "🏆", color: "#a78bfa" },
+  { key: "professionnel",  label: "Professionnel",  desc: "C'est mon métier ou j'ai une formation finance",  icon: "💎", color: "#fbbf24" },
 ]
 
-type FormData = {
-  username: string
-  avatar_color: string
-  level: "débutant" | "intermédiaire" | "avancé" | ""
-  trading_experience: "jamais" | "moins_1_an" | "1_3_ans" | "plus_3_ans" | ""
-  goals: string[]
-  capital_range: "moins_1k" | "1k_10k" | "10k_50k" | "plus_50k" | ""
-  preferred_assets: string[]
-  risk_tolerance: "faible" | "modéré" | "élevé" | ""
-}
-
-const TOTAL_STEPS = 5
-
-const GOAL_OPTIONS = [
-  { label: "💰 Gains court terme", value: "court_terme" },
-  { label: "📦 Investissement long terme", value: "long_terme" },
-  { label: "₿ Explorer la crypto", value: "crypto" },
-  { label: "💵 Revenus passifs", value: "revenus_passifs" },
-  { label: "🎓 Apprendre à trader", value: "apprendre" },
-  { label: "🏠 Préparer ma retraite", value: "retraite" },
+const GOALS = [
+  { key: "apprendre",      label: "Apprendre le trading",          icon: "📚" },
+  { key: "revenus",        label: "Générer des revenus passifs",    icon: "💰" },
+  { key: "investissement", label: "Investir à long terme",          icon: "📈" },
+  { key: "swing",          label: "Swing trading actif",            icon: "🌊" },
+  { key: "crypto",         label: "Trader les cryptos",             icon: "₿"  },
+  { key: "decouverte",     label: "Découvrir les marchés",          icon: "🔭" },
 ]
 
-const ASSET_OPTIONS = [
-  { label: "🇺🇸 Actions US", value: "actions" },
-  { label: "₿ Crypto", value: "crypto" },
-  { label: "📊 ETFs", value: "etf" },
-  { label: "🥇 Matières premières", value: "matieres_premieres" },
-  { label: "🌍 Actions internationales", value: "actions_intl" },
+const ASSET_TYPES = [
+  { key: "stocks",      label: "Actions",          icon: "📈", desc: "Apple, Tesla, NVIDIA..."   },
+  { key: "crypto",      label: "Cryptos",           icon: "₿",  desc: "Bitcoin, Ethereum..."      },
+  { key: "etf",         label: "ETF / Indices",     icon: "📦", desc: "S&P 500, Nasdaq..."        },
+  { key: "forex",       label: "Forex",             icon: "💱", desc: "EUR/USD, GBP/USD..."       },
+  { key: "commodities", label: "Matières premières",icon: "🥇", desc: "Or, pétrole..."            },
 ]
 
-const RECOMMENDED_COURSES: Record<string, string[]> = {
-  "débutant": ["Les bases du trading", "Introduction aux marchés"],
-  "intermédiaire": ["Analyse technique", "Trading des actions"],
-  "avancé": ["Trading algorithmique", "Stratégies Hedge Fund"],
-}
+const CAPITAL_RANGES = [
+  { key: "discover", label: "Je découvre",          desc: "Mode démo uniquement",          icon: "👀" },
+  { key: "small",    label: "< 1 000€",             desc: "Petit portefeuille",             icon: "💶" },
+  { key: "medium",   label: "1 000 — 10 000€",      desc: "Portefeuille moyen",             icon: "💰" },
+  { key: "large",    label: "10 000 — 50 000€",     desc: "Portefeuille avancé",            icon: "💎" },
+  { key: "pro",      label: "> 50 000€",            desc: "Portefeuille professionnel",     icon: "🏦" },
+]
 
 export default function OnboardingPage() {
   const router = useRouter()
-  const [step, setStep] = useState(1)
-  const [animating, setAnimating] = useState(false)
-  const [direction, setDirection] = useState<"forward" | "back">("forward")
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState("")
-
-  const [form, setForm] = useState<FormData>({
+  const [step, setStep]   = useState<OnboardingStep>("welcome")
+  const [user, setUser]   = useState<any>(null)
+  const [saving, setSaving] = useState(false)
+  const [selections, setSelections] = useState({
     username: "",
-    avatar_color: "#4ade80",
     level: "",
-    trading_experience: "",
-    goals: [],
-    capital_range: "",
-    preferred_assets: [],
-    risk_tolerance: "",
+    goals: [] as string[],
+    assets: [] as string[],
+    capital: "",
   })
 
-  function toggleArrayValue(field: "goals" | "preferred_assets", value: string) {
-    setForm(prev => {
-      const arr = prev[field]
-      return {
-        ...prev,
-        [field]: arr.includes(value) ? arr.filter(v => v !== value) : [...arr, value],
-      }
+  const stepIndex = STEPS.indexOf(step)
+  const progress  = (stepIndex / (STEPS.length - 1)) * 100
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) { router.push("/signup"); return }
+      setUser(session.user)
+      const defaultName = session.user.user_metadata?.username
+        ?? session.user.email?.split("@")[0]
+        ?? ""
+      setSelections(s => ({ ...s, username: defaultName }))
     })
+  }, [])
+
+  function next() { haptic("light"); setStep(STEPS[stepIndex + 1]) }
+  function prev() { haptic("light"); setStep(STEPS[stepIndex - 1]) }
+
+  function toggleGoal(key: string) {
+    haptic("light")
+    setSelections(s => ({
+      ...s,
+      goals: s.goals.includes(key) ? s.goals.filter(g => g !== key) : [...s.goals, key],
+    }))
   }
 
-  function navigateStep(nextStep: number) {
-    if (animating) return
-    setDirection(nextStep > step ? "forward" : "back")
-    setAnimating(true)
-    setTimeout(() => {
-      setStep(nextStep)
-      setAnimating(false)
-    }, 220)
+  function toggleAsset(key: string) {
+    haptic("light")
+    setSelections(s => ({
+      ...s,
+      assets: s.assets.includes(key) ? s.assets.filter(a => a !== key) : [...s.assets, key],
+    }))
   }
 
-  async function handleFinish() {
-    setSubmitting(true)
-    setError("")
+  async function completeOnboarding() {
+    if (!user) return
+    setSaving(true)
+    haptic("success")
     try {
-      const { data: sessionData } = await supabase.auth.getSession()
-      const token = sessionData.session?.access_token
-      if (!token) {
-        setError("Session expirée. Reconnecte-toi.")
-        setSubmitting(false)
-        return
-      }
-      const res = await fetch("/api/user-profile", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ ...form, onboarding_completed: true }),
-      })
-      if (!res.ok) {
-        const json = await res.json()
-        setError(json.error ?? "Erreur lors de la sauvegarde.")
-        setSubmitting(false)
-        return
-      }
-      document.cookie = "onboarding_done=1; path=/; max-age=31536000"
-      router.push("/dashboard")
-    } catch {
-      setError("Erreur réseau. Réessaie.")
-      setSubmitting(false)
+      await supabase.from("user_profiles").upsert({
+        id: user.id,
+        username: selections.username.trim() || user.email?.split("@")[0],
+        level_name: "Novice",
+        xp: 100,
+        streak_days: 0,
+        last_login: new Date().toISOString(),
+        trading_level: selections.level,
+        trading_goals: selections.goals,
+        preferred_assets: selections.assets,
+        capital_range: selections.capital,
+        onboarding_completed: true,
+        onboarding_completed_at: new Date().toISOString(),
+      }, { onConflict: "id" })
+
+      await supabase.from("trading_accounts").upsert({
+        user_id: user.id,
+        cash: 100000,
+        initial_cash: 100000,
+      }, { onConflict: "user_id" })
+
+      // XP bonus (best-effort)
+      await Promise.resolve(supabase.rpc("increment_xp", { user_id: user.id, amount: 100 })).catch(() => {})
+
+      // Welcome email (best-effort)
+      fetch("/api/emails/welcome", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email, username: selections.username }),
+      }).catch(() => {})
+
+      setStep("done")
+    } catch (e) {
+      console.error(e)
     }
+    setSaving(false)
   }
-
-  const canProceed = () => {
-    if (step === 1) return form.username.trim().length >= 2
-    if (step === 2) return form.level !== "" && form.trading_experience !== ""
-    if (step === 3) return form.goals.length > 0 && form.capital_range !== ""
-    if (step === 4) return form.preferred_assets.length > 0 && form.risk_tolerance !== ""
-    return true
-  }
-
-  const outClass = animating
-    ? direction === "forward"
-      ? "opacity-0 -translate-x-8"
-      : "opacity-0 translate-x-8"
-    : "opacity-100 translate-x-0"
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
-      {/* Progress bar */}
-      <div className="w-full h-1 bg-white/10">
-        <div
-          className="h-full bg-gradient-to-r from-green-400 to-emerald-500 transition-all duration-500"
-          style={{ width: `${(step / TOTAL_STEPS) * 100}%` }}
-        />
-      </div>
+    <div className="min-h-screen flex flex-col bg-[#050505]">
 
-      {/* Step counter */}
-      <div className="flex justify-between items-center px-8 pt-6 pb-2">
-        <div className="flex gap-2">
-          {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-            <div
-              key={i}
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                i + 1 === step
-                  ? "bg-green-400 scale-125"
-                  : i + 1 < step
-                  ? "bg-green-400/60"
-                  : "bg-white/20"
-              }`}
-            />
-          ))}
-        </div>
-        <span className="text-sm text-gray-500 font-medium">{step} / {TOTAL_STEPS}</span>
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
+        <TradexLogo size={28} showText textSize="sm" />
+        {step !== "welcome" && step !== "done" && (
+          <div className="flex items-center gap-3">
+            <div className="w-32 h-1.5 rounded-full bg-white/10 overflow-hidden">
+              <div className="h-full rounded-full bg-green-400 transition-all duration-500"
+                style={{ width: `${progress}%` }} />
+            </div>
+            <span className="text-[10px] text-white/30">{stepIndex}/{STEPS.length - 1}</span>
+          </div>
+        )}
       </div>
 
       {/* Content */}
-      <div className="flex-1 flex items-center justify-center px-4 py-8">
-        <div
-          className={`w-full max-w-lg transition-all duration-200 ease-in-out ${outClass}`}
-        >
-          {step === 1 && (
-            <Step1 form={form} setForm={setForm} toggleColor={(c) => setForm(f => ({ ...f, avatar_color: c }))} />
-          )}
-          {step === 2 && (
-            <Step2 form={form} setForm={setForm} />
-          )}
-          {step === 3 && (
-            <Step3 form={form} setForm={setForm} toggle={(v) => toggleArrayValue("goals", v)} />
-          )}
-          {step === 4 && (
-            <Step4 form={form} setForm={setForm} toggle={(v) => toggleArrayValue("preferred_assets", v)} />
-          )}
-          {step === 5 && (
-            <Step5 form={form} />
-          )}
-        </div>
-      </div>
-
-      {/* Error */}
-      {error && (
-        <div className="text-center text-red-400 text-sm pb-2">{error}</div>
-      )}
-
-      {/* Navigation */}
-      <div className="flex justify-between items-center px-8 pb-8 pt-2">
-        <button
-          onClick={() => step > 1 && navigateStep(step - 1)}
-          disabled={step === 1 || animating}
-          className="px-5 py-2.5 rounded-xl border border-white/10 text-gray-400 hover:text-white hover:border-white/30 transition disabled:opacity-20 text-sm font-semibold"
-        >
-          ← Retour
-        </button>
-
-        {step < TOTAL_STEPS ? (
-          <button
-            onClick={() => canProceed() && navigateStep(step + 1)}
-            disabled={!canProceed() || animating}
-            className="px-6 py-2.5 rounded-xl bg-green-500 hover:bg-green-400 text-black font-bold transition disabled:opacity-40 text-sm"
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 overflow-y-auto">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -30 }}
+            transition={{ duration: 0.18 }}
+            className="w-full max-w-lg"
           >
-            Continuer →
-          </button>
-        ) : (
-          <button
-            onClick={handleFinish}
-            disabled={submitting}
-            className="px-6 py-2.5 rounded-xl bg-green-500 hover:bg-green-400 text-black font-bold transition disabled:opacity-40 text-sm"
-          >
-            {submitting ? "Sauvegarde..." : "Commencer l'aventure 🚀"}
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
 
-/* ---- Step 1: Bienvenue ---- */
-function Step1({ form, setForm, toggleColor }: {
-  form: FormData
-  setForm: React.Dispatch<React.SetStateAction<FormData>>
-  toggleColor: (c: string) => void
-}) {
-  const initial = form.username.trim()[0]?.toUpperCase() ?? "?"
-  return (
-    <div className="space-y-8">
-      <div className="text-center">
-        <div className="text-6xl mb-4">🎉</div>
-        <h1 className="text-3xl font-black text-white mb-2">Bienvenue sur Tradex</h1>
-        <p className="text-gray-400">Commençons par faire connaissance</p>
-      </div>
-
-      {/* Avatar preview */}
-      <div className="flex flex-col items-center gap-4">
-        <div
-          className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-black text-black transition-all duration-300"
-          style={{ backgroundColor: form.avatar_color }}
-        >
-          {initial}
-        </div>
-      </div>
-
-      {/* Username */}
-      <div>
-        <label className="block text-sm text-gray-400 mb-2 font-semibold">Ton pseudo</label>
-        <input
-          type="text"
-          value={form.username}
-          onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
-          placeholder="ex: TradingPro92"
-          className="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-green-500/60 transition text-base"
-          maxLength={30}
-        />
-      </div>
-
-      {/* Color picker */}
-      <div>
-        <label className="block text-sm text-gray-400 mb-3 font-semibold">Couleur de ton avatar</label>
-        <div className="flex gap-3 flex-wrap">
-          {AVATAR_COLORS.map(color => (
-            <button
-              key={color}
-              onClick={() => toggleColor(color)}
-              className={`w-10 h-10 rounded-full transition-all duration-200 ${
-                form.avatar_color === color
-                  ? "scale-125 ring-2 ring-white ring-offset-2 ring-offset-black"
-                  : "hover:scale-110"
-              }`}
-              style={{ backgroundColor: color }}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* ---- Step 2: Niveau ---- */
-function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<React.SetStateAction<FormData>> }) {
-  const levels = [
-    { icon: "🌱", label: "Débutant", value: "débutant" as const, desc: "Je commence tout juste", preview: { tab: "Que dit l'IA ? 🤖", hint: "Interface simplifiée avec explications intégrées", color: "text-green-400", badge: "Mode guidé" } },
-    { icon: "📈", label: "Intermédiaire", value: "intermédiaire" as const, desc: "J'ai quelques bases", preview: { tab: "Signaux", hint: "Accès complet avec tooltips explicatifs", color: "text-blue-400", badge: "Mode standard" } },
-    { icon: "🎯", label: "Avancé", value: "avancé" as const, desc: "Je trade régulièrement", preview: { tab: "Indicateurs", hint: "Interface complète sans fioritures", color: "text-purple-400", badge: "Mode expert" } },
-  ]
-
-  const experiences = [
-    { label: "Jamais", value: "jamais" as const },
-    { label: "Moins d'1 an", value: "moins_1_an" as const },
-    { label: "1 à 3 ans", value: "1_3_ans" as const },
-    { label: "Plus de 3 ans", value: "plus_3_ans" as const },
-  ]
-
-  const selectedLevel = levels.find(l => l.value === form.level)
-
-  return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h2 className="text-2xl font-black text-white mb-2">Ton niveau en trading</h2>
-        <p className="text-gray-400">Sois honnête — ça personnalise toute ton expérience</p>
-      </div>
-
-      <div>
-        <label className="block text-sm text-gray-400 mb-3 font-semibold">Quel est ton niveau ?</label>
-        <div className="grid grid-cols-3 gap-3">
-          {levels.map(l => (
-            <button
-              key={l.value}
-              onClick={() => setForm(f => ({ ...f, level: l.value }))}
-              className={`p-4 rounded-xl border transition-all text-center ${
-                form.level === l.value
-                  ? "border-green-500/60 bg-green-500/10"
-                  : "border-white/10 bg-white/3 hover:border-white/20"
-              }`}
-            >
-              <div className="text-2xl mb-1">{l.icon}</div>
-              <div className="text-white text-sm font-bold">{l.label}</div>
-              <div className="text-gray-500 text-xs mt-1">{l.desc}</div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Live preview */}
-      {selectedLevel && (
-        <div className="rounded-xl border border-white/10 bg-[#0f0f0f] overflow-hidden transition-all duration-300">
-          <div className="px-4 py-2 border-b border-white/5 flex items-center gap-2">
-            <div className="flex gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
-              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
-              <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
-            </div>
-            <span className="text-[10px] text-gray-600 ml-2">Aperçu de ton dashboard</span>
-            <span className={`ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full bg-white/5 ${selectedLevel.preview.color}`}>
-              {selectedLevel.preview.badge}
-            </span>
-          </div>
-          <div className="p-4 space-y-3">
-            {/* Mock tabs */}
-            <div className="flex gap-2 border-b border-white/5 pb-2">
-              {["Signaux", "Indicateurs", "Que dit l'IA ? 🤖"].map(tab => (
-                <span key={tab} className={`text-[10px] font-semibold pb-1.5 border-b-2 transition-all ${
-                  tab === selectedLevel.preview.tab
-                    ? "text-white border-white"
-                    : "text-gray-700 border-transparent"
-                }`}>{tab}</span>
-              ))}
-            </div>
-            {/* Mock KPI */}
-            <div className="flex gap-2">
-              {["Prix", "Variation", "Volume"].slice(0, form.level === "débutant" ? 2 : 3).map(k => (
-                <div key={k} className="flex-1 bg-white/3 rounded-lg p-2">
-                  <div className="text-[8px] text-gray-600 uppercase mb-1">{k}</div>
-                  <div className="h-3 bg-white/10 rounded animate-pulse" />
+            {/* ── WELCOME ── */}
+            {step === "welcome" && (
+              <div className="text-center">
+                <div className="relative w-24 h-24 mx-auto mb-8">
+                  <div className="absolute inset-0 rounded-3xl opacity-20 animate-ping"
+                    style={{ background: "rgba(34,197,94,0.5)", animationDuration: "2s" }} />
+                  <TradexLogo size={96} />
                 </div>
-              ))}
-            </div>
-            <p className={`text-xs ${selectedLevel.preview.color} font-semibold`}>
-              ✓ {selectedLevel.preview.hint}
-            </p>
-          </div>
-        </div>
-      )}
+                <h1 className="text-3xl font-black text-white mb-3">Bienvenue sur Tradex 🎉</h1>
+                <p className="text-white/50 text-base leading-relaxed mb-6">
+                  La plateforme de trading IA qui s'adapte à ton niveau. Commence avec{" "}
+                  <strong className="text-green-400">$100 000 fictifs</strong> et apprends sans risque.
+                </p>
 
-      <div>
-        <label className="block text-sm text-gray-400 mb-3 font-semibold">Depuis combien de temps tu trades ?</label>
-        <div className="grid grid-cols-2 gap-3">
-          {experiences.map(e => (
-            <button
-              key={e.value}
-              onClick={() => setForm(f => ({ ...f, trading_experience: e.value }))}
-              className={`py-3 px-4 rounded-xl border text-sm font-semibold transition-all ${
-                form.trading_experience === e.value
-                  ? "border-green-500/60 bg-green-500/10 text-green-400"
-                  : "border-white/10 bg-white/3 text-gray-300 hover:border-white/20"
-              }`}
-            >
-              {e.label}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
+                {/* Username */}
+                <div className="mb-6 text-left">
+                  <p className="text-[10px] text-white/30 uppercase tracking-widest mb-2 font-bold">
+                    Ton pseudo de trader
+                  </p>
+                  <input
+                    value={selections.username}
+                    onChange={e => setSelections(s => ({ ...s, username: e.target.value }))}
+                    placeholder="MonPseudo123"
+                    maxLength={20}
+                    className="w-full text-center text-lg font-bold px-4 py-3 rounded-xl outline-none text-white transition focus:border-green-500/50"
+                    style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}
+                  />
+                </div>
 
-/* ---- Step 3: Objectifs ---- */
-function Step3({ form, setForm, toggle }: {
-  form: FormData
-  setForm: React.Dispatch<React.SetStateAction<FormData>>
-  toggle: (v: string) => void
-}) {
-  const capitalRanges = [
-    { label: "Moins de 1 000€", value: "moins_1k" as const },
-    { label: "1 000 – 10 000€", value: "1k_10k" as const },
-    { label: "10 000 – 50 000€", value: "10k_50k" as const },
-    { label: "Plus de 50 000€", value: "plus_50k" as const },
-  ]
+                {/* Features */}
+                <div className="grid grid-cols-2 gap-3 mb-8">
+                  {[
+                    { icon: "📡", text: "Signaux IA temps réel"  },
+                    { icon: "🎓", text: "Académie interactive"   },
+                    { icon: "💼", text: "$100k fictifs offerts"  },
+                    { icon: "🤖", text: "Tuteur IA personnel"    },
+                  ].map(f => (
+                    <div key={f.text} className="flex items-center gap-2.5 p-3 rounded-xl text-left"
+                      style={{ background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.12)" }}>
+                      <span className="text-xl">{f.icon}</span>
+                      <span className="text-xs font-semibold text-white/70">{f.text}</span>
+                    </div>
+                  ))}
+                </div>
 
-  return (
-    <div className="space-y-8">
-      <div className="text-center">
-        <h2 className="text-2xl font-black text-white mb-2">Tes objectifs</h2>
-        <p className="text-gray-400">Sélectionne tout ce qui te correspond</p>
-      </div>
-
-      <div>
-        <label className="block text-sm text-gray-400 mb-3 font-semibold">
-          Qu'est-ce que tu veux accomplir ? <span className="text-gray-600">(plusieurs choix)</span>
-        </label>
-        <div className="grid grid-cols-2 gap-3">
-          {GOAL_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => toggle(opt.value)}
-              className={`py-3 px-4 rounded-xl border text-sm font-semibold text-left transition-all ${
-                form.goals.includes(opt.value)
-                  ? "border-green-500/60 bg-green-500/10 text-green-400"
-                  : "border-white/10 bg-white/3 text-gray-300 hover:border-white/20"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm text-gray-400 mb-3 font-semibold">Quel est ton budget de départ ?</label>
-        <div className="grid grid-cols-2 gap-3">
-          {capitalRanges.map(r => (
-            <button
-              key={r.value}
-              onClick={() => setForm(f => ({ ...f, capital_range: r.value }))}
-              className={`py-3 px-4 rounded-xl border text-sm font-semibold transition-all ${
-                form.capital_range === r.value
-                  ? "border-green-500/60 bg-green-500/10 text-green-400"
-                  : "border-white/10 bg-white/3 text-gray-300 hover:border-white/20"
-              }`}
-            >
-              {r.label}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* ---- Step 4: Préférences ---- */
-function Step4({ form, setForm, toggle }: {
-  form: FormData
-  setForm: React.Dispatch<React.SetStateAction<FormData>>
-  toggle: (v: string) => void
-}) {
-  const riskOptions = [
-    { icon: "🛡️", label: "Prudent", value: "faible" as const, desc: "Sécurité avant tout" },
-    { icon: "⚖️", label: "Modéré", value: "modéré" as const, desc: "Équilibre risque/gain" },
-    { icon: "🔥", label: "Agressif", value: "élevé" as const, desc: "Maximiser les gains" },
-  ]
-
-  return (
-    <div className="space-y-8">
-      <div className="text-center">
-        <h2 className="text-2xl font-black text-white mb-2">Tes préférences</h2>
-        <p className="text-gray-400">Personnalise ton expérience de trading</p>
-      </div>
-
-      <div>
-        <label className="block text-sm text-gray-400 mb-3 font-semibold">
-          Quels actifs t'intéressent ? <span className="text-gray-600">(plusieurs choix)</span>
-        </label>
-        <div className="grid grid-cols-2 gap-3">
-          {ASSET_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => toggle(opt.value)}
-              className={`py-3 px-4 rounded-xl border text-sm font-semibold text-left transition-all ${
-                form.preferred_assets.includes(opt.value)
-                  ? "border-green-500/60 bg-green-500/10 text-green-400"
-                  : "border-white/10 bg-white/3 text-gray-300 hover:border-white/20"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm text-gray-400 mb-3 font-semibold">Quel est ton profil de risque ?</label>
-        <div className="grid grid-cols-3 gap-3">
-          {riskOptions.map(r => (
-            <button
-              key={r.value}
-              onClick={() => setForm(f => ({ ...f, risk_tolerance: r.value }))}
-              className={`p-4 rounded-xl border transition-all text-center ${
-                form.risk_tolerance === r.value
-                  ? "border-green-500/60 bg-green-500/10"
-                  : "border-white/10 bg-white/3 hover:border-white/20"
-              }`}
-            >
-              <div className="text-2xl mb-1">{r.icon}</div>
-              <div className="text-white text-sm font-bold">{r.label}</div>
-              <div className="text-gray-500 text-xs mt-1">{r.desc}</div>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* ---- Step 5: Résumé ---- */
-function Step5({ form }: { form: FormData }) {
-  const courses = form.level ? RECOMMENDED_COURSES[form.level] ?? [] : []
-  const levelLabel: Record<string, { emoji: string; color: string }> = {
-    "débutant": { emoji: "🌱", color: "text-green-400" },
-    "intermédiaire": { emoji: "📈", color: "text-blue-400" },
-    "avancé": { emoji: "🎯", color: "text-purple-400" },
-  }
-  const lv = form.level ? levelLabel[form.level] : null
-  const initial = form.username.trim()[0]?.toUpperCase() ?? "?"
-
-  const ASSET_LABELS: Record<string, string> = {
-    actions: "🇺🇸 Actions US",
-    crypto: "₿ Crypto",
-    etf: "📊 ETFs",
-    matieres_premieres: "🥇 Matières premières",
-    actions_intl: "🌍 Actions intl.",
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h2 className="text-2xl font-black text-white mb-1">Ton compte est prêt !</h2>
-        <p className="text-gray-400 text-sm">Voici un résumé de ton profil</p>
-      </div>
-
-      {/* Profile card */}
-      <div className="bg-[#111] border border-white/10 rounded-2xl p-5 space-y-4">
-        <div className="flex items-center gap-4">
-          <div
-            className="w-14 h-14 rounded-full flex items-center justify-center text-2xl font-black text-black flex-shrink-0"
-            style={{ backgroundColor: form.avatar_color }}
-          >
-            {initial}
-          </div>
-          <div>
-            <div className="text-white font-black text-lg">{form.username || "—"}</div>
-            {lv && (
-              <span className={`text-sm font-bold ${lv.color}`}>
-                {lv.emoji} {form.level}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {form.goals.length > 0 && (
-          <div>
-            <div className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wide">Objectifs</div>
-            <div className="flex flex-wrap gap-2">
-              {form.goals.map(g => {
-                const opt = GOAL_OPTIONS.find(o => o.value === g)
-                return (
-                  <span key={g} className="text-xs px-2 py-1 rounded-lg bg-green-500/10 text-green-400 border border-green-500/20 font-semibold">
-                    {opt?.label ?? g}
-                  </span>
-                )
-              })}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Recommended courses */}
-      {courses.length > 0 && (
-        <div className="bg-[#111] border border-white/10 rounded-2xl p-5">
-          <div className="text-xs text-gray-500 mb-3 font-semibold uppercase tracking-wide">Cours recommandés pour toi</div>
-          <div className="space-y-2">
-            {courses.map(c => (
-              <div key={c} className="flex items-center gap-3 py-2">
-                <div className="w-6 h-6 rounded-lg bg-green-500/20 flex items-center justify-center text-xs">📚</div>
-                <span className="text-white text-sm font-semibold">{c}</span>
+                <button onClick={next} disabled={!selections.username.trim()}
+                  className="w-full py-4 rounded-2xl font-black text-base text-black transition-all hover:scale-[1.02] disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}>
+                  Commencer l'aventure →
+                </button>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            )}
 
-      {/* Assets */}
-      {form.preferred_assets.length > 0 && (
-        <div className="bg-[#111] border border-white/10 rounded-2xl p-5">
-          <div className="text-xs text-gray-500 mb-3 font-semibold uppercase tracking-wide">Actifs sélectionnés</div>
-          <div className="flex flex-wrap gap-2">
-            {form.preferred_assets.map(a => (
-              <span key={a} className="text-xs px-2 py-1 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 font-semibold">
-                {ASSET_LABELS[a] ?? a}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+            {/* ── LEVEL ── */}
+            {step === "level" && (
+              <div>
+                <div className="text-center mb-8">
+                  <p className="text-4xl mb-3">📊</p>
+                  <h2 className="text-2xl font-black text-white mb-2">Quel est ton niveau ?</h2>
+                  <p className="text-white/40 text-sm">Pour personnaliser ton expérience</p>
+                </div>
+                <div className="space-y-3 mb-8">
+                  {LEVELS.map(level => (
+                    <button key={level.key}
+                      onClick={() => { setSelections(s => ({ ...s, level: level.key })); haptic("light") }}
+                      className="w-full flex items-center gap-4 p-4 rounded-2xl transition-all text-left"
+                      style={{
+                        background: selections.level === level.key ? `${level.color}12` : "rgba(255,255,255,0.03)",
+                        border: `1px solid ${selections.level === level.key ? `${level.color}35` : "rgba(255,255,255,0.07)"}`,
+                        transform: selections.level === level.key ? "scale(1.01)" : "scale(1)",
+                      }}>
+                      <span className="text-3xl">{level.icon}</span>
+                      <div className="flex-1">
+                        <p className="font-black text-white">{level.label}</p>
+                        <p className="text-xs text-white/40 mt-0.5">{level.desc}</p>
+                      </div>
+                      {selections.level === level.key && (
+                        <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-black flex-shrink-0"
+                          style={{ background: level.color }}>✓</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={prev} className="px-5 py-3 rounded-xl text-sm font-semibold text-white/40 hover:text-white transition border border-white/[0.08]">← Retour</button>
+                  <button onClick={next} disabled={!selections.level}
+                    className="flex-1 py-3 rounded-xl font-black text-sm text-black disabled:opacity-40 transition-all hover:scale-[1.01]"
+                    style={{ background: "#22c55e" }}>
+                    Continuer →
+                  </button>
+                </div>
+              </div>
+            )}
 
-      {/* Capital fictif */}
-      <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-2xl p-4 text-center">
-        <div className="text-green-400 text-sm font-bold">Capital fictif de départ</div>
-        <div className="text-white text-3xl font-black mt-1">100 000 $</div>
-        <div className="text-gray-500 text-xs mt-1">Entraîne-toi sans risque réel</div>
+            {/* ── GOALS ── */}
+            {step === "goals" && (
+              <div>
+                <div className="text-center mb-8">
+                  <p className="text-4xl mb-3">🎯</p>
+                  <h2 className="text-2xl font-black text-white mb-2">Quels sont tes objectifs ?</h2>
+                  <p className="text-white/40 text-sm">Sélectionne tout ce qui te correspond</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3 mb-8">
+                  {GOALS.map(goal => {
+                    const selected = selections.goals.includes(goal.key)
+                    return (
+                      <button key={goal.key} onClick={() => toggleGoal(goal.key)}
+                        className="flex items-center gap-3 p-4 rounded-2xl transition-all text-left"
+                        style={{
+                          background: selected ? "rgba(34,197,94,0.10)" : "rgba(255,255,255,0.03)",
+                          border: `1px solid ${selected ? "rgba(34,197,94,0.30)" : "rgba(255,255,255,0.07)"}`,
+                        }}>
+                        <span className="text-2xl">{goal.icon}</span>
+                        <span className="text-sm font-semibold text-white/70 flex-1">{goal.label}</span>
+                        {selected && <span className="text-green-400 text-sm">✓</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={prev} className="px-5 py-3 rounded-xl text-sm font-semibold text-white/40 hover:text-white transition border border-white/[0.08]">← Retour</button>
+                  <button onClick={next} disabled={selections.goals.length === 0}
+                    className="flex-1 py-3 rounded-xl font-black text-sm text-black disabled:opacity-40 transition-all hover:scale-[1.01]"
+                    style={{ background: "#22c55e" }}>
+                    Continuer →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ── ASSETS ── */}
+            {step === "assets" && (
+              <div>
+                <div className="text-center mb-8">
+                  <p className="text-4xl mb-3">💹</p>
+                  <h2 className="text-2xl font-black text-white mb-2">Quels marchés t'intéressent ?</h2>
+                  <p className="text-white/40 text-sm">Choisis un ou plusieurs marchés</p>
+                </div>
+                <div className="space-y-3 mb-8">
+                  {ASSET_TYPES.map(asset => {
+                    const selected = selections.assets.includes(asset.key)
+                    return (
+                      <button key={asset.key} onClick={() => toggleAsset(asset.key)}
+                        className="w-full flex items-center gap-4 p-4 rounded-2xl transition-all text-left"
+                        style={{
+                          background: selected ? "rgba(34,197,94,0.08)" : "rgba(255,255,255,0.03)",
+                          border: `1px solid ${selected ? "rgba(34,197,94,0.25)" : "rgba(255,255,255,0.07)"}`,
+                        }}>
+                        <span className="text-2xl">{asset.icon}</span>
+                        <div className="flex-1">
+                          <p className="font-bold text-white">{asset.label}</p>
+                          <p className="text-xs text-white/35">{asset.desc}</p>
+                        </div>
+                        {selected && (
+                          <span className="w-5 h-5 rounded-full bg-green-400 flex items-center justify-center text-[10px] font-black text-black flex-shrink-0">✓</span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={prev} className="px-5 py-3 rounded-xl text-sm font-semibold text-white/40 hover:text-white transition border border-white/[0.08]">← Retour</button>
+                  <button onClick={next} disabled={selections.assets.length === 0}
+                    className="flex-1 py-3 rounded-xl font-black text-sm text-black disabled:opacity-40 transition-all hover:scale-[1.01]"
+                    style={{ background: "#22c55e" }}>
+                    Continuer →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ── CAPITAL ── */}
+            {step === "capital" && (
+              <div>
+                <div className="text-center mb-8">
+                  <p className="text-4xl mb-3">💰</p>
+                  <h2 className="text-2xl font-black text-white mb-2">Ton capital de trading ?</h2>
+                  <p className="text-white/40 text-sm">Pour calibrer les recommandations · Anonyme et confidentiel</p>
+                </div>
+                <div className="space-y-2.5 mb-8">
+                  {CAPITAL_RANGES.map(range => (
+                    <button key={range.key}
+                      onClick={() => { setSelections(s => ({ ...s, capital: range.key })); haptic("light") }}
+                      className="w-full flex items-center gap-4 p-4 rounded-2xl transition-all text-left"
+                      style={{
+                        background: selections.capital === range.key ? "rgba(34,197,94,0.08)" : "rgba(255,255,255,0.03)",
+                        border: `1px solid ${selections.capital === range.key ? "rgba(34,197,94,0.25)" : "rgba(255,255,255,0.07)"}`,
+                      }}>
+                      <span className="text-2xl">{range.icon}</span>
+                      <div className="flex-1">
+                        <p className="font-bold text-white">{range.label}</p>
+                        <p className="text-xs text-white/35">{range.desc}</p>
+                      </div>
+                      {selections.capital === range.key && (
+                        <span className="w-5 h-5 rounded-full bg-green-400 flex items-center justify-center text-[10px] font-black text-black flex-shrink-0">✓</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={prev} className="px-5 py-3 rounded-xl text-sm font-semibold text-white/40 hover:text-white transition border border-white/[0.08]">← Retour</button>
+                  <button onClick={completeOnboarding} disabled={!selections.capital || saving}
+                    className="flex-1 py-3 rounded-xl font-black text-sm text-black disabled:opacity-40 transition-all hover:scale-[1.01]"
+                    style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}>
+                    {saving ? "⏳ Finalisation..." : "🚀 Terminer l'inscription"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ── DONE ── */}
+            {step === "done" && (
+              <div className="text-center">
+                <div className="text-7xl mb-6 animate-bounce">🎉</div>
+                <h2 className="text-3xl font-black text-white mb-3">
+                  Tu es prêt, {selections.username || "Trader"} !
+                </h2>
+                <p className="text-white/50 text-base leading-relaxed mb-8">
+                  Ton compte Tradex est configuré. Tu as reçu{" "}
+                  <strong className="text-green-400">$100 000 fictifs</strong> et{" "}
+                  <strong className="text-yellow-400">+100 XP</strong> pour démarrer.
+                </p>
+
+                {/* Résumé */}
+                <div className="rounded-2xl p-5 mb-8 text-left"
+                  style={{ background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.15)" }}>
+                  <p className="text-[10px] text-green-400/60 uppercase tracking-widest font-bold mb-3">Ton profil</p>
+                  <div className="space-y-2">
+                    {[
+                      { label: "Pseudo",   value: selections.username },
+                      { label: "Niveau",   value: LEVELS.find(l => l.key === selections.level)?.label },
+                      { label: "Marchés",  value: selections.assets.map(a => ASSET_TYPES.find(t => t.key === a)?.label).join(", ") },
+                      { label: "Capital",  value: CAPITAL_RANGES.find(c => c.key === selections.capital)?.label },
+                    ].map(item => (
+                      <div key={item.label} className="flex justify-between text-sm">
+                        <span className="text-white/40">{item.label}</span>
+                        <span className="font-semibold text-white">{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <button onClick={() => router.push("/dashboard")}
+                    className="w-full py-4 rounded-2xl font-black text-base text-black transition-all hover:scale-[1.02]"
+                    style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", boxShadow: "0 0 40px rgba(34,197,94,0.25)" }}>
+                    🚀 Accéder au Dashboard
+                  </button>
+                  <button onClick={() => router.push("/apprendre")}
+                    className="w-full py-3 rounded-2xl font-semibold text-sm text-white/50 hover:text-white transition border border-white/10">
+                    📚 Commencer par l'académie
+                  </button>
+                </div>
+              </div>
+            )}
+
+          </motion.div>
+        </AnimatePresence>
       </div>
+
+      {/* Skip */}
+      {step !== "welcome" && step !== "done" && (
+        <div className="text-center pb-6">
+          <button onClick={() => router.push("/dashboard")}
+            className="text-xs text-white/20 hover:text-white/50 transition">
+            Passer l'onboarding →
+          </button>
+        </div>
+      )}
     </div>
   )
 }
