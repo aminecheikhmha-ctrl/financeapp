@@ -17,7 +17,6 @@ const PRINCIPAL = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard"  },
   { href: "/portfolio", icon: Briefcase,        label: "Portfolio"  },
   { href: "/watchlist", icon: Star,             label: "Watchlist"  },
-  { href: "/compare",   icon: GitCompare,       label: "Comparer"   },
   { href: "/signaux",   icon: TrendingUp,       label: "Signaux"    },
   { href: "/analyses",  icon: BarChart2,        label: "Analyses"   },
   { href: "/news",      icon: Newspaper,        label: "News"       },
