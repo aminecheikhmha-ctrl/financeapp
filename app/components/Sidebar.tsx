@@ -111,6 +111,7 @@ export default function Sidebar() {
   const [forumCount,    setForumCount]    = useState(0)
   const [username,      setUsername]      = useState<string | null>(null)
   const [avatarColor,   setAvatarColor]   = useState("#4ade80")
+  const [avatarUrl,     setAvatarUrl]     = useState<string | null>(null)
   const [xp,            setXp]            = useState(0)
   const [levelName,     setLevelName]     = useState("Novice")
   const [userLevel,     setUserLevel]     = useState<string>("")
@@ -139,12 +140,13 @@ export default function Sidebar() {
 
       const { data: up } = await supabase
         .from("user_profiles")
-        .select("username, avatar_color, xp, level_name, level")
+        .select("username, avatar_color, avatar_url, xp, level_name, level")
         .eq("id", data.user.id)
         .single()
       if (up) {
         if (up.username)     setUsername(up.username)
         if (up.avatar_color) setAvatarColor(up.avatar_color)
+        if (up.avatar_url)   setAvatarUrl(up.avatar_url)
         if (up.xp != null)   setXp(up.xp)
         if (up.level_name)   setLevelName(up.level_name)
         if (up.level)        setUserLevel(up.level)
@@ -205,6 +207,7 @@ export default function Sidebar() {
         (payload: any) => {
           if (payload.new?.xp != null)        setXp(payload.new.xp)
           if (payload.new?.level_name)         setLevelName(payload.new.level_name)
+          if (payload.new?.avatar_url != null) setAvatarUrl(payload.new.avatar_url || null)
         }
       )
       .subscribe()
@@ -402,10 +405,18 @@ export default function Sidebar() {
           <>
             <a href="/profil" className="flex items-center gap-2 flex-1 min-w-0 group">
               <div
-                className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-black group-hover:ring-2 group-hover:ring-green-400/30 transition-all"
-                style={{ backgroundColor: avatarColor }}
+                className="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden group-hover:ring-2 group-hover:ring-green-400/30 transition-all"
               >
-                {initial}
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <div
+                    className="w-full h-full flex items-center justify-center text-[11px] font-bold text-black"
+                    style={{ backgroundColor: avatarColor }}
+                  >
+                    {initial}
+                  </div>
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-semibold text-white/80 truncate group-hover:text-white transition">{username ?? user?.email}</p>

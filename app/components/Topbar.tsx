@@ -30,6 +30,7 @@ export default function Topbar() {
   const [user,        setUser]        = useState<any>(null)
   const [username,    setUsername]    = useState<string | null>(null)
   const [avatarColor, setAvatarColor] = useState("#4ade80")
+  const [avatarUrl,   setAvatarUrl]   = useState<string | null>(null)
   const [showDrop, setShowDrop] = useState(false)
   const [marketOpen,  setMarketOpen]  = useState(false)
 
@@ -50,11 +51,12 @@ export default function Topbar() {
       setUser(data.user)
       const { data: up } = await supabase
         .from("user_profiles")
-        .select("username, avatar_color")
+        .select("username, avatar_color, avatar_url")
         .eq("id", data.user.id)
         .single()
-      if (up?.username)    setUsername(up.username)
+      if (up?.username)     setUsername(up.username)
       if (up?.avatar_color) setAvatarColor(up.avatar_color)
+      if (up?.avatar_url)   setAvatarUrl(up.avatar_url)
     })
 
     const { data: listener } = supabase.auth.onAuthStateChange((_e, s) => setUser(s?.user ?? null))
@@ -119,11 +121,17 @@ export default function Topbar() {
             onClick={() => setShowDrop(d => !d)}
             className="flex items-center gap-2 p-1 rounded-lg hover:bg-white/5 transition"
           >
-            <div
-              className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-black flex-shrink-0"
-              style={{ backgroundColor: avatarColor }}
-            >
-              {initial}
+            <div className="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+              ) : (
+                <div
+                  className="w-full h-full flex items-center justify-center text-[11px] font-bold text-black"
+                  style={{ backgroundColor: avatarColor }}
+                >
+                  {initial}
+                </div>
+              )}
             </div>
             <ChevronDown size={12} className={cn("text-white/25 transition-transform", showDrop && "rotate-180")} />
           </button>

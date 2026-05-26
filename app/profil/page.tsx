@@ -10,6 +10,7 @@ import {
   ACHIEVEMENTS, RARITY_COLORS, getLevelInfo,
   type AchievementCategory, type Rarity,
 } from "@/lib/achievements"
+import AvatarUpload from "@/app/components/AvatarUpload"
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
 
@@ -214,6 +215,7 @@ export default function ProfilPage() {
   const [unlockedIds, setUnlockedIds]       = useState<string[]>([])
   const [leaderboard, setLeaderboard]       = useState<any[]>([])
   const [loading, setLoading]               = useState(true)
+  const [avatarUrl, setAvatarUrl]           = useState<string | null>(null)
   const [tab, setTab]                       = useState<Tab>("trading")
   const [myRank, setMyRank]                 = useState<number | null>(null)
 
@@ -224,8 +226,9 @@ export default function ProfilPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: { user: u } } = await supabase.auth.getUser()
-      if (!u) { router.push("/login"); return }
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { router.push("/login"); return }
+      const u = session.user
       setUser(u)
 
       const token = await getToken()
@@ -249,6 +252,7 @@ export default function ProfilPage() {
         // Override streak_days with the freshly computed value
         if (p && streakRes?.streak_days != null) p.streak_days = streakRes.streak_days
         setProfile(p)
+        if (p?.avatar_url) setAvatarUrl(p.avatar_url)
       }
       if (accRes.status === "fulfilled") setAccount(accRes.value?.account ?? null)
       if (posRes.status === "fulfilled") setPositions(Array.isArray(posRes.value?.positions) ? posRes.value.positions : [])
@@ -337,21 +341,17 @@ export default function ProfilPage() {
           />
 
           <div className="relative flex items-start gap-4">
-            {/* Avatar with glow ring */}
-            <div className="relative flex-shrink-0">
-              <div
-                className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-black text-black"
-                style={{ backgroundColor: avatarBg, boxShadow: `0 0 20px ${levelInfo.color}40` }}
-              >
-                {initial}
-              </div>
-              <div
-                className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full border-2 border-[#111] flex items-center justify-center text-sm"
-                style={{ background: `${levelInfo.color}20`, borderColor: `${levelInfo.color}60` }}
-              >
-                {levelInfo.icon}
-              </div>
-            </div>
+            {/* Avatar with upload */}
+            <AvatarUpload
+              currentUrl={avatarUrl}
+              avatarColor={avatarBg}
+              initial={initial}
+              levelColor={levelInfo.color}
+              levelIcon={levelInfo.icon}
+              size="lg"
+              onUploaded={url => setAvatarUrl(url)}
+              onRemoved={() => setAvatarUrl(null)}
+            />
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-0.5">

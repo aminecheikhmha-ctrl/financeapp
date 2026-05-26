@@ -36,6 +36,7 @@ export default function BottomNav() {
   const [menuOpen,    setMenuOpen]    = useState(false)
   const [username,    setUsername]    = useState<string | null>(null)
   const [avatarColor, setAvatarColor] = useState("#4ade80")
+  const [avatarUrl,   setAvatarUrl]   = useState<string | null>(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -43,11 +44,12 @@ export default function BottomNav() {
       setUser(data.user)
       const { data: up } = await supabase
         .from("user_profiles")
-        .select("username, avatar_color")
+        .select("username, avatar_color, avatar_url")
         .eq("id", data.user.id)
         .single()
-      if (up?.username)    setUsername(up.username)
+      if (up?.username)     setUsername(up.username)
       if (up?.avatar_color) setAvatarColor(up.avatar_color)
+      if (up?.avatar_url)   setAvatarUrl(up.avatar_url)
     })
 
     fetch("/api/signals")
@@ -103,11 +105,17 @@ export default function BottomNav() {
           onClick={() => setMenuOpen(false)}
           className="flex items-center gap-3 mx-4 mb-3 mt-1 p-3 rounded-2xl bg-white/[0.03] active:bg-white/[0.08] transition"
         >
-          <div
-            className="w-10 h-10 rounded-full flex items-center justify-center text-black font-black text-sm flex-shrink-0"
-            style={{ backgroundColor: avatarColor }}
-          >
-            {initial}
+          <div className="w-10 h-10 rounded-full flex-shrink-0 overflow-hidden">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+            ) : (
+              <div
+                className="w-full h-full flex items-center justify-center text-black font-black text-sm"
+                style={{ backgroundColor: avatarColor }}
+              >
+                {initial}
+              </div>
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-white font-bold text-sm truncate">{username ?? user?.email?.split("@")[0]}</p>
