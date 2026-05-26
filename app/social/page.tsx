@@ -46,26 +46,180 @@ function timeAgo(date: string): string {
   return `il y a ${Math.floor(hours / 24)}j`
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── Podium ───────────────────────────────────────────────────────────────────
+
+function Podium({ traders }: { traders: Trader[] }) {
+  if (traders.length < 3) return null
+
+  const POSITIONS = [1, 0, 2]
+  const HEIGHTS   = ["h-24", "h-32", "h-20"]
+  const MEDALS    = ["🥈", "🥇", "🥉"]
+  const RING_COLORS = ["rgba(156,163,175,0.4)", "rgba(250,204,21,0.5)", "rgba(205,124,43,0.4)"]
+
+  return (
+    <div className="bg-[#111] border border-white/5 rounded-2xl p-6 mb-6">
+      <p className="text-xs text-gray-600 font-semibold uppercase tracking-widest text-center mb-6">
+        Meilleurs traders
+      </p>
+      <div className="flex items-end justify-center gap-6">
+        {POSITIONS.map(idx => {
+          const t = traders[idx]
+          const isGold = idx === 0
+          return (
+            <div key={t.user_id} className="flex flex-col items-center gap-2">
+              <div
+                className="rounded-full flex items-center justify-center font-black text-black"
+                style={{
+                  width: isGold ? 56 : 44,
+                  height: isGold ? 56 : 44,
+                  backgroundColor: t.avatar_color ?? "#4ade80",
+                  boxShadow: `0 0 20px ${RING_COLORS[idx]}`,
+                }}
+              >
+                <span style={{ fontSize: isGold ? 22 : 17 }}>{(t.username ?? "?")[0]?.toUpperCase()}</span>
+              </div>
+              <p className={`font-bold text-white truncate max-w-[70px] text-center ${isGold ? "text-sm" : "text-xs"}`}>
+                {t.username ?? "Anonyme"}
+              </p>
+              <p className={`font-black text-xs ${(t.avg_pnl_pct ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                {(t.avg_pnl_pct ?? 0) >= 0 ? "+" : ""}{(t.avg_pnl_pct ?? 0).toFixed(1)}%
+              </p>
+              <div className={`${HEIGHTS[idx]} w-20 rounded-t-2xl flex items-center justify-center text-2xl ${
+                isGold
+                  ? "bg-yellow-500/15 border border-yellow-500/25"
+                  : idx === 1
+                  ? "bg-gray-400/8 border border-gray-400/15"
+                  : "bg-orange-600/8 border border-orange-600/15"
+              }`}>
+                {MEDALS[idx]}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ─── Trader Card ──────────────────────────────────────────────────────────────
+
+function TraderCard({
+  trader, rank, isFollowing, isCopying, onFollow, onCopy,
+}: {
+  trader: Trader
+  rank: number
+  isFollowing: boolean
+  isCopying: boolean
+  onFollow: () => void
+  onCopy: () => void
+}) {
+  return (
+    <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-white/5 bg-[#111] hover:border-white/10 transition">
+      <span className="text-sm font-black text-gray-600 w-6 text-center flex-shrink-0">
+        {rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`}
+      </span>
+      <div
+        className="w-9 h-9 rounded-full flex items-center justify-center font-black text-xs text-black flex-shrink-0"
+        style={{ backgroundColor: trader.avatar_color ?? "#4ade80" }}
+      >
+        {(trader.username ?? "?")[0]?.toUpperCase()}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-white font-bold text-sm truncate">@{trader.username ?? "Anonyme"}</p>
+        <p className="text-gray-600 text-xs">{trader.total_trades} trades · {Math.round(trader.win_rate ?? 0)}% WR</p>
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <p className={`text-sm font-black w-14 text-right ${(trader.avg_pnl_pct ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
+          {(trader.avg_pnl_pct ?? 0) >= 0 ? "+" : ""}{(trader.avg_pnl_pct ?? 0).toFixed(1)}%
+        </p>
+        <button
+          onClick={onFollow}
+          className={`text-xs px-2.5 py-1.5 rounded-lg font-bold transition flex-shrink-0 ${
+            isFollowing
+              ? "bg-white/8 text-gray-400"
+              : "bg-green-500/15 text-green-400 border border-green-500/25 hover:bg-green-500/25"
+          }`}
+        >
+          {isFollowing ? "✓" : "+"}
+        </button>
+        <button
+          onClick={onCopy}
+          title={isCopying ? "Arrêter la copie" : "Copier les trades"}
+          className={`text-xs px-2 py-1.5 rounded-lg font-bold transition flex-shrink-0 ${
+            isCopying
+              ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+              : "bg-white/5 text-gray-600 border border-white/8 hover:text-blue-400"
+          }`}
+        >
+          📋
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Feed Item ────────────────────────────────────────────────────────────────
+
+function FeedCard({ item }: { item: FeedItem }) {
+  const isTrade = item.type === "trade"
+  const isBuy   = item.side === "buy"
+  const hasPnl  = item.pnl_pct != null
+
+  return (
+    <div className="flex items-start gap-3 px-4 py-3 rounded-xl border border-white/5 bg-[#111]">
+      <div
+        className="w-9 h-9 rounded-full flex items-center justify-center font-black text-sm flex-shrink-0 mt-0.5"
+        style={{ background: isTrade ? (isBuy ? "rgba(74,222,128,0.15)" : "rgba(248,113,113,0.15)") : "rgba(167,139,250,0.15)" }}
+      >
+        {isTrade ? (isBuy ? "↗" : "↘") : "🏅"}
+      </div>
+      <div className="flex-1 min-w-0">
+        {isTrade ? (
+          <p className="text-sm text-white leading-snug">
+            <span className="font-bold text-green-400">@{item.user}</span>
+            {isBuy ? " a acheté " : " a vendu "}
+            <span className="font-bold">{item.symbol}</span>
+            {hasPnl && (
+              <span className={`ml-1 font-black ${(item.pnl_pct ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                {(item.pnl_pct ?? 0) >= 0 ? "+" : ""}{(item.pnl_pct ?? 0).toFixed(1)}%
+              </span>
+            )}
+          </p>
+        ) : (
+          <p className="text-sm text-white leading-snug">
+            <span className="font-bold text-purple-400">@{item.user}</span>
+            {" a débloqué "}
+            <span className="font-bold">{item.achievement}</span>
+          </p>
+        )}
+        <p className="text-gray-600 text-xs mt-0.5">{timeAgo(item.timestamp)}</p>
+      </div>
+    </div>
+  )
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
+type Tab = "leaderboard" | "feed" | "trades"
 
 export default function SocialPage() {
   const router = useRouter()
-  const [feed, setFeed] = useState<FeedItem[]>([])
-  const [topTraders, setTopTraders] = useState<Trader[]>([])
+  const [feed, setFeed]               = useState<FeedItem[]>([])
+  const [topTraders, setTopTraders]   = useState<Trader[]>([])
   const [publicTrades, setPublicTrades] = useState<PublicTrade[]>([])
-  const [activeTab, setActiveTab] = useState<"feed" | "top" | "trades">("feed")
-  const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab]     = useState<Tab>("leaderboard")
+  const [loading, setLoading]         = useState(true)
   const [followStatus, setFollowStatus] = useState<Record<string, boolean>>({})
-  const [copying,     setCopying]      = useState<Set<string>>(new Set())
+  const [copying, setCopying]         = useState<Set<string>>(new Set())
+  const [userId, setUserId]           = useState<string | null>(null)
 
   useEffect(() => {
     async function init() {
       const { data: sessionData } = await supabase.auth.getSession()
-      if (!sessionData.session) {
-        router.replace("/login")
-        return
-      }
+      if (!sessionData.session) { router.replace("/login"); return }
+
       const token = sessionData.session.access_token
+      setUserId(sessionData.session.user.id)
 
       try {
         const [feedRes, topRes, tradesRes] = await Promise.all([
@@ -75,327 +229,206 @@ export default function SocialPage() {
         ])
 
         if (feedRes.ok) {
-          const feedData = await feedRes.json()
-          setFeed(feedData?.items ?? feedData ?? [])
+          const d = await feedRes.json()
+          setFeed(d?.items ?? d ?? [])
         }
         if (topRes.ok) {
-          const topData = await topRes.json()
-          setTopTraders(topData?.traders ?? topData ?? [])
+          const d = await topRes.json()
+          setTopTraders(d?.traders ?? d ?? [])
         }
         if (tradesRes.ok) {
-          const tradesData = await tradesRes.json()
-          setPublicTrades(tradesData?.trades ?? tradesData ?? [])
+          const d = await tradesRes.json()
+          setPublicTrades(d?.trades ?? d ?? [])
         }
 
-        // Load follow statuses
         const { data: follows } = await supabase
-          .from("follows")
-          .select("following_id")
-          .eq("follower_id", sessionData.session.user.id)
-
+          .from("follows").select("following_id").eq("follower_id", sessionData.session.user.id)
         if (follows) {
           const map: Record<string, boolean> = {}
-          follows.forEach((f) => { map[f.following_id] = true })
+          follows.forEach((f: any) => { map[f.following_id] = true })
           setFollowStatus(map)
         }
-      } catch {
-        // silently fail
-      } finally {
-        setLoading(false)
-      }
+      } catch {}
+
+      setLoading(false)
     }
     init()
   }, [router])
 
-  async function toggleCopy(userId: string) {
+  async function handleFollow(traderId: string) {
+    const { data } = await supabase.auth.getSession()
+    const token = data.session?.access_token
+    if (!token) return
+    const isFollowing = followStatus[traderId]
+    await fetch("/api/social/follow", {
+      method: isFollowing ? "DELETE" : "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: isFollowing ? undefined : JSON.stringify({ following_id: traderId }),
+    })
+    setFollowStatus(prev => ({ ...prev, [traderId]: !prev[traderId] }))
+  }
+
+  async function toggleCopy(traderId: string) {
     const { data } = await supabase.auth.getSession()
     if (!data.session) return
-    const isCopying = copying.has(userId)
+    const isCopying = copying.has(traderId)
     if (isCopying) {
       await supabase.from("social_follows")
         .update({ copy_trades: false })
         .eq("follower_id", data.session.user.id)
-        .eq("following_id", userId)
+        .eq("following_id", traderId)
     } else {
-      await supabase.from("social_follows")
-        .upsert({
-          follower_id:      data.session.user.id,
-          following_id:     userId,
-          copy_trades:      true,
-          copy_amount_pct:  10,
-        }, { onConflict: "follower_id,following_id" })
+      await supabase.from("social_follows").upsert({
+        follower_id: data.session.user.id,
+        following_id: traderId,
+        copy_trades: true,
+        copy_amount_pct: 10,
+      }, { onConflict: "follower_id,following_id" })
     }
     setCopying(prev => {
       const next = new Set(prev)
-      if (isCopying) next.delete(userId); else next.add(userId)
+      if (isCopying) next.delete(traderId); else next.add(traderId)
       return next
     })
   }
 
-  async function handleFollow(userId: string) {
-    const { data } = await supabase.auth.getSession()
-    const token = data.session?.access_token
-    if (!token) return
-
-    const isFollowing = followStatus[userId]
-
-    await fetch("/api/social/follow", {
-      method: isFollowing ? "DELETE" : "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: isFollowing ? undefined : JSON.stringify({ following_id: userId }),
-    })
-
-    setFollowStatus((prev) => ({ ...prev, [userId]: !prev[userId] }))
-  }
-
-  const tabs: { key: "feed" | "top" | "trades"; label: string }[] = [
-    { key: "feed", label: "📰 Feed" },
-    { key: "top", label: "🏆 Top Traders" },
-    { key: "trades", label: "📊 Trades Publics" },
+  const tabs: { key: Tab; label: string }[] = [
+    { key: "leaderboard", label: "🏆 Classement" },
+    { key: "feed",        label: "📰 Feed"        },
+    { key: "trades",      label: "📊 Trades"      },
   ]
 
   return (
     <div className="min-h-screen text-white overflow-x-hidden" style={{ background: "#080808" }}>
-      <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 space-y-6">
+      <div className="max-w-2xl mx-auto px-4 py-6">
+
         {/* Header */}
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black">👥 Social Trading</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Suis les meilleurs traders et copie leurs stratégies
-          </p>
+        <div className="mb-6">
+          <h1 className="text-2xl font-black text-white">Social Trading</h1>
+          <p className="text-gray-500 text-sm mt-1">Suis les meilleurs traders et copie leurs stratégies</p>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {tabs.map((tab) => (
+        <div className="flex gap-1 bg-[#111] border border-white/5 rounded-xl p-1 mb-6">
+          {tabs.map(t => (
             <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                activeTab === tab.key
-                  ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                  : "text-gray-500 hover:text-gray-300 border border-transparent hover:border-white/10"
+              key={t.key}
+              onClick={() => setActiveTab(t.key)}
+              className={`flex-1 whitespace-nowrap py-2 rounded-lg text-xs font-bold transition-all ${
+                activeTab === t.key ? "bg-green-500/15 text-green-400" : "text-gray-500 hover:text-white"
               }`}
             >
-              {tab.label}
+              {t.label}
             </button>
           ))}
         </div>
 
-        {/* Content */}
         {loading ? (
           <div className="space-y-3">
-            {[1, 2, 3, 4].map((n) => (
-              <div
-                key={n}
-                className="h-16 rounded-xl animate-pulse"
-                style={{ background: "#0d0d0d" }}
-              />
+            {[1, 2, 3].map(n => (
+              <div key={n} className="h-16 rounded-xl animate-pulse" style={{ background: "#111" }} />
             ))}
           </div>
         ) : (
           <>
-            {/* ── Feed Tab ── */}
-            {activeTab === "feed" && (
+            {/* Leaderboard */}
+            {activeTab === "leaderboard" && (
               <div className="space-y-3">
-                {feed.length === 0 ? (
-                  <div className="text-center py-16 text-gray-600">
-                    <p className="text-4xl mb-3">👥</p>
-                    <p className="font-bold">Suis des traders pour voir leur activité ici</p>
-                    <p className="text-sm mt-1">
-                      Explore les Top Traders et commence à les suivre
-                    </p>
-                  </div>
-                ) : (
-                  feed.map((item, i) => (
-                    <div
-                      key={i}
-                      className="rounded-xl p-4 flex items-start gap-3"
-                      style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}
-                    >
-                      <div
-                        className="w-9 h-9 rounded-full flex items-center justify-center font-black text-sm flex-shrink-0"
-                        style={{ background: "#4ade8033" }}
-                      >
-                        {item.user?.[0]?.toUpperCase() ?? "?"}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        {item.type === "trade" ? (
-                          <p className="text-white text-sm">
-                            <span className="font-black text-green-400">@{item.user}</span>
-                            {item.side === "buy" ? " a acheté " : " a vendu "}
-                            <span className="font-black">{item.symbol}</span>
-                            {item.pnl_pct != null && (
-                              <span
-                                className={`ml-1 font-black ${
-                                  item.pnl_pct >= 0 ? "text-green-400" : "text-red-400"
-                                }`}
-                              >
-                                {item.pnl_pct >= 0 ? "+" : ""}
-                                {item.pnl_pct?.toFixed(1)}%
-                              </span>
-                            )}
-                          </p>
-                        ) : (
-                          <p className="text-white text-sm">
-                            <span className="font-black text-purple-400">@{item.user}</span>
-                            {" a débloqué "}
-                            <span className="font-black">{item.achievement}</span>
-                          </p>
-                        )}
-                        <p className="text-gray-600 text-xs mt-0.5">{timeAgo(item.timestamp)}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-
-            {/* ── Top Traders Tab ── */}
-            {activeTab === "top" && (
-              <div className="space-y-3">
+                <Podium traders={topTraders} />
                 {topTraders.length === 0 ? (
                   <div className="text-center py-16 text-gray-600">
                     <p className="text-4xl mb-3">🏆</p>
                     <p className="font-bold">Aucun trader classé pour le moment</p>
                   </div>
                 ) : (
-                  topTraders.map((trader, i) => (
-                    <div
-                      key={trader.user_id}
-                      className="rounded-xl p-4 flex items-center gap-3"
-                      style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}
-                    >
-                      {/* Rank */}
-                      <span
-                        className="text-lg font-black w-6 text-center flex-shrink-0"
-                        style={{
-                          color:
-                            i === 0
-                              ? "#facc15"
-                              : i === 1
-                              ? "#9ca3af"
-                              : i === 2
-                              ? "#cd7c2b"
-                              : "#444",
-                        }}
-                      >
-                        {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}
-                      </span>
-
-                      {/* Avatar */}
-                      <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center font-black text-sm flex-shrink-0"
-                        style={{ background: trader.avatar_color ?? "#4ade8033" }}
-                      >
-                        {trader.username?.[0]?.toUpperCase() ?? "?"}
-                      </div>
-
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white font-black text-sm truncate">
-                          @{trader.username ?? "anonymous"}
-                        </p>
-                        <p className="text-gray-500 text-xs">
-                          {trader.total_trades} trades ·{" "}
-                          {trader.win_rate?.toFixed(0) ?? "0"}% win rate
-                        </p>
-                      </div>
-
-                      {/* Return + Follow + Copy */}
-                      <div className="text-right flex-shrink-0 space-y-1">
-                        <p
-                          className={`font-black text-lg ${
-                            (trader.avg_pnl_pct ?? 0) >= 0 ? "text-green-400" : "text-red-400"
-                          }`}
-                        >
-                          {(trader.avg_pnl_pct ?? 0) >= 0 ? "+" : ""}
-                          {(trader.avg_pnl_pct ?? 0).toFixed(1)}%
-                        </p>
-                        <div className="flex items-center gap-1.5 justify-end">
-                          <button
-                            onClick={() => handleFollow(trader.user_id)}
-                            className={`text-xs px-3 py-1 rounded-lg font-bold transition ${
-                              followStatus[trader.user_id]
-                                ? "bg-white/10 text-gray-400"
-                                : "bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30"
-                            }`}
-                          >
-                            {followStatus[trader.user_id] ? "Suivi ✓" : "Suivre"}
-                          </button>
-                          <button
-                            onClick={() => toggleCopy(trader.user_id)}
-                            title={copying.has(trader.user_id) ? "Arrêter la copie" : "Copier les trades (10% du capital)"}
-                            className={`text-xs px-2.5 py-1 rounded-lg font-bold transition ${
-                              copying.has(trader.user_id)
-                                ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                                : "bg-white/5 text-gray-500 border border-white/10 hover:bg-blue-500/10 hover:text-blue-400"
-                            }`}
-                          >
-                            {copying.has(trader.user_id) ? "📋 10%" : "📋"}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                  topTraders.slice(3).map((t, i) => (
+                    <TraderCard
+                      key={t.user_id}
+                      trader={t}
+                      rank={i + 4}
+                      isFollowing={!!followStatus[t.user_id]}
+                      isCopying={copying.has(t.user_id)}
+                      onFollow={() => handleFollow(t.user_id)}
+                      onCopy={() => toggleCopy(t.user_id)}
+                    />
                   ))
+                )}
+                {/* Top 3 listed below podium too */}
+                {topTraders.length > 0 && (
+                  <div className="space-y-3">
+                    {topTraders.slice(0, 3).map((t, i) => (
+                      <TraderCard
+                        key={t.user_id + "_list"}
+                        trader={t}
+                        rank={i + 1}
+                        isFollowing={!!followStatus[t.user_id]}
+                        isCopying={copying.has(t.user_id)}
+                        onFollow={() => handleFollow(t.user_id)}
+                        onCopy={() => toggleCopy(t.user_id)}
+                      />
+                    ))}
+                  </div>
                 )}
               </div>
             )}
 
-            {/* ── Public Trades Tab ── */}
+            {/* Feed */}
+            {activeTab === "feed" && (
+              <div className="space-y-3">
+                {feed.length === 0 ? (
+                  <div className="text-center py-16 text-gray-600">
+                    <p className="text-4xl mb-3">👥</p>
+                    <p className="font-bold text-white">Suis des traders pour voir leur activité</p>
+                    <p className="text-sm mt-1">Va dans le classement et clique sur +</p>
+                    <button
+                      onClick={() => setActiveTab("leaderboard")}
+                      className="mt-4 px-4 py-2 rounded-xl bg-green-500/15 text-green-400 border border-green-500/25 text-sm font-semibold hover:bg-green-500/25 transition"
+                    >
+                      Voir le classement →
+                    </button>
+                  </div>
+                ) : (
+                  feed.map((item, i) => <FeedCard key={i} item={item} />)
+                )}
+              </div>
+            )}
+
+            {/* Public Trades */}
             {activeTab === "trades" && (
               <div className="space-y-3">
                 {publicTrades.length === 0 ? (
                   <div className="text-center py-16 text-gray-600">
                     <p className="text-4xl mb-3">📊</p>
-                    <p className="font-bold">Aucun trade public partagé pour le moment</p>
+                    <p className="font-bold">Aucun trade public partagé</p>
                   </div>
                 ) : (
-                  publicTrades.map((trade) => (
+                  publicTrades.map(trade => (
                     <div
                       key={trade.id}
-                      className="rounded-xl p-4 flex items-center gap-3"
-                      style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl border border-white/5 bg-[#111]"
                     >
-                      {/* Side badge */}
                       <div
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black flex-shrink-0 ${
-                          trade.side === "buy"
-                            ? "bg-green-500/20 text-green-400"
-                            : "bg-red-500/20 text-red-400"
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center font-black flex-shrink-0 ${
+                          trade.side === "buy" ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400"
                         }`}
                       >
                         {trade.side === "buy" ? "↗" : "↘"}
                       </div>
-
-                      {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <p className="text-white font-black text-sm">{trade.symbol}</p>
-                        <p className="text-gray-500 text-xs">
-                          @{trade.username} · {timeAgo(trade.shared_at)}
-                        </p>
+                        <p className="text-white font-bold text-sm">{trade.symbol}</p>
+                        <p className="text-gray-600 text-xs">@{trade.username} · {timeAgo(trade.shared_at)}</p>
                       </div>
-
-                      {/* PnL + link */}
-                      <div className="text-right flex-shrink-0 space-y-1">
+                      <div className="text-right flex-shrink-0">
                         {trade.pnl_pct != null && (
-                          <p
-                            className={`font-black text-sm ${
-                              trade.pnl_pct >= 0 ? "text-green-400" : "text-red-400"
-                            }`}
-                          >
-                            {trade.pnl_pct >= 0 ? "+" : ""}
-                            {trade.pnl_pct.toFixed(1)}%
+                          <p className={`font-black text-sm ${trade.pnl_pct >= 0 ? "text-green-400" : "text-red-400"}`}>
+                            {trade.pnl_pct >= 0 ? "+" : ""}{trade.pnl_pct.toFixed(1)}%
                           </p>
                         )}
                         <a
                           href={`/traders/${trade.username}`}
-                          className="text-[10px] text-blue-400 hover:text-blue-300 font-bold block"
+                          className="text-[10px] text-blue-400 hover:text-blue-300 font-semibold"
                         >
-                          Voir le profil →
+                          Profil →
                         </a>
                       </div>
                     </div>

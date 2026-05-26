@@ -10,7 +10,7 @@ import {
   LayoutDashboard, TrendingUp, BarChart2, Briefcase,
   BookOpen, Users, MessageSquare, FileText, Bot,
   Bell, Settings, ChevronRight, LogOut, Zap, Newspaper,
-  Star, GitCompare
+  Star
 } from "lucide-react"
 
 const PRINCIPAL = [

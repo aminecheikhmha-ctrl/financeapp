@@ -4,93 +4,18 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from "recharts"
+import {
+  ACHIEVEMENTS, RARITY_COLORS, getLevelInfo,
+  type AchievementCategory, type Rarity,
+} from "@/lib/achievements"
 
-function ReferralSection() {
-  const [ref, setRef] = useState<{ code: string; url: string; stats: { total: number; converted: number } } | null>(null)
-  const [copied, setCopied] = useState(false)
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      const token = data.session?.access_token
-      if (!token) return
-      fetch("/api/referral", { headers: { Authorization: `Bearer ${token}` } })
-        .then(r => r.json())
-        .then(setRef)
-        .catch(() => {})
-    })
-  }, [])
-
-  if (!ref) return <div className="text-gray-600 text-xs">Chargement...</div>
-
-  function copy() {
-    navigator.clipboard.writeText(ref!.url)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  return (
-    <div>
-      <div className="flex items-center gap-2 mb-3">
-        <div className="flex-1 bg-[#0a0a0a] border border-white/10 rounded-xl px-3 py-2.5 text-green-400 font-mono text-sm truncate">
-          {ref.url}
-        </div>
-        <button onClick={copy} className="px-3 py-2.5 rounded-xl bg-green-500 hover:bg-green-400 text-black font-bold text-xs transition flex-shrink-0">
-          {copied ? "✓ Copié" : "Copier"}
-        </button>
-      </div>
-      <div className="flex gap-4">
-        <div className="text-center">
-          <p className="text-2xl font-black text-white">{ref.stats.total}</p>
-          <p className="text-gray-500 text-xs">Parrainés</p>
-        </div>
-        <div className="text-center">
-          <p className="text-2xl font-black text-green-400">{ref.stats.converted}</p>
-          <p className="text-gray-500 text-xs">Convertis</p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-const AVATAR_COLORS = [
-  "#4ade80", "#60a5fa", "#f472b6", "#a78bfa",
-  "#fb923c", "#34d399", "#facc15", "#f87171",
-]
-
-type UserProfile = {
-  id: string
-  username?: string
-  avatar_color?: string
-  level?: "débutant" | "intermédiaire" | "avancé"
-  goals?: string[]
-  preferred_assets?: string[]
-  risk_tolerance?: "faible" | "modéré" | "élevé"
-  onboarding_completed?: boolean
-  created_at?: string
-  notifications_email?: boolean
-  notifications_push?: boolean
-}
-
-type Tab = "trading" | "progression" | "classement"
-
-function getLevelBadge(level?: string) {
-  if (level === "débutant") return { emoji: "🌱", color: "text-green-400", bg: "bg-green-500/15 border-green-500/30" }
-  if (level === "intermédiaire") return { emoji: "📈", color: "text-blue-400", bg: "bg-blue-500/15 border-blue-500/30" }
-  if (level === "avancé") return { emoji: "🎯", color: "text-purple-400", bg: "bg-purple-500/15 border-purple-500/30" }
-  return { emoji: "🌱", color: "text-gray-400", bg: "bg-white/5 border-white/10" }
-}
+// ─── Utils ────────────────────────────────────────────────────────────────────
 
 function daysSince(dateStr?: string) {
   if (!dateStr) return 0
-  const diff = Date.now() - new Date(dateStr).getTime()
-  return Math.max(1, Math.floor(diff / (1000 * 60 * 60 * 24)))
+  return Math.max(1, Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000))
 }
 
 function buildPortfolioChart(pnlPct: number) {
@@ -103,107 +28,198 @@ function buildPortfolioChart(pnlPct: number) {
   return points
 }
 
-function CoachRecentAnalysis() {
-  const [coachData, setCoachData] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+// ─── Referral Section ─────────────────────────────────────────────────────────
+
+function ReferralSection() {
+  const [ref, setRef] = useState<{ code: string; url: string; stats: { total: number; converted: number } } | null>(null)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
-    async function load() {
-      const { data } = await supabase.auth.getSession()
+    supabase.auth.getSession().then(({ data }) => {
       const token = data.session?.access_token
-      if (!token) { setLoading(false); return }
-      try {
-        const res = await fetch("/api/ai/trade-coach", {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        const json = await res.json()
-        setCoachData(json)
-      } catch {}
-      setLoading(false)
-    }
-    load()
+      if (!token) return
+      fetch("/api/referral", { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json()).then(setRef).catch(() => {})
+    })
   }, [])
 
-  if (loading) {
-    return <div className="text-gray-600 text-xs">Chargement de l'analyse...</div>
-  }
+  if (!ref) return <p className="text-gray-600 text-xs">Chargement...</p>
 
-  if (!coachData || coachData.insufficient_data) {
-    return (
-      <div className="rounded-2xl p-4 text-center" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
-        <p className="text-gray-500 text-sm">{coachData?.message ?? "Pas encore assez de données."}</p>
-      </div>
-    )
+  function copy() {
+    navigator.clipboard.writeText(ref!.url)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
-
-  const score = coachData.score_global ?? 0
-  const scoreColor = score > 70 ? "text-green-400" : score > 40 ? "text-orange-400" : "text-red-400"
 
   return (
-    <div className="space-y-3">
-      <div className="rounded-2xl p-4" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Dernier rapport</p>
-          <span className={`text-2xl font-black ${scoreColor}`}>{score}<span className="text-gray-600 text-sm">/100</span></span>
+    <div>
+      <div className="flex items-center gap-2 mb-4">
+        <div className="flex-1 bg-[#0a0a0a] border border-white/10 rounded-xl px-3 py-2.5 text-green-400 font-mono text-sm truncate">
+          {ref.url}
         </div>
-        {coachData.synthese && (
-          <p className="text-gray-400 text-xs leading-relaxed">{coachData.synthese}</p>
-        )}
+        <button onClick={copy} className="px-3 py-2.5 rounded-xl bg-green-500 hover:bg-green-400 text-black font-bold text-xs transition flex-shrink-0">
+          {copied ? "✓ Copié" : "Copier"}
+        </button>
       </div>
-
-      {(coachData.patterns ?? []).slice(0, 3).map((pattern: any, i: number) => {
-        const isPositive = pattern.type === "positif"
-        const borderColor = isPositive ? "#4ade80" : "#fb923c"
-        const icon = isPositive ? "✅" : "⚠️"
-        return (
-          <div
-            key={i}
-            className="rounded-xl p-3"
-            style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderLeft: `3px solid ${borderColor}` }}
-          >
-            <div className="flex items-start gap-2">
-              <span className="text-sm flex-shrink-0">{icon}</span>
-              <p className="text-white text-xs font-semibold">{pattern.titre ?? pattern.description}</p>
-            </div>
-          </div>
-        )
-      })}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-white/3 border border-white/5 rounded-xl p-3 text-center">
+          <p className="text-2xl font-black text-white">{ref.stats.total}</p>
+          <p className="text-gray-500 text-xs mt-0.5">Parrainés</p>
+        </div>
+        <div className="bg-white/3 border border-white/5 rounded-xl p-3 text-center">
+          <p className="text-2xl font-black text-green-400">{ref.stats.converted}</p>
+          <p className="text-gray-500 text-xs mt-0.5">Convertis</p>
+        </div>
+      </div>
     </div>
   )
 }
 
+// ─── Achievements Grid ────────────────────────────────────────────────────────
+
+const CATEGORY_TABS: { key: AchievementCategory | "all"; label: string }[] = [
+  { key: "all",       label: "Tous"       },
+  { key: "trading",   label: "Trading"    },
+  { key: "learning",  label: "Formation"  },
+  { key: "community", label: "Forum"      },
+  { key: "social",    label: "Social"     },
+  { key: "streak",    label: "Assiduité"  },
+]
+
+function AchievementsGrid({ unlockedIds }: { unlockedIds: string[] }) {
+  const [catFilter, setCatFilter] = useState<AchievementCategory | "all">("all")
+  const [rarityFilter, setRarityFilter] = useState<Rarity | "all">("all")
+
+  const filtered = ACHIEVEMENTS.filter(a => {
+    if (catFilter !== "all" && a.category !== catFilter) return false
+    if (rarityFilter !== "all" && a.rarity !== rarityFilter) return false
+    return true
+  })
+
+  const unlocked = filtered.filter(a => unlockedIds.includes(a.id))
+  const locked   = filtered.filter(a => !unlockedIds.includes(a.id))
+
+  return (
+    <div>
+      {/* Category tabs */}
+      <div className="flex gap-1.5 overflow-x-auto pb-2 mb-3 no-scrollbar">
+        {CATEGORY_TABS.map(t => (
+          <button
+            key={t.key}
+            onClick={() => setCatFilter(t.key)}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition ${
+              catFilter === t.key
+                ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                : "bg-white/5 text-gray-500 hover:text-white"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Rarity filter */}
+      <div className="flex gap-1.5 overflow-x-auto pb-3 mb-4 no-scrollbar">
+        {(["all", "common", "rare", "epic", "legendary"] as const).map(r => {
+          const c = r === "all" ? null : RARITY_COLORS[r]
+          return (
+            <button
+              key={r}
+              onClick={() => setRarityFilter(r)}
+              className={`flex-shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold transition border ${
+                rarityFilter === r
+                  ? "opacity-100"
+                  : "opacity-40 hover:opacity-70"
+              }`}
+              style={c ? { color: c.hex, borderColor: `${c.hex}40`, background: `${c.hex}10` } : { color: "#9ca3af", borderColor: "rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)" }}
+            >
+              {r === "all" ? "Tous" : RARITY_COLORS[r].label}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Stats */}
+      <div className="flex items-center gap-3 mb-4">
+        <p className="text-xs text-gray-500">
+          <span className="text-white font-bold">{unlockedIds.length}</span>
+          <span className="text-gray-600"> / {ACHIEVEMENTS.length} débloqués</span>
+        </p>
+        <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-green-500 rounded-full transition-all"
+            style={{ width: `${(unlockedIds.length / ACHIEVEMENTS.length) * 100}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {unlocked.map(a => {
+          const c = RARITY_COLORS[a.rarity]
+          return (
+            <div
+              key={a.id}
+              className="relative rounded-xl p-3 border transition"
+              style={{ background: `${c.hex}08`, borderColor: `${c.hex}30` }}
+            >
+              <div className="flex items-start justify-between mb-2">
+                <span className="text-2xl">{a.icon}</span>
+                <span
+                  className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                  style={{ background: `${c.hex}18`, color: c.hex, border: `1px solid ${c.hex}30` }}
+                >
+                  {c.label}
+                </span>
+              </div>
+              <p className="text-white text-xs font-bold leading-tight">{a.title}</p>
+              <p className="text-gray-500 text-[10px] mt-0.5 leading-tight">{a.description}</p>
+              <p className="text-yellow-400 text-[10px] font-bold mt-1.5">+{a.xp} XP</p>
+            </div>
+          )
+        })}
+
+        {locked.map(a => (
+          <div
+            key={a.id}
+            className="relative rounded-xl p-3 border border-white/5 bg-white/2 opacity-40"
+          >
+            <div className="flex items-start justify-between mb-2">
+              <span className="text-2xl grayscale">{a.icon}</span>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/5 text-gray-600">
+                🔒
+              </span>
+            </div>
+            <p className="text-gray-500 text-xs font-bold leading-tight">{a.title}</p>
+            <p className="text-gray-700 text-[10px] mt-0.5 leading-tight">{a.description}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
+type Tab = "trading" | "achievements" | "classement"
+
 export default function ProfilPage() {
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [account, setAccount] = useState<{ cash: number } | null>(null)
-  const [positions, setPositions] = useState<any[]>([])
+  const [user, setUser]                     = useState<any>(null)
+  const [profile, setProfile]               = useState<any>(null)
+  const [account, setAccount]               = useState<{ cash: number } | null>(null)
+  const [positions, setPositions]           = useState<any[]>([])
   const [completedCourses, setCompletedCourses] = useState<any[]>([])
-  const [orders, setOrders] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<Tab>("trading")
-
-  // Leaderboard state
-  const [leaderboard, setLeaderboard] = useState<any[]>([])
-  const [lbPeriod, setLbPeriod] = useState<"week" | "month" | "all">("week")
-  const [lbFilter, setLbFilter] = useState<"performance" | "xp" | "trades">("performance")
-  const [myRank, setMyRank] = useState<number | null>(null)
-
+  const [orders, setOrders]                 = useState<any[]>([])
+  const [unlockedIds, setUnlockedIds]       = useState<string[]>([])
+  const [leaderboard, setLeaderboard]       = useState<any[]>([])
+  const [loading, setLoading]               = useState(true)
+  const [tab, setTab]                       = useState<Tab>("trading")
+  const [myRank, setMyRank]                 = useState<number | null>(null)
 
   async function getToken() {
     const { data } = await supabase.auth.getSession()
     return data.session?.access_token
-  }
-
-  async function fetchLeaderboard() {
-    try {
-      const res = await fetch("/api/social/top-traders")
-      const json = await res.json()
-      const traders = Array.isArray(json) ? json : []
-      setLeaderboard(traders)
-      const idx = traders.findIndex((t: any) => t.user_id === user?.id)
-      setMyRank(idx >= 0 ? idx + 1 : null)
-    } catch {}
   }
 
   useEffect(() => {
@@ -215,49 +231,38 @@ export default function ProfilPage() {
       const token = await getToken()
       if (!token) return
 
-      // Profile
-      const profileRes = await fetch("/api/user-profile", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      const profileJson = await profileRes.json()
-      const p: UserProfile | null = profileJson.profile
-      setProfile(p)
+      const [profileRes, accRes, posRes, ordRes] = await Promise.allSettled([
+        fetch("/api/user-profile", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+        fetch("/api/trading/account", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+        fetch("/api/trading/positions", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+        fetch("/api/trading/orders", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      ])
 
-      // Account
-      try {
-        const accRes = await fetch("/api/trading/account", {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        const accJson = await accRes.json()
-        setAccount(accJson.account)
-      } catch {}
+      if (profileRes.status === "fulfilled") setProfile(profileRes.value?.profile ?? null)
+      if (accRes.status === "fulfilled") setAccount(accRes.value?.account ?? null)
+      if (posRes.status === "fulfilled") setPositions(Array.isArray(posRes.value?.positions) ? posRes.value.positions : [])
+      if (ordRes.status === "fulfilled") setOrders(Array.isArray(ordRes.value) ? ordRes.value : [])
 
-      // Positions
-      try {
-        const posRes = await fetch("/api/trading/positions", {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        const posJson = await posRes.json()
-        setPositions(Array.isArray(posJson.positions) ? posJson.positions : [])
-      } catch {}
-
-      // Completed courses
       try {
         const { data: rows } = await supabase
-          .from("user_progress")
-          .select("*")
-          .eq("user_id", u.id)
-          .eq("completed", true)
+          .from("user_progress").select("*").eq("user_id", u.id).eq("completed", true)
         setCompletedCourses(rows ?? [])
       } catch {}
 
-      // Orders
       try {
-        const ordRes = await fetch("/api/trading/orders", {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        const ordJson = await ordRes.json()
-        setOrders(Array.isArray(ordJson) ? ordJson : [])
+        const { data: rows } = await supabase
+          .from("user_achievements").select("achievement_id").eq("user_id", u.id)
+        setUnlockedIds((rows ?? []).map((r: any) => r.achievement_id))
+      } catch {}
+
+      try {
+        const res = await fetch("/api/social/top-traders")
+        const traders = await res.json()
+        if (Array.isArray(traders)) {
+          setLeaderboard(traders)
+          const idx = traders.findIndex((t: any) => t.user_id === u.id)
+          setMyRank(idx >= 0 ? idx + 1 : null)
+        }
       } catch {}
 
       setLoading(false)
@@ -265,103 +270,133 @@ export default function ProfilPage() {
     load()
   }, [])
 
-  useEffect(() => {
-    if (user) fetchLeaderboard()
-  }, [user, lbPeriod, lbFilter])
-
-
-  // Computed stats
   const positionsValue = positions.reduce((s, p) => s + (p.qty ?? 0) * (p.current_price ?? p.avg_price ?? 0), 0)
   const portfolioValue = (account?.cash ?? 0) + positionsValue
-  const pnlPct = portfolioValue > 0 ? ((portfolioValue - 100000) / 100000) * 100 : 0
-  const pnlAbs = portfolioValue - 100000
-  const winRate =
-    orders.length > 0
-      ? Math.round(
-          (orders.filter((o: any) => o.type === "sell" && o.price > (o.avg_price ?? 0)).length / orders.filter((o: any) => o.type === "sell").length || 0) * 100
-        )
-      : 0
+  const pnlPct  = portfolioValue > 0 ? ((portfolioValue - 100000) / 100000) * 100 : 0
+  const pnlAbs  = portfolioValue - 100000
+  const sellOrders = orders.filter((o: any) => o.type === "sell")
+  const winRate = sellOrders.length > 0
+    ? Math.round((sellOrders.filter((o: any) => o.price > (o.avg_price ?? 0)).length / sellOrders.length) * 100)
+    : 0
   const chartData = buildPortfolioChart(pnlPct)
-  const lv = getLevelBadge(profile?.level)
+
+  const xp = profile?.xp ?? 0
+  const levelInfo = getLevelInfo(xp)
   const initial = (profile?.username ?? user?.email ?? "?")[0]?.toUpperCase()
   const avatarBg = profile?.avatar_color ?? "#4ade80"
+  const username = profile?.username ?? user?.email?.split("@")[0] ?? "Trader"
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#0a0a0a]">
-        <div className="text-gray-500 text-sm">Chargement du profil...</div>
+        <div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: "trading",     label: "📊 Trading"     },
-    { key: "progression", label: "📚 Progression" },
-    { key: "classement",  label: "🏆 Classement"  },
+    { key: "trading",      label: "📊 Trading"    },
+    { key: "achievements", label: "🏅 Succès"     },
+    { key: "classement",   label: "🏆 Classement" },
   ]
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white pb-16 overflow-x-hidden">
-      <div className="max-w-2xl mx-auto px-4 pt-6 md:pt-8">
+      <div className="max-w-2xl mx-auto px-4 pt-6">
 
-        {/* Header */}
-        <div className="bg-[#111] border border-white/5 rounded-2xl p-6 mb-6">
-          <div className="flex items-start gap-5">
-            <div
-              className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-black text-black flex-shrink-0"
-              style={{ backgroundColor: avatarBg }}
-            >
-              {initial}
+        {/* Hero Header */}
+        <div className="bg-[#111] border border-white/5 rounded-2xl p-6 mb-6 relative overflow-hidden">
+          {/* Glow */}
+          <div
+            className="absolute inset-0 opacity-20 pointer-events-none"
+            style={{ background: `radial-gradient(circle at 30% 50%, ${levelInfo.color}30, transparent 70%)` }}
+          />
+
+          <div className="relative flex items-start gap-4">
+            {/* Avatar with glow ring */}
+            <div className="relative flex-shrink-0">
+              <div
+                className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-black text-black"
+                style={{ backgroundColor: avatarBg, boxShadow: `0 0 20px ${levelInfo.color}40` }}
+              >
+                {initial}
+              </div>
+              <div
+                className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full border-2 border-[#111] flex items-center justify-center text-sm"
+                style={{ background: `${levelInfo.color}20`, borderColor: `${levelInfo.color}60` }}
+              >
+                {levelInfo.icon}
+              </div>
             </div>
+
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-xl md:text-2xl font-black text-white truncate">
-                  {profile?.username ?? user?.email?.split("@")[0] ?? "Utilisateur"}
-                </h1>
-                {profile?.level && (
-                  <span className={`text-xs px-2.5 py-1 rounded-lg border font-bold ${lv.bg} ${lv.color}`}>
-                    {lv.emoji} {profile.level}
-                  </span>
-                )}
+              <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                <h1 className="text-xl font-black text-white">{username}</h1>
+                <span
+                  className="text-xs px-2.5 py-0.5 rounded-full font-bold"
+                  style={{ background: `${levelInfo.color}18`, color: levelInfo.color, border: `1px solid ${levelInfo.color}35` }}
+                >
+                  {levelInfo.name}
+                </span>
                 <a
                   href="/parametres"
-                  className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white/40 hover:text-white transition flex-shrink-0"
+                  className="ml-auto text-xs px-2.5 py-1 rounded-lg text-white/30 hover:text-white transition flex-shrink-0"
                   style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
                 >
-                  ⚙️ Paramètres
+                  ⚙️
                 </a>
               </div>
-              <p className="text-gray-500 text-sm mt-0.5 truncate">{user?.email}</p>
+              <p className="text-gray-600 text-xs mb-3">{user?.email}</p>
 
               {/* Stats strip */}
-              <div className="flex gap-5 mt-3 flex-wrap">
-                <div className="text-center">
-                  <div className="text-white font-black text-lg">{daysSince(user?.created_at)}</div>
-                  <div className="text-gray-500 text-xs">jours sur la plateforme</div>
+              <div className="flex gap-4 mb-4">
+                {[
+                  { value: daysSince(user?.created_at), label: "jours" },
+                  { value: unlockedIds.length,           label: "succès" },
+                  { value: completedCourses.length,      label: "cours"  },
+                  { value: orders.length,                label: "trades" },
+                ].map(s => (
+                  <div key={s.label} className="text-center">
+                    <p className="text-white font-black text-base leading-none">{s.value}</p>
+                    <p className="text-gray-600 text-[10px] mt-0.5">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* XP Bar */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[11px] text-gray-500 font-medium">{xp} XP</span>
+                  {levelInfo.nextLevel && (
+                    <span className="text-[11px] text-gray-600">{levelInfo.nextLevel} → {levelInfo.nextLevelXP} XP</span>
+                  )}
                 </div>
-                <div className="text-center">
-                  <div className="text-white font-black text-lg">{completedCourses.length}</div>
-                  <div className="text-gray-500 text-xs">cours complétés</div>
+                <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      width: `${levelInfo.progress}%`,
+                      background: `linear-gradient(90deg, ${levelInfo.color}aa, ${levelInfo.color})`,
+                      boxShadow: `0 0 8px ${levelInfo.color}50`,
+                    }}
+                  />
                 </div>
-                <div className="text-center">
-                  <div className="text-white font-black text-lg">{orders.length}</div>
-                  <div className="text-gray-500 text-xs">trades effectués</div>
-                </div>
+                {!levelInfo.nextLevel && (
+                  <p className="text-[10px] text-yellow-400 font-bold mt-1 text-center">Niveau maximum atteint 👑</p>
+                )}
               </div>
             </div>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-[#111] border border-white/5 rounded-xl p-1 mb-6 overflow-x-auto scrollbar-hide">
+        <div className="flex gap-1 bg-[#111] border border-white/5 rounded-xl p-1 mb-6 overflow-x-auto no-scrollbar">
           {tabs.map(t => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`flex-1 flex-shrink-0 whitespace-nowrap py-2 rounded-lg text-xs md:text-sm font-bold transition-all ${
-                tab === t.key
-                  ? "bg-green-500/15 text-green-400"
-                  : "text-gray-500 hover:text-white"
+              className={`flex-1 flex-shrink-0 whitespace-nowrap py-2 rounded-lg text-xs font-bold transition-all ${
+                tab === t.key ? "bg-green-500/15 text-green-400" : "text-gray-500 hover:text-white"
               }`}
             >
               {t.label}
@@ -372,7 +407,6 @@ export default function ProfilPage() {
         {/* Tab: Trading */}
         {tab === "trading" && (
           <div className="space-y-4">
-            {/* Portfolio value */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-[#111] border border-white/5 rounded-2xl p-4">
                 <div className="text-gray-500 text-xs mb-1 font-semibold uppercase tracking-wide">Portfolio</div>
@@ -388,7 +422,7 @@ export default function ProfilPage() {
                 <div className={`text-2xl font-black ${pnlPct >= 0 ? "text-green-400" : "text-red-400"}`}>
                   {pnlPct >= 0 ? "+" : ""}{pnlPct.toFixed(2)}%
                 </div>
-                <div className="text-gray-500 text-xs mt-1">vs 100 000 $ de départ</div>
+                <div className="text-gray-500 text-xs mt-1">vs $100,000 initial</div>
               </div>
             </div>
 
@@ -396,7 +430,7 @@ export default function ProfilPage() {
               <div className="bg-[#111] border border-white/5 rounded-2xl p-4">
                 <div className="text-gray-500 text-xs mb-1 font-semibold uppercase tracking-wide">Win Rate</div>
                 <div className="text-white text-2xl font-black">{winRate}%</div>
-                <div className="text-gray-500 text-xs mt-1">{orders.filter((o: any) => o.type === "sell").length} ventes</div>
+                <div className="text-gray-500 text-xs mt-1">{sellOrders.length} ventes</div>
               </div>
               <div className="bg-[#111] border border-white/5 rounded-2xl p-4">
                 <div className="text-gray-500 text-xs mb-1 font-semibold uppercase tracking-wide">Liquidités</div>
@@ -407,9 +441,8 @@ export default function ProfilPage() {
               </div>
             </div>
 
-            {/* Chart */}
             <div className="bg-[#111] border border-white/5 rounded-2xl p-4">
-              <div className="text-gray-500 text-xs mb-3 font-semibold uppercase tracking-wide">Évolution du portfolio (30j)</div>
+              <div className="text-gray-500 text-xs mb-3 font-semibold uppercase tracking-wide">Évolution (30j)</div>
               <div className="h-40">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
@@ -430,108 +463,96 @@ export default function ProfilPage() {
                 </ResponsiveContainer>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* Tab: Progression */}
-        {tab === "progression" && (
-          <div className="space-y-4">
-            {/* Completed courses */}
+            {/* Referral */}
             <div className="bg-[#111] border border-white/5 rounded-2xl p-5">
-              <div className="text-gray-500 text-xs mb-4 font-semibold uppercase tracking-wide">Cours complétés</div>
-              {completedCourses.length === 0 ? (
-                <p className="text-gray-500 text-sm">Aucun cours complété pour le moment.</p>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  {completedCourses.map((c: any, i: number) => (
-                    <div key={i} className="bg-green-500/5 border border-green-500/20 rounded-xl p-3 flex items-center gap-2">
-                      <span className="text-green-400 text-lg">✅</span>
-                      <span className="text-white text-xs font-semibold truncate">{c.chapter_id ?? `Cours ${i + 1}`}</span>
-                    </div>
-                  ))}
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-xl">👥</span>
+                <div>
+                  <p className="text-white font-bold text-sm">Parrainage</p>
+                  <p className="text-gray-500 text-xs">Invite tes amis et gagne 500 XP par filleul</p>
                 </div>
-              )}
-            </div>
-
-            {/* Badges */}
-            <div className="bg-[#111] border border-white/5 rounded-2xl p-5">
-              <div className="text-gray-500 text-xs mb-4 font-semibold uppercase tracking-wide">Badges</div>
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { emoji: "🏆", label: "Premier trade", earned: orders.length > 0 },
-                  { emoji: "📚", label: "Premier cours", earned: completedCourses.length > 0 },
-                  { emoji: "🎯", label: "TP atteint", earned: false },
-                  { emoji: "📈", label: "Profit réalisé", earned: pnlPct > 0 },
-                  { emoji: "🔥", label: "5 cours complétés", earned: completedCourses.length >= 5 },
-                  { emoji: "💎", label: "Trader confirmé", earned: orders.length >= 10 },
-                ].map(badge => (
-                  <div
-                    key={badge.label}
-                    className={`p-3 rounded-xl border text-center transition-all ${
-                      badge.earned
-                        ? "border-yellow-500/30 bg-yellow-500/10"
-                        : "border-white/5 bg-white/3 opacity-40 grayscale"
-                    }`}
-                  >
-                    <div className="text-2xl mb-1">{badge.emoji}</div>
-                    <div className="text-xs text-white font-semibold leading-tight">{badge.label}</div>
-                  </div>
-                ))}
               </div>
-            </div>
-
-            {/* Streak */}
-            <div className="bg-[#111] border border-white/5 rounded-2xl p-5 flex items-center justify-between">
-              <div>
-                <div className="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-1">Streak actuelle</div>
-                <div className="text-white text-2xl font-black">🔥 1 jour</div>
-                <div className="text-gray-500 text-xs mt-1">Connexion quotidienne</div>
-              </div>
-              <div className="text-5xl opacity-20">🔥</div>
+              <ReferralSection />
             </div>
           </div>
         )}
 
+        {/* Tab: Achievements */}
+        {tab === "achievements" && (
+          <div className="bg-[#111] border border-white/5 rounded-2xl p-5">
+            <AchievementsGrid unlockedIds={unlockedIds} />
+          </div>
+        )}
 
         {/* Tab: Classement */}
         {tab === "classement" && (
-          <div className="space-y-4">
-            {/* Period + filter controls */}
-            <div className="flex gap-2 flex-wrap">
-              {(["week","month","all"] as const).map(p => (
-                <button key={p} onClick={() => setLbPeriod(p)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${lbPeriod === p ? "bg-green-500/15 text-green-400 border border-green-500/30" : "bg-white/5 text-gray-500 hover:text-white border border-white/5"}`}>
-                  {p === "week" ? "Cette semaine" : p === "month" ? "Ce mois" : "All time"}
-                </button>
-              ))}
-              <div className="ml-auto flex gap-2">
-                {(["performance","xp","trades"] as const).map(f => (
-                  <button key={f} onClick={() => setLbFilter(f)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${lbFilter === f ? "bg-white/10 text-white border border-white/20" : "bg-white/3 text-gray-600 border border-white/5"}`}>
-                    {f === "performance" ? "📈 Perf" : f === "xp" ? "⭐ XP" : "🔢 Trades"}
-                  </button>
-                ))}
+          <div className="space-y-3">
+            {/* Podium */}
+            {leaderboard.length >= 3 && (
+              <div className="bg-[#111] border border-white/5 rounded-2xl p-6">
+                <div className="flex items-end justify-center gap-4">
+                  {[1, 0, 2].map(idx => {
+                    const e = leaderboard[idx]
+                    if (!e) return null
+                    const medals = ["🥈", "🥇", "🥉"]
+                    const heights = ["h-24", "h-32", "h-20"]
+                    const isGold = idx === 0
+                    return (
+                      <div key={e.user_id} className="flex flex-col items-center gap-2">
+                        <div
+                          className="rounded-full flex items-center justify-center font-black text-black"
+                          style={{
+                            width: isGold ? 52 : 40,
+                            height: isGold ? 52 : 40,
+                            backgroundColor: e.avatar_color ?? "#4ade80",
+                            fontSize: isGold ? 20 : 16,
+                          }}
+                        >
+                          {(e.username ?? "?")[0]?.toUpperCase()}
+                        </div>
+                        <p className={`font-bold text-white ${isGold ? "text-sm" : "text-xs"}`}>{e.username ?? "Anonyme"}</p>
+                        <p className={`font-black text-xs ${(e.avg_pnl_pct ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                          {(e.avg_pnl_pct ?? 0) >= 0 ? "+" : ""}{(e.avg_pnl_pct ?? 0).toFixed(1)}%
+                        </p>
+                        <div className={`${heights[idx]} w-16 rounded-t-xl flex items-center justify-center text-xl ${
+                          isGold ? "bg-yellow-500/20 border border-yellow-500/30" :
+                          idx === 1 ? "bg-gray-400/10 border border-gray-400/20" :
+                          "bg-orange-600/10 border border-orange-600/20"
+                        }`}>
+                          {medals[idx]}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Leaderboard list */}
+            {/* List */}
             <div className="space-y-2">
               {leaderboard.slice(0, 20).map((trader: any, i: number) => {
                 const isMe = trader.user_id === user?.id
-                const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : null
                 return (
-                  <div key={trader.user_id || i}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition ${isMe ? "bg-green-500/10 border-green-500/30" : "bg-[#111] border-white/5"}`}>
+                  <div
+                    key={trader.user_id ?? i}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition ${
+                      isMe ? "bg-green-500/10 border-green-500/30" : "bg-[#111] border-white/5"
+                    }`}
+                  >
                     <span className="text-sm font-black text-gray-500 w-6 text-center flex-shrink-0">
-                      {medal ?? `#${i+1}`}
+                      {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}
                     </span>
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-black text-xs font-black flex-shrink-0"
-                      style={{ backgroundColor: trader.avatar_color ?? "#4ade80" }}>
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-black text-xs font-black flex-shrink-0"
+                      style={{ backgroundColor: trader.avatar_color ?? "#4ade80" }}
+                    >
                       {(trader.username ?? "?")[0]?.toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm font-bold truncate ${isMe ? "text-green-400" : "text-white"}`}>
-                        {trader.username ?? "Anonyme"} {isMe && <span className="text-[10px] text-green-500 ml-1">← vous</span>}
+                        {trader.username ?? "Anonyme"}
+                        {isMe && <span className="text-[10px] text-green-500 ml-1">← vous</span>}
                       </p>
                       <p className="text-gray-600 text-xs">{trader.total_trades ?? 0} trades</p>
                     </div>
@@ -545,17 +566,16 @@ export default function ProfilPage() {
                 )
               })}
               {leaderboard.length === 0 && (
-                <div className="text-center py-12 text-gray-600">
-                  <p className="text-3xl mb-2">🏆</p>
+                <div className="text-center py-16 text-gray-600">
+                  <p className="text-4xl mb-3">🏆</p>
                   <p className="text-sm">Pas encore de données de classement</p>
                 </div>
               )}
             </div>
 
-            {/* Your rank (if not in top 20) */}
             {myRank !== null && myRank > 20 && (
               <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 text-center">
-                <p className="text-green-400 font-bold text-sm">Ton classement actuel : #{myRank}</p>
+                <p className="text-green-400 font-bold text-sm">Ton classement : #{myRank}</p>
                 <p className="text-gray-500 text-xs mt-1">Continue à trader pour grimper !</p>
               </div>
             )}
