@@ -4,85 +4,174 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import UpgradeModal from "@/app/components/UpgradeModal"
+import ScannerIA from "@/app/components/ScannerIA"
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts"
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ── Design tokens ──────────────────────────────────────────────────────────────
+const UP     = "#4ade80"
+const DOWN   = "#f87171"
+const WARN   = "#facc15"
+const PURPLE = "#a78bfa"
+const BLUE   = "#60a5fa"
+
+// ── Types ──────────────────────────────────────────────────────────────────────
 type AssetResult = {
-  symbol: string; name: string; category: "stock" | "crypto" | "etf"
-  price: number; change: number; rsi: number
-  ma20: number | null; ma50: number | null
-  volume: number; volRatio: number
-  score: number; signal: "ACHETER" | "ATTENDRE" | "ÉVITER"
+  symbol: string
+  name: string
+  category: "stock" | "crypto" | "etf"
+  sector?: string
+  type?: string
+  price: number
+  change: number
+  change_1d: number
+  change_1w: number
+  change_1m: number
+  rsi: number
+  ma20: number | null
+  ma50: number | null
+  volume: number
+  volume_ratio: number
+  volRatio: number
+  macd_signal: "bullish" | "bearish" | "neutral"
+  bb_position: "upper" | "middle" | "lower" | "above" | "below"
+  confluence: number
+  news_sentiment: number
+  score: number
+  signal: string
+  signal_legacy: "ACHETER" | "ATTENDRE" | "ÉVITER"
+  category_legacy?: string
+  above_ma200: boolean
 }
 
 type ScreenerData = {
-  assets: AssetResult[]; top_buys: AssetResult[]; top_sells: AssetResult[]
-  neutral: AssetResult[]; updated_at: string
+  assets: AssetResult[]
+  top_buys: AssetResult[]
+  top_sells: AssetResult[]
+  neutral: AssetResult[]
+  updated_at: string
 }
-
-type MarketIndex = { symbol: string; name: string; price: number; change: number }
 
 type MarketSummary = {
-  summary: string; sentiment: "bullish" | "bearish" | "neutral"
-  date: string; top_movers: MarketIndex[]; market_data: MarketIndex[]
+  summary: string
+  sentiment: "bullish" | "bearish" | "neutral"
+  date: string
+  top_movers: { symbol: string; name: string; price: number; change: number }[]
+  market_data: { symbol: string; name: string; price: number; change: number }[]
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-const UP   = "#4ade80"
-const DOWN = "#f87171"
-const WARN = "#facc15"
-
-function scoreColor(score: number) {
-  if (score >= 70) return UP
-  if (score >= 40) return WARN
-  return DOWN
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function signalColor(signal: string) {
+  if (signal === "ACHAT_FORT") return UP
+  if (signal === "ACHAT")      return "#86efac"
+  if (signal === "VENTE_FORT") return DOWN
+  if (signal === "VENTE")      return "#fca5a5"
+  return WARN
 }
 
-function signalStyle(signal: string) {
-  if (signal === "ACHETER") return { bg: "rgba(74,222,128,0.12)", color: UP,   border: "rgba(74,222,128,0.25)" }
-  if (signal === "ÉVITER")  return { bg: "rgba(248,113,113,0.12)", color: DOWN, border: "rgba(248,113,113,0.25)" }
-  return { bg: "rgba(250,204,21,0.08)", color: WARN, border: "rgba(250,204,21,0.2)" }
+function signalLabel(signal: string) {
+  if (signal === "ACHAT_FORT") return "ACHAT FORT ⚡"
+  if (signal === "ACHAT")      return "ACHAT ↗"
+  if (signal === "VENTE_FORT") return "VENTE FORTE ⚡"
+  if (signal === "VENTE")      return "VENTE ↘"
+  return "NEUTRE"
 }
 
-function sentimentConfig(s: string) {
-  if (s === "bullish")  return { label: "🟢 Haussier",  color: UP,   bg: "rgba(74,222,128,0.1)",   border: "rgba(74,222,128,0.25)"  }
-  if (s === "bearish")  return { label: "🔴 Baissier",  color: DOWN, bg: "rgba(248,113,113,0.1)",  border: "rgba(248,113,113,0.25)" }
-  return                       { label: "🟡 Neutre",    color: WARN, bg: "rgba(250,204,21,0.08)",  border: "rgba(250,204,21,0.2)"   }
+function signalBg(signal: string) {
+  if (signal === "ACHAT_FORT" || signal === "ACHAT") return "rgba(74,222,128,0.1)"
+  if (signal === "VENTE_FORT" || signal === "VENTE") return "rgba(248,113,113,0.1)"
+  return "rgba(250,204,21,0.08)"
+}
+
+function signalBorder(signal: string) {
+  if (signal === "ACHAT_FORT" || signal === "ACHAT") return "rgba(74,222,128,0.25)"
+  if (signal === "VENTE_FORT" || signal === "VENTE") return "rgba(248,113,113,0.25)"
+  return "rgba(250,204,21,0.2)"
 }
 
 function fmtPrice(p: number) {
-  return p >= 1000 ? `$${p.toLocaleString("en-US", { maximumFractionDigits: 0 })}` : `$${p.toFixed(2)}`
+  return p >= 1000
+    ? `$${p.toLocaleString("en-US", { maximumFractionDigits: 0 })}`
+    : `$${p.toFixed(2)}`
 }
 
 function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
 }
 
-function categoryLabel(c: string) {
-  return c === "stock" ? "Actions" : c === "crypto" ? "Crypto" : "ETF"
+function fmtChange(v: number) {
+  return `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`
 }
 
-// ── Asset card ────────────────────────────────────────────────────────────────
+function sentimentConfig(s: string) {
+  if (s === "bullish") return { label: "🟢 Haussier", color: UP,   bg: "rgba(74,222,128,0.1)",  border: "rgba(74,222,128,0.25)"  }
+  if (s === "bearish") return { label: "🔴 Baissier", color: DOWN, bg: "rgba(248,113,113,0.1)", border: "rgba(248,113,113,0.25)" }
+  return                      { label: "🟡 Neutre",   color: WARN, bg: "rgba(250,204,21,0.08)", border: "rgba(250,204,21,0.2)"   }
+}
+
+function macdColor(s: string) {
+  if (s === "bullish") return UP
+  if (s === "bearish") return DOWN
+  return "#555"
+}
+
+function macdLabel(s: string) {
+  if (s === "bullish") return "↑ Haussier"
+  if (s === "bearish") return "↓ Baissier"
+  return "→ Neutre"
+}
+
+function bbLabel(s: string) {
+  if (s === "above") return "↑ Au-dessus"
+  if (s === "below") return "↓ En-dessous"
+  if (s === "upper") return "Haute"
+  if (s === "lower") return "Basse"
+  return "Milieu"
+}
+
+function exportCSV(assets: AssetResult[]) {
+  const headers = ["Symbole", "Nom", "Catégorie", "Secteur", "Prix", "Var 1j%", "Var 1S%", "Var 1M%", "RSI", "MACD", "BB", "MA20", "MA50", "Confluence", "Vol Ratio", "Score", "Signal"]
+  const rows = assets.map(a => [
+    a.symbol, a.name, a.category, a.sector ?? "",
+    a.price, a.change_1d, a.change_1w, a.change_1m,
+    a.rsi, a.macd_signal, a.bb_position,
+    a.ma20 ?? "", a.ma50 ?? "",
+    a.confluence, a.volume_ratio, a.score, a.signal
+  ].join(","))
+  const csv = [headers.join(","), ...rows].join("\n")
+  const blob = new Blob([csv], { type: "text/csv" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `screener_${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+// ── Skeleton ───────────────────────────────────────────────────────────────────
+function Skeleton({ h = "h-5", w = "w-full" }: { h?: string; w?: string }) {
+  return <div className={`${h} ${w} rounded-lg animate-pulse`} style={{ background: "#151515" }} />
+}
+
+// ── Asset Card (Cards view) ────────────────────────────────────────────────────
 function AssetCard({ asset, onClick }: { asset: AssetResult; onClick: () => void }) {
-  const { bg, color, border } = signalStyle(asset.signal)
-  const sc = scoreColor(asset.score)
-  const up = asset.change >= 0
+  const sc = signalColor(asset.signal)
+  const up = asset.change_1d >= 0
 
   return (
     <div
       onClick={onClick}
       className="rounded-xl p-3.5 cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99]"
-      style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderLeft: `3px solid ${color}` }}
+      style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderLeft: `3px solid ${sc}` }}
     >
-      {/* Top row */}
       <div className="flex items-start justify-between mb-2">
         <div>
           <div className="flex items-center gap-1.5">
             <span className="text-white font-black text-sm">{asset.symbol.replace("-USD", "")}</span>
-            <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold" style={{ background: "rgba(255,255,255,0.06)", color: "#555" }}>
-              {categoryLabel(asset.category)}
+            <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold"
+              style={{ background: "rgba(255,255,255,0.06)", color: "#555" }}>
+              {asset.category === "stock" ? "Action" : asset.category === "crypto" ? "Crypto" : "ETF"}
             </span>
           </div>
           <p className="text-[10px] text-gray-600 mt-0.5 truncate max-w-[130px]">{asset.name}</p>
@@ -90,63 +179,158 @@ function AssetCard({ asset, onClick }: { asset: AssetResult; onClick: () => void
         <div className="text-right flex-shrink-0">
           <p className="text-white font-bold text-sm tabular-nums">{fmtPrice(asset.price)}</p>
           <p className="text-[11px] font-semibold tabular-nums" style={{ color: up ? UP : DOWN }}>
-            {up ? "+" : ""}{asset.change.toFixed(2)}%
+            {fmtChange(asset.change_1d)}
           </p>
         </div>
       </div>
 
-      {/* Score bar */}
       <div className="mb-2">
         <div className="flex justify-between items-center mb-1">
           <span className="text-[9px] text-gray-600 uppercase tracking-widest">Score IA</span>
           <span className="text-[11px] font-black tabular-nums" style={{ color: sc }}>{asset.score}</span>
         </div>
         <div className="h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
-          <div className="h-full rounded-full transition-all" style={{ width: `${asset.score}%`, background: `linear-gradient(90deg, ${sc}99, ${sc})` }} />
+          <div className="h-full rounded-full transition-all"
+            style={{ width: `${asset.score}%`, background: `linear-gradient(90deg, ${sc}99, ${sc})` }} />
         </div>
       </div>
 
-      {/* Bottom row */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-[10px] font-mono">
           <span style={{ color: asset.rsi > 70 ? DOWN : asset.rsi < 30 ? UP : "#555" }}>
             RSI {asset.rsi}
           </span>
-          {asset.ma20 != null && (
-            <span style={{ color: asset.price > asset.ma20 ? UP : DOWN }}>
-              MA20 {asset.price > asset.ma20 ? "▲" : "▼"}
-            </span>
-          )}
+          <span style={{ color: macdColor(asset.macd_signal) }}>MACD {asset.macd_signal === "bullish" ? "▲" : asset.macd_signal === "bearish" ? "▼" : "→"}</span>
         </div>
-        <span className="text-[9px] font-black px-2 py-0.5 rounded-md" style={{ background: bg, color, border: `1px solid ${border}` }}>
-          {asset.signal}
+        <span className="text-[9px] font-black px-2 py-0.5 rounded-md"
+          style={{ background: signalBg(asset.signal), color: signalColor(asset.signal), border: `1px solid ${signalBorder(asset.signal)}` }}>
+          {signalLabel(asset.signal)}
         </span>
       </div>
     </div>
   )
 }
 
-// ── Market index card ─────────────────────────────────────────────────────────
-function IndexCard({ d }: { d: MarketIndex }) {
-  const up = d.change >= 0
+// ── Heatmap Cell ───────────────────────────────────────────────────────────────
+function HeatmapCell({ asset, onClick }: { asset: AssetResult; onClick: () => void }) {
+  const pct = asset.change_1d
+  const abs = Math.abs(pct)
+  const intensity = Math.min(abs / 5, 1)
+  const bg = pct > 0
+    ? `rgba(74, 222, 128, ${0.1 + intensity * 0.4})`
+    : pct < 0
+    ? `rgba(248, 113, 113, ${0.1 + intensity * 0.4})`
+    : "rgba(255,255,255,0.04)"
+
   return (
-    <div className="rounded-xl p-3 flex-1 min-w-[90px]" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
-      <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-1">{d.symbol.replace("-USD", "")}</p>
-      <p className="text-white font-black text-sm tabular-nums">{fmtPrice(d.price)}</p>
-      <p className="text-[11px] font-bold tabular-nums mt-0.5" style={{ color: up ? UP : DOWN }}>
-        {up ? "+" : ""}{d.change.toFixed(2)}%
-      </p>
+    <div
+      onClick={onClick}
+      className="relative rounded-lg p-2.5 cursor-pointer transition-all hover:scale-[1.02] flex flex-col justify-between"
+      style={{ background: bg, border: "1px solid rgba(255,255,255,0.05)", minHeight: 64 }}
+    >
+      <p className="text-white font-black text-xs truncate">{asset.symbol.replace("-USD", "")}</p>
+      <div>
+        <p className="text-[10px] font-bold tabular-nums" style={{ color: pct >= 0 ? UP : DOWN }}>
+          {fmtChange(pct)}
+        </p>
+        <p className="text-[9px]" style={{ color: "rgba(255,255,255,0.3)" }}>{fmtPrice(asset.price)}</p>
+      </div>
     </div>
   )
 }
 
-// ── Skeleton ──────────────────────────────────────────────────────────────────
-function Skeleton({ h = "h-5", w = "w-full" }: { h?: string; w?: string }) {
-  return <div className={`${h} ${w} rounded-lg animate-pulse`} style={{ background: "#151515" }} />
+// ── Screener Table Row ─────────────────────────────────────────────────────────
+type SortField = "score" | "price" | "change_1d" | "change_1w" | "change_1m" | "rsi" | "confluence" | "volume_ratio"
+
+function TableRow({ asset, onClick }: { asset: AssetResult; onClick: () => void }) {
+  const sc = signalColor(asset.signal)
+  const up1d = asset.change_1d >= 0
+
+  return (
+    <div
+      onClick={onClick}
+      className="grid items-center gap-2 px-4 py-2.5 cursor-pointer transition-colors text-xs"
+      style={{
+        gridTemplateColumns: "1.6fr 70px 80px 70px 70px 70px 50px 80px 80px 80px 110px",
+        borderBottom: "1px solid #111",
+      }}
+      onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")}
+      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+    >
+      {/* Asset */}
+      <div className="flex items-center gap-2 min-w-0">
+        <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: sc }} />
+        <div className="min-w-0">
+          <p className="text-white font-bold truncate">{asset.symbol.replace("-USD", "")}</p>
+          <p className="text-[9px] truncate" style={{ color: "#444" }}>{asset.name}</p>
+        </div>
+      </div>
+
+      {/* Price */}
+      <p className="text-white font-mono tabular-nums text-right">{fmtPrice(asset.price)}</p>
+
+      {/* 1d */}
+      <p className="font-bold tabular-nums text-right" style={{ color: up1d ? UP : DOWN }}>{fmtChange(asset.change_1d)}</p>
+
+      {/* 1w */}
+      <p className="font-mono tabular-nums text-right" style={{ color: asset.change_1w >= 0 ? UP : DOWN }}>{fmtChange(asset.change_1w)}</p>
+
+      {/* 1m */}
+      <p className="font-mono tabular-nums text-right" style={{ color: asset.change_1m >= 0 ? UP : DOWN }}>{fmtChange(asset.change_1m)}</p>
+
+      {/* RSI */}
+      <p className="font-mono tabular-nums text-right" style={{ color: asset.rsi > 70 ? DOWN : asset.rsi < 30 ? UP : "#888" }}>
+        {asset.rsi.toFixed(0)}
+      </p>
+
+      {/* MACD */}
+      <p className="text-right text-[10px] font-semibold" style={{ color: macdColor(asset.macd_signal) }}>
+        {asset.macd_signal === "bullish" ? "▲" : asset.macd_signal === "bearish" ? "▼" : "→"}
+      </p>
+
+      {/* Confluence */}
+      <div className="flex items-center gap-1.5">
+        <div className="flex-1 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
+          <div className="h-full rounded-full" style={{ width: `${asset.confluence}%`, background: asset.confluence >= 60 ? UP : asset.confluence >= 40 ? WARN : DOWN }} />
+        </div>
+        <span className="font-bold tabular-nums w-6 text-right" style={{ color: "#888" }}>{asset.confluence}</span>
+      </div>
+
+      {/* Vol Ratio */}
+      <p className="font-mono tabular-nums text-right" style={{ color: asset.volume_ratio > 1.5 ? PURPLE : "#555" }}>
+        {asset.volume_ratio.toFixed(1)}x
+      </p>
+
+      {/* Score */}
+      <div className="flex items-center gap-1.5">
+        <div className="flex-1 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
+          <div className="h-full rounded-full" style={{ width: `${asset.score}%`, background: sc }} />
+        </div>
+        <span className="font-black tabular-nums w-6 text-right" style={{ color: sc }}>{asset.score}</span>
+      </div>
+
+      {/* Signal */}
+      <span className="text-[9px] font-black px-2 py-0.5 rounded-md text-center"
+        style={{ background: signalBg(asset.signal), color: signalColor(asset.signal), border: `1px solid ${signalBorder(asset.signal)}` }}>
+        {signalLabel(asset.signal)}
+      </span>
+    </div>
+  )
+}
+
+// ── KPI stat pill ──────────────────────────────────────────────────────────────
+function KPIStat({ label, value, sub, color = "#fff" }: { label: string; value: string | number; sub?: string; color?: string }) {
+  return (
+    <div className="rounded-xl px-4 py-3" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
+      <p className="text-[9px] uppercase tracking-widest font-bold mb-1" style={{ color: "#444" }}>{label}</p>
+      <p className="text-lg font-black tabular-nums" style={{ color }}>{value}</p>
+      {sub && <p className="text-[10px] mt-0.5" style={{ color: "#555" }}>{sub}</p>}
+    </div>
+  )
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// BACKTEST TAB
+// BACKTEST TAB (preserved from original)
 // ══════════════════════════════════════════════════════════════════════════════
 
 type BacktestTrade = {
@@ -193,7 +377,7 @@ function BtKPI({ label, value, sub, positive }: { label: string; value: string; 
   )
 }
 
-function EquityTooltip({ active, payload, label }: any) {
+function EquityTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) {
   if (!active || !payload?.length) return null
   return (
     <div className="rounded-lg px-3 py-2 text-sm" style={{ background: "#111", border: "1px solid #222" }}>
@@ -224,8 +408,8 @@ function BacktestTab() {
     try {
       const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`)
       const data = await res.json()
-      const items = (data?.quotes ?? []).filter((r: any) => r.symbol && r.shortname).slice(0, 6)
-        .map((r: any) => ({ symbol: r.symbol, name: r.shortname }))
+      const items = (data?.quotes ?? []).filter((r: { symbol?: string; shortname?: string }) => r.symbol && r.shortname).slice(0, 6)
+        .map((r: { symbol: string; shortname: string }) => ({ symbol: r.symbol, name: r.shortname }))
       setSearchResults(items)
       setShowSearch(items.length > 0)
     } catch {}
@@ -259,24 +443,21 @@ function BacktestTab() {
 
   return (
     <div className="space-y-5">
-      {/* Form */}
       <div className="rounded-2xl p-5 space-y-5" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
         <h2 className="text-base font-black">Paramètres</h2>
 
-        {/* Symbol */}
         <div ref={searchRef}>
           <p className="text-[9px] uppercase tracking-widest font-bold mb-2" style={{ color: "#444" }}>Symbole</p>
           <div className="relative">
-            <input
-              type="text" value={symbol}
+            <input type="text" value={symbol}
               onChange={e => handleSearch(e.target.value)}
               onFocus={() => searchResults.length > 0 && setShowSearch(true)}
               placeholder="AAPL, NVDA, BTC-USD…"
               className="w-full px-4 py-2.5 rounded-xl font-mono text-sm text-white outline-none transition"
-              style={{ background: "#111", border: "1px solid #222" }}
-            />
+              style={{ background: "#111", border: "1px solid #222" }} />
             {showSearch && (
-              <div className="absolute top-full left-0 right-0 mt-1 rounded-xl overflow-hidden z-20 shadow-2xl" style={{ background: "#0d0d0d", border: "1px solid #222" }}>
+              <div className="absolute top-full left-0 right-0 mt-1 rounded-xl overflow-hidden z-20 shadow-2xl"
+                style={{ background: "#0d0d0d", border: "1px solid #222" }}>
                 {searchResults.map(r => (
                   <button key={r.symbol} onClick={() => { setSymbol(r.symbol); setSearchResults([]); setShowSearch(false) }}
                     className="w-full flex items-center justify-between px-4 py-2.5 text-left transition hover:brightness-125"
@@ -290,7 +471,6 @@ function BacktestTab() {
           </div>
         </div>
 
-        {/* Strategy */}
         <div>
           <p className="text-[9px] uppercase tracking-widest font-bold mb-2" style={{ color: "#444" }}>Stratégie</p>
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 mb-2">
@@ -314,7 +494,6 @@ function BacktestTab() {
           )}
         </div>
 
-        {/* Dates + capital */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           <div>
             <p className="text-[9px] uppercase tracking-widest font-bold mb-2" style={{ color: "#444" }}>Date début</p>
@@ -339,7 +518,6 @@ function BacktestTab() {
           </div>
         </div>
 
-        {/* TP / SL */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <div className="flex justify-between mb-2">
@@ -377,10 +555,8 @@ function BacktestTab() {
         {error && <p className="text-center text-xs" style={{ color: DOWN }}>{error}</p>}
       </div>
 
-      {/* Results */}
       {result && (
         <div className="space-y-4">
-          {/* Badge header */}
           <div className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{
             background: pos ? "rgba(74,222,128,0.08)" : "rgba(248,113,113,0.08)",
             border: `1px solid ${pos ? "rgba(74,222,128,0.2)" : "rgba(248,113,113,0.2)"}`,
@@ -398,31 +574,32 @@ function BacktestTab() {
             </div>
           </div>
 
-          {/* KPIs */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
-            <BtKPI label="Win Rate"      value={`${fmtN(result.win_rate, 1)}%`}     sub={`${result.winning_trades}W / ${result.losing_trades}L`} positive={result.win_rate >= 50} />
-            <BtKPI label="Rendement"     value={`${result.total_return >= 0 ? "+" : ""}${fmtN(result.total_return)}%`}  positive={result.total_return >= 0} />
-            <BtKPI label="Max Drawdown"  value={`-${fmtN(result.max_drawdown)}%`}   positive={result.max_drawdown < 10} />
-            <BtKPI label="Sharpe"        value={fmtN(result.sharpe_ratio)}           positive={result.sharpe_ratio >= 1} />
-            <BtKPI label="Profit Factor" value={fmtN(result.profit_factor)}         positive={result.profit_factor >= 1} />
-            <BtKPI label="Trades"        value={String(result.total_trades)}         sub={`Moy. ${fmtN(result.avg_trade_return)}%`} />
+            <BtKPI label="Win Rate" value={`${fmtN(result.win_rate, 1)}%`} sub={`${result.winning_trades}W / ${result.losing_trades}L`} positive={result.win_rate >= 50} />
+            <BtKPI label="Rendement" value={`${result.total_return >= 0 ? "+" : ""}${fmtN(result.total_return)}%`} positive={result.total_return >= 0} />
+            <BtKPI label="Max Drawdown" value={`-${fmtN(result.max_drawdown)}%`} positive={result.max_drawdown < 10} />
+            <BtKPI label="Sharpe" value={fmtN(result.sharpe_ratio)} positive={result.sharpe_ratio >= 1} />
+            <BtKPI label="Profit Factor" value={fmtN(result.profit_factor)} positive={result.profit_factor >= 1} />
+            <BtKPI label="Trades" value={String(result.total_trades)} sub={`Moy. ${fmtN(result.avg_trade_return)}%`} />
           </div>
 
-          {/* Best / Worst */}
           <div className="grid grid-cols-2 gap-3">
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{ background: "rgba(74,222,128,0.07)", border: "1px solid rgba(74,222,128,0.15)" }}>
               <span className="text-lg">🏆</span>
-              <div><p className="text-[9px] uppercase tracking-widest font-bold" style={{ color: "#444" }}>Meilleur trade</p>
-              <p className="text-lg font-black" style={{ color: UP }}>+{fmtN(result.best_trade)}%</p></div>
+              <div>
+                <p className="text-[9px] uppercase tracking-widest font-bold" style={{ color: "#444" }}>Meilleur trade</p>
+                <p className="text-lg font-black" style={{ color: UP }}>+{fmtN(result.best_trade)}%</p>
+              </div>
             </div>
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{ background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.15)" }}>
               <span className="text-lg">📉</span>
-              <div><p className="text-[9px] uppercase tracking-widest font-bold" style={{ color: "#444" }}>Pire trade</p>
-              <p className="text-lg font-black" style={{ color: DOWN }}>{fmtN(result.worst_trade)}%</p></div>
+              <div>
+                <p className="text-[9px] uppercase tracking-widest font-bold" style={{ color: "#444" }}>Pire trade</p>
+                <p className="text-lg font-black" style={{ color: DOWN }}>{fmtN(result.worst_trade)}%</p>
+              </div>
             </div>
           </div>
 
-          {/* Equity curve */}
           <div className="rounded-2xl p-5" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
             <p className="text-sm font-black mb-4">Courbe d'équité</p>
             <ResponsiveContainer width="100%" height={220}>
@@ -442,7 +619,6 @@ function BacktestTab() {
             </ResponsiveContainer>
           </div>
 
-          {/* Trades table */}
           {result.trades.length > 0 && (
             <div className="rounded-2xl overflow-hidden" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
               <div className="px-5 py-3 border-b" style={{ borderColor: "#1a1a1a" }}>
@@ -453,7 +629,7 @@ function BacktestTab() {
                   <thead>
                     <tr style={{ color: "#444" }}>
                       {["Entrée", "Sortie", "Prix ent.", "Prix sort.", "Raison", "P&L", "%"].map(h => (
-                        <th key={h} className={`px-4 py-2.5 font-semibold uppercase tracking-widest text-[9px] border-b ${h === "Prix ent." || h === "Prix sort." || h === "P&L" || h === "%" ? "text-right" : "text-left"}`} style={{ borderColor: "#1a1a1a" }}>{h}</th>
+                        <th key={h} className={`px-4 py-2.5 font-semibold uppercase tracking-widest text-[9px] border-b ${["Prix ent.", "Prix sort.", "P&L", "%"].includes(h) ? "text-right" : "text-left"}`} style={{ borderColor: "#1a1a1a" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -497,21 +673,25 @@ function BacktestTab() {
   )
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// MAIN PAGE
+// ══════════════════════════════════════════════════════════════════════════════
 export default function AnalysesPage() {
   const router = useRouter()
 
-  const [screener,      setScreener]      = useState<ScreenerData | null>(null)
-  const [summary,       setSummary]       = useState<MarketSummary | null>(null)
-  const [loadScreener,  setLoadScreener]  = useState(true)
-  const [loadSummary,   setLoadSummary]   = useState(true)
-  const [filter,        setFilter]        = useState<"all" | "stock" | "crypto" | "etf">("all")
-  const [showAllBuys,   setShowAllBuys]   = useState(false)
-  const [tab,           setTab]           = useState<"screener" | "market" | "backtest">("market")
-  const [plan,          setPlan]          = useState("free")
-  const [showUpgrade,   setShowUpgrade]   = useState(false)
+  const [screener,     setScreener]     = useState<ScreenerData | null>(null)
+  const [summary,      setSummary]      = useState<MarketSummary | null>(null)
+  const [loadScreener, setLoadScreener] = useState(true)
+  const [loadSummary,  setLoadSummary]  = useState(true)
+  const [tab,          setTab]          = useState<"screener" | "heatmap" | "scanner" | "backtest" | "market">("screener")
+  const [filter,       setFilter]       = useState<"all" | "stock" | "crypto" | "etf">("all")
+  const [viewMode,     setViewMode]     = useState<"table" | "cards">("table")
+  const [sortField,    setSortField]    = useState<SortField>("score")
+  const [sortAsc,      setSortAsc]      = useState(false)
+  const [search,       setSearch]       = useState("")
+  const [plan,         setPlan]         = useState("free")
+  const [showUpgrade,  setShowUpgrade]  = useState(false)
 
-  // ── Auth guard + plan ───────────────────────────────────────────────────────
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) { router.push("/login"); return }
@@ -520,72 +700,127 @@ export default function AnalysesPage() {
     })
   }, [router])
 
-  // ── Fetch screener ──────────────────────────────────────────────────────────
   const fetchScreener = useCallback(async (force = false) => {
     setLoadScreener(true)
     try {
-      const res  = await fetch(`/api/screener${force ? `?t=${Date.now()}` : ""}`)
+      const res = await fetch(`/api/screener${force ? `?t=${Date.now()}` : ""}`)
       const data = await res.json()
       setScreener(data)
     } catch {}
     setLoadScreener(false)
   }, [])
 
-  // ── Fetch market summary ────────────────────────────────────────────────────
   const fetchSummary = useCallback(async (force = false) => {
     setLoadSummary(true)
     try {
-      const res  = await fetch(`/api/market-summary${force ? `?t=${Date.now()}` : ""}`)
+      const res = await fetch(`/api/market-summary${force ? `?t=${Date.now()}` : ""}`)
       const data = await res.json()
       setSummary(data)
     } catch {}
     setLoadSummary(false)
   }, [])
 
-  // ── Load both in parallel on mount ─────────────────────────────────────────
   useEffect(() => {
     Promise.all([fetchScreener(), fetchSummary()])
   }, [fetchScreener, fetchSummary])
 
-  // ── Filtered screener assets ────────────────────────────────────────────────
-  const filtered = screener
-    ? (filter === "all" ? screener.assets : screener.assets.filter(a => a.category === filter))
-    : []
-
-  const filteredBuys  = filtered.filter(a => a.signal === "ACHETER")
-  const filteredSells = filtered.filter(a => a.signal === "ÉVITER")
-  const displayBuys   = showAllBuys ? filteredBuys : filteredBuys.slice(0, 10)
-  const displaySells  = filteredSells.slice(0, 5)
-
   const sent = summary ? sentimentConfig(summary.sentiment) : null
+
+  const allAssets: AssetResult[] = screener?.assets ?? []
+
+  const baseFiltered = allAssets
+    .filter(a => filter === "all" || a.category === filter)
+    .filter(a => !search || a.symbol.toLowerCase().includes(search.toLowerCase()) || a.name.toLowerCase().includes(search.toLowerCase()))
+
+  const sorted = [...baseFiltered].sort((a, b) => {
+    const va = a[sortField] as number
+    const vb = b[sortField] as number
+    return sortAsc ? va - vb : vb - va
+  })
+
+  function toggleSort(field: SortField) {
+    if (sortField === field) setSortAsc(v => !v)
+    else { setSortField(field); setSortAsc(false) }
+  }
+
+  function SortBtn({ field, label }: { field: SortField; label: string }) {
+    const active = sortField === field
+    return (
+      <button onClick={() => toggleSort(field)}
+        className="flex items-center gap-0.5 text-[9px] uppercase tracking-widest font-bold transition"
+        style={{ color: active ? BLUE : "#444" }}>
+        {label}
+        {active && <span>{sortAsc ? " ↑" : " ↓"}</span>}
+      </button>
+    )
+  }
+
+  const buyCnt  = baseFiltered.filter(a => a.signal === "ACHAT_FORT" || a.signal === "ACHAT").length
+  const sellCnt = baseFiltered.filter(a => a.signal === "VENTE_FORT" || a.signal === "VENTE").length
+  const neutCnt = baseFiltered.filter(a => a.signal === "NEUTRE").length
+  const avgScore = baseFiltered.length > 0 ? Math.round(baseFiltered.reduce((s, a) => s + a.score, 0) / baseFiltered.length) : 0
+  const avgConf  = baseFiltered.length > 0 ? Math.round(baseFiltered.reduce((s, a) => s + a.confluence, 0) / baseFiltered.length) : 0
 
   return (
     <>
     <div className="min-h-screen text-white overflow-x-hidden page-enter" style={{ background: "var(--bg-canvas)" }}>
-      <div className="max-w-6xl mx-auto px-4 md:px-5 py-6">
+      <div className="max-w-7xl mx-auto px-4 md:px-5 py-6">
 
-        {/* ── Page header ─────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        {/* ── Header ──────────────────────────────────────────────────────── */}
+        <div className="flex items-start justify-between mb-5 flex-wrap gap-3">
           <div>
-            <h1 className="text-xl md:text-2xl font-black tracking-tight">Analyses IA</h1>
-            <p className="text-gray-600 text-sm mt-0.5">Screener algorithmique · Briefing de marché Groq LLaMA</p>
-          </div>
-          {sent && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl font-bold text-sm"
-              style={{ background: sent.bg, color: sent.color, border: `1px solid ${sent.border}` }}>
-              {sent.label}
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="text-xl md:text-2xl font-black tracking-tight">Terminal Analyses</h1>
+              {!loadScreener && screener && (
+                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black"
+                  style={{ background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.2)", color: UP }}>
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: UP }} />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: UP }} />
+                  </span>
+                  LIVE
+                </span>
+              )}
             </div>
-          )}
+            <p className="text-gray-600 text-sm">Screener · Heatmap · Scanner IA · Backtest · Briefing marché</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {sent && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl font-bold text-sm"
+                style={{ background: sent.bg, color: sent.color, border: `1px solid ${sent.border}` }}>
+                {sent.label}
+              </div>
+            )}
+            {!loadScreener && screener && (
+              <p className="text-[10px]" style={{ color: "#444" }}>
+                MAJ {fmtTime(screener.updated_at)}
+              </p>
+            )}
+          </div>
         </div>
 
+        {/* ── KPI stats (screener data) ────────────────────────────────────── */}
+        {!loadScreener && screener && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-5">
+            <KPIStat label="Actifs scannés" value={allAssets.length} />
+            <KPIStat label="Signaux achat" value={buyCnt} color={UP} />
+            <KPIStat label="Signaux vente" value={sellCnt} color={DOWN} />
+            <KPIStat label="Neutres" value={neutCnt} color={WARN} />
+            <KPIStat label="Score moyen" value={`${avgScore}/100`} color={avgScore >= 60 ? UP : avgScore >= 40 ? WARN : DOWN} />
+            <KPIStat label="Confluence moy." value={`${avgConf}%`} color={BLUE} />
+          </div>
+        )}
+
         {/* ── Tabs ────────────────────────────────────────────────────────── */}
-        <div className="flex gap-1 mb-6 p-1 rounded-xl overflow-x-auto scrollbar-hide" style={{ background: "#111" }}>
+        <div className="flex gap-1 mb-5 p-1 rounded-xl overflow-x-auto scrollbar-hide" style={{ background: "#111" }}>
           {[
-            { key: "market",   label: "📰 Résumé" },
             { key: "screener", label: "🔍 Screener" },
+            { key: "heatmap",  label: "🔥 Heatmap" },
+            { key: "scanner",  label: "🧠 Scanner IA" },
             { key: "backtest", label: "📊 Backtest" },
+            { key: "market",   label: "📰 Marché" },
           ].map(t => (
-            <button key={t.key} onClick={() => setTab(t.key as any)}
+            <button key={t.key} onClick={() => setTab(t.key as typeof tab)}
               className="flex-1 flex-shrink-0 whitespace-nowrap py-2 rounded-lg text-xs md:text-sm font-bold transition-all"
               style={{
                 background: tab === t.key ? "#1a1a1a" : "transparent",
@@ -597,13 +832,279 @@ export default function AnalysesPage() {
           ))}
         </div>
 
-        {/* ══════════════════════════════════════════════════════════════════ */}
-        {/* MARKET SUMMARY TAB                                                */}
-        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/* ════════════════════════════════════════════════════════════════════ */}
+        {/* SCREENER TAB                                                         */}
+        {/* ════════════════════════════════════════════════════════════════════ */}
+        {tab === "screener" && plan === "free" && (
+          <div className="relative rounded-2xl overflow-hidden" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
+            <div className="p-6 blur-sm pointer-events-none select-none opacity-40">
+              <div className="space-y-2">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="h-10 rounded-lg animate-pulse" style={{ background: "#151515" }} />
+                ))}
+              </div>
+            </div>
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl" style={{ background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.2)" }}>🔒</div>
+              <div>
+                <p className="text-white font-black text-lg">Terminal Pro réservé aux abonnés</p>
+                <p className="text-gray-500 text-sm mt-1">Screener temps réel, heatmap, scanner IA, backtest avancé</p>
+              </div>
+              <button onClick={() => setShowUpgrade(true)}
+                className="px-6 py-3 rounded-xl font-black text-sm text-black transition hover:opacity-90"
+                style={{ background: "linear-gradient(135deg, #4ade80, #22c55e)" }}>
+                Passer à Pro →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {tab === "screener" && plan !== "free" && (
+          <div className="space-y-4">
+            {/* Controls */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Category filter */}
+                <div className="flex rounded-lg overflow-hidden" style={{ border: "1px solid #1a1a1a" }}>
+                  {([["all", "Tout"], ["stock", "Actions"], ["crypto", "Crypto"], ["etf", "ETF"]] as const).map(([key, label]) => (
+                    <button key={key} onClick={() => setFilter(key)}
+                      className="px-3 py-1.5 text-[11px] font-bold transition-all"
+                      style={{
+                        background: filter === key ? "#1f2937" : "#0d0d0d",
+                        color: filter === key ? BLUE : "#555",
+                      }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* View mode */}
+                <div className="flex gap-1 rounded-lg overflow-hidden" style={{ border: "1px solid #1a1a1a" }}>
+                  {([["table", "☰ Table"], ["cards", "⊞ Cartes"]] as const).map(([key, label]) => (
+                    <button key={key} onClick={() => setViewMode(key)}
+                      className="px-3 py-1.5 text-[11px] font-bold transition-all"
+                      style={{
+                        background: viewMode === key ? "#1f2937" : "#0d0d0d",
+                        color: viewMode === key ? "#fff" : "#555",
+                      }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* Search */}
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Rechercher…"
+                  className="px-3 py-1.5 rounded-lg text-xs text-white outline-none w-36"
+                  style={{ background: "#111", border: "1px solid #1a1a1a" }} />
+
+                {/* Export CSV */}
+                <button onClick={() => exportCSV(sorted)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition"
+                  style={{ background: "#111", border: "1px solid #1a1a1a", color: "#555" }}>
+                  ↓ CSV
+                </button>
+
+                {/* Refresh */}
+                <button onClick={() => fetchScreener(true)} disabled={loadScreener}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition disabled:opacity-40"
+                  style={{ background: "#111", border: "1px solid #222", color: "#888" }}>
+                  {loadScreener
+                    ? <><span className="w-3 h-3 border border-gray-500 border-t-transparent rounded-full animate-spin" /> Scan...</>
+                    : "↻"}
+                </button>
+              </div>
+            </div>
+
+            {/* Count line */}
+            {!loadScreener && (
+              <p className="text-[10px]" style={{ color: "#444" }}>
+                {sorted.length} actif{sorted.length > 1 ? "s" : ""} · triés par <span style={{ color: BLUE }}>{sortField}</span> {sortAsc ? "↑" : "↓"}
+              </p>
+            )}
+
+            {/* Loading */}
+            {loadScreener && (
+              <div className="space-y-2">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} className="h-10 rounded-lg animate-pulse" style={{ background: "#111" }} />
+                ))}
+              </div>
+            )}
+
+            {/* Table view */}
+            {!loadScreener && viewMode === "table" && (
+              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid #1a1a1a" }}>
+                {/* Table header */}
+                <div className="grid items-center gap-2 px-4 py-2.5"
+                  style={{
+                    gridTemplateColumns: "1.6fr 70px 80px 70px 70px 70px 50px 80px 80px 80px 110px",
+                    background: "rgba(255,255,255,0.02)",
+                    borderBottom: "1px solid #1a1a1a",
+                  }}>
+                  <span className="text-[9px] uppercase tracking-widest font-bold" style={{ color: "#444" }}>Actif</span>
+                  <SortBtn field="price" label="Prix" />
+                  <SortBtn field="change_1d" label="1j %" />
+                  <SortBtn field="change_1w" label="1S %" />
+                  <SortBtn field="change_1m" label="1M %" />
+                  <SortBtn field="rsi" label="RSI" />
+                  <span className="text-[9px] uppercase tracking-widest font-bold" style={{ color: "#444" }}>MACD</span>
+                  <SortBtn field="confluence" label="Conf." />
+                  <SortBtn field="volume_ratio" label="Vol ×" />
+                  <SortBtn field="score" label="Score" />
+                  <span className="text-[9px] uppercase tracking-widest font-bold" style={{ color: "#444" }}>Signal</span>
+                </div>
+
+                {/* Rows */}
+                <div className="overflow-y-auto" style={{ maxHeight: "70vh" }}>
+                  {sorted.map(a => (
+                    <TableRow key={a.symbol} asset={a} onClick={() => router.push(`/dashboard?symbol=${a.symbol}`)} />
+                  ))}
+                  {sorted.length === 0 && (
+                    <div className="text-center py-10" style={{ color: "#555" }}>
+                      Aucun actif ne correspond aux filtres
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Cards view */}
+            {!loadScreener && viewMode === "cards" && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                {sorted.map(a => (
+                  <AssetCard key={a.symbol} asset={a} onClick={() => router.push(`/dashboard?symbol=${a.symbol}`)} />
+                ))}
+                {sorted.length === 0 && (
+                  <div className="col-span-full text-center py-10" style={{ color: "#555" }}>
+                    Aucun actif ne correspond aux filtres
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════════════ */}
+        {/* HEATMAP TAB                                                          */}
+        {/* ════════════════════════════════════════════════════════════════════ */}
+        {tab === "heatmap" && (
+          <div className="space-y-5">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <h2 className="text-lg font-black">Heatmap des variations</h2>
+                <p className="text-[10px] mt-0.5" style={{ color: "#555" }}>Variation journalière — vert intensif = forte hausse, rouge intensif = forte baisse</p>
+              </div>
+              <div className="flex rounded-lg overflow-hidden" style={{ border: "1px solid #1a1a1a" }}>
+                {([["all", "Tout"], ["stock", "Actions"], ["crypto", "Crypto"], ["etf", "ETF"]] as const).map(([key, label]) => (
+                  <button key={key} onClick={() => setFilter(key)}
+                    className="px-3 py-1.5 text-[11px] font-bold transition-all"
+                    style={{
+                      background: filter === key ? "#1f2937" : "#0d0d0d",
+                      color: filter === key ? BLUE : "#555",
+                    }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {loadScreener ? (
+              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-1.5">
+                {Array.from({ length: 40 }).map((_, i) => (
+                  <div key={i} className="h-16 rounded-lg animate-pulse" style={{ background: "#111" }} />
+                ))}
+              </div>
+            ) : (
+              <>
+                {/* Sector groups */}
+                {filter === "all" || filter === "stock" ? (
+                  <div className="space-y-4">
+                    {["Technology", "Finance", "Healthcare", "Consumer", "Energy"].map(sector => {
+                      const sectorAssets = baseFiltered.filter(a => a.sector === sector)
+                      if (sectorAssets.length === 0) return null
+                      return (
+                        <div key={sector}>
+                          <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "#444" }}>{sector}</p>
+                          <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))" }}>
+                            {sectorAssets.map(a => (
+                              <HeatmapCell key={a.symbol} asset={a} onClick={() => router.push(`/dashboard?symbol=${a.symbol}`)} />
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))" }}>
+                    {baseFiltered.map(a => (
+                      <HeatmapCell key={a.symbol} asset={a} onClick={() => router.push(`/dashboard?symbol=${a.symbol}`)} />
+                    ))}
+                  </div>
+                )}
+
+                {/* Legend */}
+                <div className="flex items-center gap-3 justify-end flex-wrap">
+                  <span className="text-[10px]" style={{ color: "#444" }}>Légende variation 1j :</span>
+                  {[
+                    { label: "+5%+", bg: "rgba(74,222,128,0.5)" },
+                    { label: "+2%", bg: "rgba(74,222,128,0.25)" },
+                    { label: "0%", bg: "rgba(255,255,255,0.04)" },
+                    { label: "-2%", bg: "rgba(248,113,113,0.25)" },
+                    { label: "-5%-", bg: "rgba(248,113,113,0.5)" },
+                  ].map(({ label, bg }) => (
+                    <div key={label} className="flex items-center gap-1">
+                      <div className="w-4 h-4 rounded" style={{ background: bg, border: "1px solid rgba(255,255,255,0.05)" }} />
+                      <span className="text-[9px]" style={{ color: "#555" }}>{label}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════════════ */}
+        {/* SCANNER IA TAB                                                       */}
+        {/* ════════════════════════════════════════════════════════════════════ */}
+        {tab === "scanner" && plan === "free" && (
+          <div className="text-center py-16 rounded-2xl" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.2)" }}>🔒</div>
+            <p className="text-white font-black text-lg mb-1">Scanner IA réservé Pro</p>
+            <p className="text-gray-500 text-sm mb-4">Détection de 12 patterns techniques + analyse IA Groq</p>
+            <button onClick={() => setShowUpgrade(true)}
+              className="px-6 py-3 rounded-xl font-black text-sm text-black transition hover:opacity-90"
+              style={{ background: "linear-gradient(135deg, #a78bfa, #7c3aed)" }}>
+              Passer à Pro →
+            </button>
+          </div>
+        )}
+
+        {tab === "scanner" && plan !== "free" && (
+          loadScreener ? (
+            <div className="text-center py-12" style={{ color: "#555" }}>
+              <span className="w-6 h-6 border border-gray-600 border-t-white rounded-full animate-spin inline-block mb-3" />
+              <p>Chargement des données du scanner…</p>
+            </div>
+          ) : (
+            <ScannerIA assets={allAssets} />
+          )
+        )}
+
+        {/* ════════════════════════════════════════════════════════════════════ */}
+        {/* BACKTEST TAB                                                         */}
+        {/* ════════════════════════════════════════════════════════════════════ */}
+        {tab === "backtest" && <BacktestTab />}
+
+        {/* ════════════════════════════════════════════════════════════════════ */}
+        {/* MARKET SUMMARY TAB                                                   */}
+        {/* ════════════════════════════════════════════════════════════════════ */}
         {tab === "market" && (
           <div className="space-y-5">
-
-            {/* Section header */}
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-black">Résumé de marché</h2>
@@ -620,7 +1121,6 @@ export default function AnalysesPage() {
               </button>
             </div>
 
-            {/* Briefing */}
             <div className="rounded-2xl p-5" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
               {loadSummary ? (
                 <div className="space-y-3">
@@ -630,7 +1130,8 @@ export default function AnalysesPage() {
                 <div>
                   <div className="flex items-center gap-3 mb-4">
                     {sent && (
-                      <span className="text-xs font-black px-3 py-1 rounded-full" style={{ background: sent.bg, color: sent.color, border: `1px solid ${sent.border}` }}>
+                      <span className="text-xs font-black px-3 py-1 rounded-full"
+                        style={{ background: sent.bg, color: sent.color, border: `1px solid ${sent.border}` }}>
                         {sent.label}
                       </span>
                     )}
@@ -643,23 +1144,26 @@ export default function AnalysesPage() {
               )}
             </div>
 
-            {/* Index cards */}
-            <div>
-              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Indices et actifs majeurs</h3>
-              {loadSummary ? (
-                <div className="flex gap-2 flex-wrap">
-                  {Array.from({ length: 7 }).map((_, i) => (
-                    <div key={i} className="flex-1 min-w-[90px] h-16 rounded-xl animate-pulse" style={{ background: "#151515" }} />
-                  ))}
-                </div>
-              ) : summary ? (
+            {summary?.market_data && (
+              <div>
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Indices et actifs majeurs</h3>
                 <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-                  {summary.market_data.map(d => <IndexCard key={d.symbol} d={d} />)}
+                  {summary.market_data.map(d => {
+                    const up = d.change >= 0
+                    return (
+                      <div key={d.symbol} className="rounded-xl p-3 flex-shrink-0 min-w-[90px]" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
+                        <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-1">{d.symbol.replace("-USD", "")}</p>
+                        <p className="text-white font-black text-sm tabular-nums">{fmtPrice(d.price)}</p>
+                        <p className="text-[11px] font-bold tabular-nums mt-0.5" style={{ color: up ? UP : DOWN }}>
+                          {up ? "+" : ""}{d.change.toFixed(2)}%
+                        </p>
+                      </div>
+                    )
+                  })}
                 </div>
-              ) : null}
-            </div>
+              </div>
+            )}
 
-            {/* Top movers */}
             {summary?.top_movers && (
               <div>
                 <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Plus grandes variations</h3>
@@ -685,170 +1189,6 @@ export default function AnalysesPage() {
             )}
           </div>
         )}
-
-        {/* ══════════════════════════════════════════════════════════════════ */}
-        {/* SCREENER TAB                                                      */}
-        {/* ══════════════════════════════════════════════════════════════════ */}
-        {tab === "screener" && plan === "free" && (
-          <div className="relative rounded-2xl overflow-hidden" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
-            {/* Blurred preview */}
-            <div className="p-6 blur-sm pointer-events-none select-none opacity-40">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {[1,2,3,4,5,6,7,8].map(i => (
-                  <div key={i} className="h-28 rounded-xl animate-pulse" style={{ background: "#151515" }} />
-                ))}
-              </div>
-            </div>
-            {/* Lock overlay */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl" style={{ background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.2)" }}>🔒</div>
-              <div>
-                <p className="text-white font-black text-lg">Screener IA réservé Pro</p>
-                <p className="text-gray-500 text-sm mt-1">Scanne 160+ actifs en temps réel avec scoring algorithmique</p>
-              </div>
-              <button
-                onClick={() => setShowUpgrade(true)}
-                className="px-6 py-3 rounded-xl font-black text-sm text-black transition hover:opacity-90"
-                style={{ background: "linear-gradient(135deg, #4ade80, #22c55e)" }}
-              >
-                Passer à Pro →
-              </button>
-            </div>
-          </div>
-        )}
-
-        {tab === "screener" && plan !== "free" && (
-          <div className="space-y-6">
-
-            {/* Section header + controls */}
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-lg font-black">Screener IA</h2>
-                {screener && !loadScreener && (
-                  <p className="text-[10px] text-gray-600 mt-0.5">
-                    {screener.assets.length} actifs scannés · Mis à jour à {fmtTime(screener.updated_at)}
-                  </p>
-                )}
-              </div>
-
-              {/* Controls row */}
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Category filters */}
-                <div className="flex rounded-lg overflow-hidden" style={{ border: "1px solid #1a1a1a" }}>
-                  {([["all", "Tout"], ["stock", "Actions"], ["crypto", "Crypto"], ["etf", "ETF"]] as const).map(([key, label]) => (
-                    <button key={key} onClick={() => setFilter(key)}
-                      className="px-3 py-1.5 text-[11px] font-bold transition-all"
-                      style={{
-                        background: filter === key ? "#1f2937" : "#0d0d0d",
-                        color: filter === key ? "#60a5fa" : "#555",
-                      }}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Refresh */}
-                <button onClick={() => fetchScreener(true)} disabled={loadScreener}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition disabled:opacity-40"
-                  style={{ background: "#111", border: "1px solid #222", color: "#888" }}>
-                  {loadScreener
-                    ? <><span className="w-3 h-3 border border-gray-500 border-t-transparent rounded-full animate-spin" /> Scan...</>
-                    : "↻ Rafraîchir"}
-                </button>
-              </div>
-            </div>
-
-            {/* Stats pills */}
-            {screener && !loadScreener && (
-              <div className="flex gap-2 flex-wrap">
-                {[
-                  { label: "Opportunités d'achat", count: screener.top_buys.length,  color: UP   },
-                  { label: "Signaux neutres",       count: screener.neutral.length,   color: WARN },
-                  { label: "À éviter",              count: screener.top_sells.length, color: DOWN },
-                ].map(s => (
-                  <div key={s.label} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
-                    style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
-                    <span className="w-2 h-2 rounded-full" style={{ background: s.color }} />
-                    <span className="text-gray-400">{s.label}</span>
-                    <span className="font-black" style={{ color: s.color }}>{s.count}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Loading skeleton for screener */}
-            {loadScreener && (
-              <div className="space-y-4">
-                <Skeleton h="h-5" w="w-40" />
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                  {Array.from({ length: 10 }).map((_, i) => (
-                    <div key={i} className="h-28 rounded-xl animate-pulse" style={{ background: "#111" }} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {!loadScreener && (
-              <>
-                {/* ── Top Acheter ────────────────────────────────────────── */}
-                {filteredBuys.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="w-2 h-2 rounded-full" style={{ background: UP }} />
-                      <h3 className="text-sm font-black" style={{ color: UP }}>
-                        Top Opportunités d'Achat
-                      </h3>
-                      <span className="text-[10px] text-gray-600">({filteredBuys.length} actifs · score ≥ 70)</span>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                      {displayBuys.map(a => (
-                        <AssetCard key={a.symbol} asset={a} onClick={() => router.push(`/dashboard?symbol=${a.symbol}`)} />
-                      ))}
-                    </div>
-                    {filteredBuys.length > 10 && (
-                      <button onClick={() => setShowAllBuys(v => !v)}
-                        className="mt-3 w-full py-2 rounded-xl text-xs font-semibold transition"
-                        style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", color: "#555" }}>
-                        {showAllBuys ? "Afficher moins ▲" : `Voir tous les ${filteredBuys.length} ▼`}
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* ── Top Éviter ─────────────────────────────────────────── */}
-                {displaySells.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="w-2 h-2 rounded-full" style={{ background: DOWN }} />
-                      <h3 className="text-sm font-black" style={{ color: DOWN }}>
-                        Top À Éviter
-                      </h3>
-                      <span className="text-[10px] text-gray-600">({filteredSells.length} actifs · score &lt; 30)</span>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                      {displaySells.map(a => (
-                        <AssetCard key={a.symbol} asset={a} onClick={() => router.push(`/dashboard?symbol=${a.symbol}`)} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Empty state */}
-                {filteredBuys.length === 0 && filteredSells.length === 0 && (
-                  <div className="text-center py-16">
-                    <p className="text-gray-600 text-sm">Aucun signal fort sur cette catégorie</p>
-                    <p className="text-gray-700 text-xs mt-1">Essaie "Tout" pour voir tous les actifs</p>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════════════ */}
-        {/* BACKTEST TAB                                                       */}
-        {/* ══════════════════════════════════════════════════════════════════ */}
-        {tab === "backtest" && <BacktestTab />}
 
       </div>
     </div>
