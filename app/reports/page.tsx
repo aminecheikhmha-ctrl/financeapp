@@ -144,6 +144,46 @@ function TradeHeatmap({ data }: { data: ReportData["heatmapData"] }) {
   )
 }
 
+function PnLCalendar({ data }: { data: ReportData["dailySnapshots"] }) {
+  const days = Array.from({ length: 90 }, (_, i) => {
+    const d = new Date()
+    d.setDate(d.getDate() - (89 - i))
+    return d.toISOString().slice(0, 10)
+  })
+  const pnlByDay: Record<string, number> = {}
+  for (const s of data) pnlByDay[s.date] = s.daily_pnl ?? 0
+  const maxPnl = Math.max(...Object.values(pnlByDay).map(Math.abs), 1)
+
+  return (
+    <div>
+      <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-3">Calendrier P&L — 90 derniers jours</p>
+      <div className="flex flex-wrap gap-1">
+        {days.map(day => {
+          const pnl = pnlByDay[day]
+          const intensity = pnl ? Math.min(Math.abs(pnl) / maxPnl, 1) : 0
+          const color = !pnl
+            ? "rgba(255,255,255,0.04)"
+            : pnl > 0
+              ? `rgba(34,197,94,${0.15 + intensity * 0.6})`
+              : `rgba(239,68,68,${0.15 + intensity * 0.6})`
+          return (
+            <div key={day}
+              className="w-4 h-4 rounded-sm cursor-pointer transition-transform hover:scale-125"
+              style={{ background: color }}
+              title={`${day} : ${pnl ? `${pnl >= 0 ? "+" : ""}$${pnl.toFixed(2)}` : "—"}`}
+            />
+          )
+        })}
+      </div>
+      <div className="flex gap-3 mt-2">
+        <span className="flex items-center gap-1 text-[10px] text-gray-600"><span className="w-3 h-3 rounded-sm bg-green-500/60 inline-block" /> Profitable</span>
+        <span className="flex items-center gap-1 text-[10px] text-gray-600"><span className="w-3 h-3 rounded-sm bg-red-500/60 inline-block" /> En perte</span>
+        <span className="flex items-center gap-1 text-[10px] text-gray-600"><span className="w-3 h-3 rounded-sm bg-white/5 inline-block" /> Pas de trade</span>
+      </div>
+    </div>
+  )
+}
+
 export default function ReportsPage() {
   const router = useRouter()
   const reportRef = useRef<HTMLDivElement>(null)
@@ -155,6 +195,8 @@ export default function ReportsPage() {
   const [pdfLoading, setPdfLoading] = useState(false)
   const [csvLoading, setCsvLoading] = useState(false)
   const [token, setToken] = useState<string | null>(null)
+  const [aiReport, setAiReport] = useState<string | null>(null)
+  const [generatingReport, setGeneratingReport] = useState(false)
 
   const fetchReport = useCallback(async (p: Period, tok: string) => {
     setLoading(true)
@@ -278,6 +320,29 @@ export default function ReportsPage() {
     setPdfLoading(false)
   }
 
+  async function generateAIReport() {
+    if (!report || !token) return
+    setGeneratingReport(true)
+    try {
+      const topSymbols = report.perAsset.slice(0, 3).map(a => a.symbol)
+      const res = await fetch("/api/reports/ai-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          winRate: report.winRate,
+          profitFactor: report.profitFactor,
+          avgWin: report.bestTrade ? report.bestTrade.pnlPct : 0,
+          avgLoss: report.worstTrade ? report.worstTrade.pnlPct : 0,
+          totalTrades: report.totalTrades,
+          topSymbols,
+        }),
+      })
+      const data = await res.json()
+      if (data.analysis) setAiReport(data.analysis)
+    } catch {}
+    setGeneratingReport(false)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#0a0a0a]">
@@ -337,6 +402,35 @@ export default function ReportsPage() {
             </button>
           ))}
         </div>
+
+        {/* AI Analysis */}
+        <div className="bg-[#111] border rounded-2xl p-5 mb-6"
+          style={{ background: "rgba(139,92,246,0.06)", borderColor: "rgba(139,92,246,0.2)" }}>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-lg">🧠</span>
+            <p className="text-sm font-black text-white">Analyse IA de tes performances</p>
+            <span className="text-[9px] text-purple-400 px-2 py-0.5 rounded-full font-bold"
+              style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.2)" }}>
+              GROQ AI
+            </span>
+          </div>
+          {aiReport ? (
+            <p className="text-sm text-white/60 leading-relaxed">{aiReport}</p>
+          ) : (
+            <button onClick={generateAIReport} disabled={generatingReport}
+              className="px-4 py-2 rounded-xl text-sm font-bold transition-all hover:scale-[1.02] disabled:opacity-50"
+              style={{ background: "rgba(139,92,246,0.12)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.2)" }}>
+              {generatingReport ? "⏳ Génération..." : "Générer mon analyse personnalisée →"}
+            </button>
+          )}
+        </div>
+
+        {/* 90-day PnL calendar */}
+        {report.dailySnapshots.length > 0 && (
+          <div className="bg-[#111] border border-white/5 rounded-2xl p-5 mb-6">
+            <PnLCalendar data={report.dailySnapshots} />
+          </div>
+        )}
 
         {/* Hero strip */}
         <div className="bg-[#111] border border-white/5 rounded-2xl p-5 mb-6">
