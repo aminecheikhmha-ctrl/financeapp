@@ -257,9 +257,15 @@ export default function ProfilPage() {
           body: JSON.stringify({ context: "profile_load" }),
         }).catch(() => {})
 
-        const { data: rows } = await supabase
-          .from("user_achievements").select("achievement_id").eq("user_id", u.id)
-        setUnlockedIds((rows ?? []).map((r: any) => r.achievement_id))
+        // Read via API (service key) to bypass RLS
+        const achRes = await fetch("/api/achievements", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const achJson = await achRes.json()
+        const unlocked = (achJson.achievements ?? [])
+          .filter((a: any) => a.unlocked)
+          .map((a: any) => a.id)
+        setUnlockedIds(unlocked)
       } catch {}
 
       try {
