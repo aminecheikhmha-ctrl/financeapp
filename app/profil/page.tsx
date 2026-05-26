@@ -364,10 +364,10 @@ export default function ProfilPage() {
               {/* Stats strip */}
               <div className="flex gap-4 mb-4">
                 {[
-                  { value: daysSince(user?.created_at), label: "jours" },
-                  { value: unlockedIds.length,           label: "succès" },
-                  { value: completedCourses.length,      label: "cours"  },
-                  { value: orders.length,                label: "trades" },
+                  { value: `🔥 ${profile?.streak_days ?? 0}`, label: "jours streak" },
+                  { value: unlockedIds.length,                label: "succès"       },
+                  { value: completedCourses.length,           label: "cours"        },
+                  { value: orders.length,                     label: "trades"       },
                 ].map(s => (
                   <div key={s.label} className="text-center">
                     <p className="text-white font-black text-base leading-none">{s.value}</p>
