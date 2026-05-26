@@ -31,7 +31,12 @@ export async function POST(req: NextRequest) {
   const yesterdayStr = yesterday.toISOString().slice(0, 10)
 
   const currentStreak = profile?.streak_days ?? 0
-  const newStreak = lastLogin === yesterdayStr ? currentStreak + 1 : 1
+  // If no last_login recorded yet, keep existing streak and just set today's date
+  const newStreak = lastLogin === null
+    ? (currentStreak > 0 ? currentStreak : 1)
+    : lastLogin === yesterdayStr
+    ? currentStreak + 1
+    : 1
 
   await supabase
     .from("user_profiles")
