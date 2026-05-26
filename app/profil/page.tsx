@@ -250,6 +250,13 @@ export default function ProfilPage() {
       } catch {}
 
       try {
+        // Trigger achievement check first so existing trades unlock achievements
+        await fetch("/api/achievements/check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ context: "profile_load" }),
+        }).catch(() => {})
+
         const { data: rows } = await supabase
           .from("user_achievements").select("achievement_id").eq("user_id", u.id)
         setUnlockedIds((rows ?? []).map((r: any) => r.achievement_id))

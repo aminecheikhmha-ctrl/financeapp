@@ -352,6 +352,11 @@ export default function Dashboard() {
             })
           })
         }
+        fetch("/api/achievements/check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ context: "trade" }),
+        }).catch(() => {})
         setTimeout(() => { setOrderModal(null); setOrderMsg(""); loadPosition(); loadOrders(); loadAccount() }, 1500)
       } else {
         const { haptic } = await import("@/lib/capacitor")

@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
     supabase
       .from("user_profiles")
       .select("xp, streak_days")
-      .eq("user_id", user.id)
+      .eq("id", user.id)
       .single(),
   ])
 
@@ -163,10 +163,10 @@ export async function POST(req: NextRequest) {
   await supabase
     .from("user_profiles")
     .upsert({
-      user_id: user.id,
+      id: user.id,
       xp: newXP,
       level_name: newLevel.name,
-    })
+    }, { onConflict: "id" })
 
   return NextResponse.json({ unlocked: newlyUnlocked, total_xp_gained: totalXP })
 }
