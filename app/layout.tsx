@@ -1,19 +1,20 @@
 import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-import Navbar       from "./components/Navbar"
-import Sidebar      from "./components/Sidebar"
-import BottomNav    from "./components/BottomNav"
-import MobileHeader from "./components/MobileHeader"
-import Topbar from "./components/Topbar"
-import ServiceWorker from "./components/ServiceWorker"
+import Navbar          from "./components/Navbar"
+import Sidebar         from "./components/Sidebar"
+import BottomNav       from "./components/BottomNav"
+import MobileHeader    from "./components/MobileHeader"
+import Topbar          from "./components/Topbar"
+import ServiceWorker   from "./components/ServiceWorker"
 import { ToastProvider } from "./components/Toast"
-import { Analytics } from "@vercel/analytics/react"
+import { Analytics }   from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/next"
-import ChatBot from "./components/ChatBot"
-import CookieBanner from "./components/CookieBanner"
+import ChatBot         from "./components/ChatBot"
+import CookieBanner    from "./components/CookieBanner"
 import NativePushSetup from "./components/NativePushSetup"
 import AppSplashScreen from "./components/AppSplashScreen"
+import PWAInstallBanner from "./components/PWAInstallBanner"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -22,41 +23,52 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://tradex-kappa-six.vercel.app"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://tradex-kappa-six.vercel.app"),
   title: {
     default: "TradEx — Trading intelligent avec l'IA",
     template: "%s | TradEx",
   },
-  description: "Signaux de trading en temps réel, analyses IA, graphes professionnels et académie de trading complète. Tradez plus intelligemment.",
-  keywords: ["trading", "bourse", "crypto", "signaux", "analyse technique", "IA", "investissement", "paper trading"],
+  description: "Signaux de trading IA en temps réel. Paper trading, analyses sur 160+ actifs et académie interactive.",
+  keywords: ["trading", "bourse", "crypto", "signaux", "analyse technique", "IA", "investissement", "paper trading", "RSI", "MACD"],
   authors: [{ name: "TradEx" }],
-  robots: { index: true, follow: true },
+  creator: "TradEx",
+  robots: { index: true, follow: true, googleBot: { index: true, follow: true } },
   openGraph: {
     type: "website",
     locale: "fr_FR",
-    url: "https://tradex.io",
     siteName: "TradEx",
     title: "TradEx — Trading intelligent avec l'IA",
-    description: "Signaux de trading en temps réel, analyses IA et académie de trading — tout en un.",
-    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "TradEx" }],
+    description: "Signaux en temps réel · Analyses IA · Paper Trading · Académie",
+    images: [{ url: "/api/og", width: 1200, height: 630, alt: "TradEx Trading IA" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "TradEx — Trading intelligent avec l'IA",
-    description: "Signaux de trading en temps réel, analyses IA et académie de trading.",
-    images: ["/og-image.png"],
+    title: "TradEx — Trading IA",
+    description: "Signaux en temps réel · Paper Trading · Académie",
+    images: ["/api/og"],
   },
   manifest: "/manifest.json",
   icons: {
-    icon: "/icon-192.png",
-    apple: "/icon-192.png",
+    icon: [{ url: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+    apple: [{ url: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+    shortcut: "/icon-192.png",
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "TradEx",
+  },
+  applicationName: "TradEx",
+  formatDetection: { telephone: false },
 }
 
 export const viewport: Viewport = {
-  themeColor: "#4ade80",
+  themeColor: "#050505",
   width: "device-width",
   initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  colorScheme: "dark",
 }
 
 export default function RootLayout({
@@ -65,24 +77,28 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="fr">
+    <html lang="fr" suppressHydrationWarning>
+      <head>
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <link rel="preconnect" href="https://query1.finance.yahoo.com" />
+        <link rel="dns-prefetch" href="https://query1.finance.yahoo.com" />
+      </head>
       <body className={`${inter.variable} font-sans bg-[#050505] text-white`}>
         <ToastProvider>
           <AppSplashScreen />
           <NativePushSetup />
           <ServiceWorker />
-          {/* Public marketing navbar (unauthenticated only) */}
           <Navbar />
-          {/* Desktop sidebar */}
           <Sidebar />
-          {/* Desktop topbar */}
           <Topbar />
-          {/* Mobile: header bar + bottom tab nav */}
           <MobileHeader />
           <BottomNav />
           <main className="sidebar-main">
             {children}
           </main>
+          <PWAInstallBanner />
           <Analytics />
           <SpeedInsights />
           <ChatBot />

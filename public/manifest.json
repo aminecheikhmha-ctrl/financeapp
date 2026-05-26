@@ -1,20 +1,48 @@
 {
-  "name": "TradEx",
+  "name": "TradEx — Trading IA",
   "short_name": "TradEx",
-  "description": "Trading intelligent avec l'IA — Signaux en temps réel, analyses IA et académie de trading",
+  "description": "Signaux de trading IA en temps réel. Paper trading, analyses sur 160+ actifs et académie interactive.",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#080808",
-  "theme_color": "#4ade80",
   "orientation": "portrait-primary",
+  "background_color": "#050505",
+  "theme_color": "#050505",
   "categories": ["finance", "business", "education"],
+  "lang": "fr",
+  "scope": "/",
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "Dashboard", "url": "/dashboard", "description": "Tableau de bord" },
-    { "name": "Signaux", "url": "/signaux", "description": "Signaux IA en temps réel" },
-    { "name": "Portfolio", "url": "/portfolio", "description": "Mon portfolio" }
-  ]
+    {
+      "name": "Dashboard",
+      "url": "/dashboard",
+      "description": "Voir les marchés en temps réel",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Signaux",
+      "url": "/signaux",
+      "description": "Signaux IA du moment",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Portfolio",
+      "url": "/portfolio",
+      "description": "Mon portfolio",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }
