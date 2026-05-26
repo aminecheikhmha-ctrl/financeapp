@@ -219,38 +219,25 @@ export default function ProfilPage() {
   const [tab, setTab]                       = useState<Tab>("trading")
   const [myRank, setMyRank]                 = useState<number | null>(null)
 
-  async function getToken() {
-    const { data } = await supabase.auth.getSession()
-    return data.session?.access_token
-  }
-
   useEffect(() => {
     async function load() {
+      // ── Phase 1 : auth (synchrone depuis localStorage) ──────────────────
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push("/login"); return }
       const u = session.user
+      const token = session.access_token
       setUser(u)
 
-      const token = await getToken()
-      if (!token) return
-
-      // Update streak first, then read profile (so streak_days is fresh)
-      const streakRes = await fetch("/api/streak", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      }).then(r => r.json()).catch(() => ({}))
-
+      // ── Phase 2 : données critiques en parallèle → affiche la page ──────
       const [profileRes, accRes, posRes, ordRes] = await Promise.allSettled([
-        fetch("/api/user-profile", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-        fetch("/api/trading/account", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+        fetch("/api/user-profile",      { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+        fetch("/api/trading/account",   { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
         fetch("/api/trading/positions", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-        fetch("/api/trading/orders", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+        fetch("/api/trading/orders",    { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
       ])
 
       if (profileRes.status === "fulfilled") {
         const p = profileRes.value?.profile ?? null
-        // Override streak_days with the freshly computed value
-        if (p && streakRes?.streak_days != null) p.streak_days = streakRes.streak_days
         setProfile(p)
         if (p?.avatar_url) setAvatarUrl(p.avatar_url)
       }
@@ -258,42 +245,48 @@ export default function ProfilPage() {
       if (posRes.status === "fulfilled") setPositions(Array.isArray(posRes.value?.positions) ? posRes.value.positions : [])
       if (ordRes.status === "fulfilled") setOrders(Array.isArray(ordRes.value) ? ordRes.value : [])
 
-      try {
-        const { data: rows } = await supabase
-          .from("user_progress").select("*").eq("user_id", u.id).eq("completed", true)
-        setCompletedCourses(rows ?? [])
-      } catch {}
+      // ── Affiche la page immédiatement ────────────────────────────────────
+      setLoading(false)
 
-      try {
-        // Trigger achievement check first so existing trades unlock achievements
-        await fetch("/api/achievements/check", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ context: "profile_load" }),
+      // ── Phase 3 : données secondaires en arrière-plan (sans bloquer) ────
+      // Streak (fire-and-forget, met à jour le profil en arrière-plan)
+      fetch("/api/streak", { method: "POST", headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(streakRes => {
+          if (streakRes?.streak_days != null) {
+            setProfile(prev => prev ? { ...prev, streak_days: streakRes.streak_days } : prev)
+          }
         }).catch(() => {})
 
-        // Read via API (service key) to bypass RLS
-        const achRes = await fetch("/api/achievements", {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        const achJson = await achRes.json()
-        const unlocked = (achJson.achievements ?? [])
-          .filter((a: any) => a.unlocked)
-          .map((a: any) => a.id)
-        setUnlockedIds(unlocked)
-      } catch {}
+      // Cours complétés
+      supabase.from("user_progress").select("*").eq("user_id", u.id).eq("completed", true)
+        .then(({ data: rows }) => setCompletedCourses(rows ?? []))
+        .catch(() => {})
 
-      try {
-        const res = await fetch("/api/social/top-traders")
-        const traders = await res.json()
-        if (Array.isArray(traders)) {
-          setLeaderboard(traders)
-          const idx = traders.findIndex((t: any) => t.user_id === u.id)
-          setMyRank(idx >= 0 ? idx + 1 : null)
-        }
-      } catch {}
+      // Achievements (check + fetch en séquence mais non bloquant)
+      fetch("/api/achievements/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ context: "profile_load" }),
+      }).catch(() => {}).finally(() => {
+        fetch("/api/achievements", { headers: { Authorization: `Bearer ${token}` } })
+          .then(r => r.json())
+          .then(achJson => {
+            const unlocked = (achJson.achievements ?? []).filter((a: any) => a.unlocked).map((a: any) => a.id)
+            setUnlockedIds(unlocked)
+          }).catch(() => {})
+      })
 
-      setLoading(false)
+      // Leaderboard (le plus lent, complètement en arrière-plan)
+      fetch("/api/social/top-traders")
+        .then(r => r.json())
+        .then(traders => {
+          if (Array.isArray(traders)) {
+            setLeaderboard(traders)
+            const idx = traders.findIndex((t: any) => t.user_id === u.id)
+            setMyRank(idx >= 0 ? idx + 1 : null)
+          }
+        }).catch(() => {})
     }
     load()
   }, [])
