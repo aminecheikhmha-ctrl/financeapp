@@ -231,6 +231,12 @@ export default function ProfilPage() {
       const token = await getToken()
       if (!token) return
 
+      // Update streak first, then read profile (so streak_days is fresh)
+      const streakRes = await fetch("/api/streak", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.json()).catch(() => ({}))
+
       const [profileRes, accRes, posRes, ordRes] = await Promise.allSettled([
         fetch("/api/user-profile", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
         fetch("/api/trading/account", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
@@ -238,7 +244,12 @@ export default function ProfilPage() {
         fetch("/api/trading/orders", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
       ])
 
-      if (profileRes.status === "fulfilled") setProfile(profileRes.value?.profile ?? null)
+      if (profileRes.status === "fulfilled") {
+        const p = profileRes.value?.profile ?? null
+        // Override streak_days with the freshly computed value
+        if (p && streakRes?.streak_days != null) p.streak_days = streakRes.streak_days
+        setProfile(p)
+      }
       if (accRes.status === "fulfilled") setAccount(accRes.value?.account ?? null)
       if (posRes.status === "fulfilled") setPositions(Array.isArray(posRes.value?.positions) ? posRes.value.positions : [])
       if (ordRes.status === "fulfilled") setOrders(Array.isArray(ordRes.value) ? ordRes.value : [])
