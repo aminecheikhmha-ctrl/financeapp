@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils"
 import {
   LayoutDashboard, TrendingUp, BarChart2, Briefcase,
   BookOpen, Users, MessageSquare, FileText, Bot,
-  Bell, Settings, ChevronRight, LogOut, Zap, Newspaper,
+  Bell, Settings, ChevronRight, ChevronLeft, LogOut, Zap, Newspaper,
   Star
 } from "lucide-react"
 
@@ -226,7 +226,7 @@ export default function Sidebar() {
   async function handleLogout() {
     await supabase.auth.signOut()
     document.cookie = "onboarding_done=; path=/; max-age=0"
-    router.push("/")
+    router.push("/login")
   }
 
   if (!user || pathname === "/onboarding") return null
@@ -258,6 +258,13 @@ export default function Sidebar() {
       return (
         <span className="ml-auto">
           <span className="live-dot" style={{ width: 6, height: 6 }} />
+        </span>
+      )
+    if (href === "/social")
+      return (
+        <span className="ml-auto text-[9px] font-black px-1.5 py-0.5 rounded-md"
+          style={{ background: "rgba(251,191,36,0.10)", color: "rgba(251,191,36,0.55)", border: "1px solid rgba(251,191,36,0.15)" }}>
+          Bientôt
         </span>
       )
     return null
@@ -293,7 +300,7 @@ export default function Sidebar() {
         </button>
         {!collapsed && (
           <button onClick={toggleCollapsed} className="ml-auto text-white/20 hover:text-white/50 transition p-1 rounded">
-            <ChevronRight size={14} />
+            <ChevronLeft size={14} />
           </button>
         )}
       </div>

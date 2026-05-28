@@ -118,36 +118,54 @@ export default function PortfolioPage() {
       const cash = accountData?.cash ?? 100000
       const invested = enrichedPositions.reduce((s, p) => s + p.avg_price * p.qty, 0)
       const posValue = enrichedPositions.reduce((s, p) => s + p.value, 0)
-      const totalPnl = enrichedPositions.reduce((s, p) => s + p.pnl, 0)
-      const dayPnl = totalPnl // approximation
+      const totalValue = cash + posValue
+      const totalPnl = totalValue - 100000 // true P&L = total portfolio value minus starting capital
+      const dayPnl = enrichedPositions.reduce((s, p) => s + p.pnl, 0) // open position P&L as day approx
 
-      // Win/loss from positions
-      const winners = enrichedPositions.filter(p => p.pnl > 0)
-      const losers  = enrichedPositions.filter(p => p.pnl < 0)
-      const avgWin  = winners.length > 0 ? winners.reduce((s, p) => s + p.pnl, 0) / winners.length : 0
-      const avgLoss = losers.length  > 0 ? losers.reduce((s, p) => s + p.pnl, 0) / losers.length : 0
-      const winRate = enrichedPositions.length > 0 ? (winners.length / enrichedPositions.length) * 100 : 0
+      // FIFO matching to compute closed-trade stats
+      const buyMap: Record<string, { price: number; qty: number }[]> = {}
+      const closedTrades: { symbol: string; pnl: number; pnlPct: number }[] = []
+      const sortedOrders = [...filled].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      for (const o of sortedOrders) {
+        if (o.side === "buy") {
+          if (!buyMap[o.symbol]) buyMap[o.symbol] = []
+          buyMap[o.symbol].push({ price: o.price, qty: o.qty })
+        } else if (o.side === "sell" && buyMap[o.symbol]?.length) {
+          const buy = buyMap[o.symbol].shift()!
+          const matchedQty = Math.min(o.qty, buy.qty)
+          const pnl = (o.price - buy.price) * matchedQty
+          const pnlPct = ((o.price - buy.price) / buy.price) * 100
+          closedTrades.push({ symbol: o.symbol, pnl, pnlPct })
+          // If partial fill, push remaining back
+          if (buy.qty > o.qty) buyMap[o.symbol].unshift({ price: buy.price, qty: buy.qty - o.qty })
+        }
+      }
 
-      const totalGains  = winners.reduce((s, p) => s + p.pnl, 0)
-      const totalLosses = Math.abs(losers.reduce((s, p) => s + p.pnl, 0))
+      const tradeWinners = closedTrades.filter(t => t.pnl > 0)
+      const tradeLosers  = closedTrades.filter(t => t.pnl < 0)
+      const winRate = closedTrades.length > 0 ? (tradeWinners.length / closedTrades.length) * 100 : 0
+      const avgWin  = tradeWinners.length > 0 ? tradeWinners.reduce((s, t) => s + t.pnl, 0) / tradeWinners.length : 0
+      const avgLoss = tradeLosers.length  > 0 ? Math.abs(tradeLosers.reduce((s, t) => s + t.pnl, 0) / tradeLosers.length) : 0
+      const totalGains  = tradeWinners.reduce((s, t) => s + t.pnl, 0)
+      const totalLosses = Math.abs(tradeLosers.reduce((s, t) => s + t.pnl, 0))
       const profitFactor = totalLosses > 0 ? totalGains / totalLosses : totalGains > 0 ? Infinity : 0
 
-      const sorted = [...enrichedPositions].sort((a, b) => b.pnl - a.pnl)
+      const sortedClosed = [...closedTrades].sort((a, b) => b.pnl - a.pnl)
       const computedStats: Stats = {
-        totalValue: cash + posValue,
+        totalValue,
         totalCash: cash,
         totalInvested: invested,
         totalPnl,
-        totalPnlPct: invested > 0 ? (totalPnl / invested) * 100 : 0,
+        totalPnlPct: (totalPnl / 100000) * 100,
         dayPnl,
         winRate,
         avgWin,
         avgLoss,
         profitFactor,
         totalTrades: filled.length,
-        bestTrade: sorted[0] ? { symbol: sorted[0].symbol, pnl: sorted[0].pnl, pnl_pct: sorted[0].pnl_pct } : null,
-        worstTrade: sorted[sorted.length - 1] && sorted[sorted.length - 1].pnl < 0
-          ? { symbol: sorted[sorted.length - 1].symbol, pnl: sorted[sorted.length - 1].pnl, pnl_pct: sorted[sorted.length - 1].pnl_pct }
+        bestTrade: sortedClosed[0] ? { symbol: sortedClosed[0].symbol, pnl: sortedClosed[0].pnl, pnl_pct: sortedClosed[0].pnlPct } : null,
+        worstTrade: sortedClosed[sortedClosed.length - 1]?.pnl < 0
+          ? { symbol: sortedClosed[sortedClosed.length - 1].symbol, pnl: sortedClosed[sortedClosed.length - 1].pnl, pnl_pct: sortedClosed[sortedClosed.length - 1].pnlPct }
           : null,
       }
       setStats(computedStats)
@@ -161,13 +179,23 @@ export default function PortfolioPage() {
 
   function buildPerfHistory(orders: Order[]) {
     if (orders.length === 0) return []
+    // Track realized P&L via FIFO matching
+    const buyMap: Record<string, { price: number; qty: number }[]> = {}
     const byDay: Record<string, number> = {}
-    let running = 100000
+    let realizedPnl = 0
     const sorted = [...orders].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
     for (const o of sorted) {
       const day = o.created_at.slice(0, 10)
-      if (o.side === "sell") running += o.total
-      byDay[day] = running
+      if (o.side === "buy") {
+        if (!buyMap[o.symbol]) buyMap[o.symbol] = []
+        buyMap[o.symbol].push({ price: o.price, qty: o.qty })
+      } else if (o.side === "sell" && buyMap[o.symbol]?.length) {
+        const buy = buyMap[o.symbol].shift()!
+        const matchedQty = Math.min(o.qty, buy.qty)
+        realizedPnl += (o.price - buy.price) * matchedQty
+        if (buy.qty > o.qty) buyMap[o.symbol].unshift({ price: buy.price, qty: buy.qty - o.qty })
+      }
+      byDay[day] = 100000 + realizedPnl
     }
     return Object.entries(byDay).map(([date, value]) => ({ date, value }))
   }

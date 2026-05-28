@@ -14,18 +14,27 @@ interface Props {
   onDismiss: () => void
 }
 
+const STORAGE_KEY = "checklist_completed_v2"
+
 export default function OnboardingChecklist({ positions, watchlist, onDismiss }: Props) {
   const [courseStarted, setCourseStarted] = useState(false)
   const [alertCreated, setAlertCreated] = useState(false)
   const [forumPosted, setForumPosted] = useState(false)
   const [dismissed, setDismissed] = useState(false)
+  // Persisted set of step IDs that were ever completed — never unchecked
+  const [persistedDone, setPersistedDone] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    // Check if dismissed
+    // Load persisted completions from localStorage (client-only)
     if (localStorage.getItem("checklist_dismissed") === "1") {
       setDismissed(true)
       return
     }
+    try {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]")
+      setPersistedDone(new Set(stored as string[]))
+    } catch {}
+
     // Check course progress
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) return
@@ -50,15 +59,37 @@ export default function OnboardingChecklist({ positions, watchlist, onDismiss }:
     })
   }, [])
 
-  const steps: Step[] = [
-    { id: "account", label: "Créer ton compte", done: true },
-    { id: "watchlist", label: "Ajouter un actif à ta watchlist", done: watchlist.length > 1 },
-    { id: "order", label: "Passer ton premier ordre paper trading", done: positions.length > 0 },
-    { id: "course", label: "Lire ton premier cours", done: courseStarted },
-    { id: "alert", label: "Configurer une alerte de prix", done: alertCreated },
-    { id: "tpsl", label: "Configurer un TP et un SL", done: false },
-    { id: "forum", label: "Rejoindre le forum", done: forumPosted },
+  const liveSteps: Step[] = [
+    { id: "account",   label: "Créer ton compte",                          done: true },
+    { id: "watchlist", label: "Ajouter un actif à ta watchlist",           done: watchlist.length > 1 },
+    { id: "order",     label: "Passer ton premier ordre paper trading",    done: positions.length > 0 },
+    { id: "course",    label: "Lire ton premier cours",                    done: courseStarted },
+    { id: "alert",     label: "Configurer une alerte de prix",             done: alertCreated },
+    { id: "tpsl",      label: "Configurer un TP et un SL",                 done: false },
+    { id: "forum",     label: "Rejoindre le forum",                        done: forumPosted },
   ]
+
+  // Merge live state with persisted — once done, always done
+  const steps: Step[] = liveSteps.map(s => ({
+    ...s,
+    done: s.done || persistedDone.has(s.id),
+  }))
+
+  // Persist any newly completed steps
+  useEffect(() => {
+    const newDone = new Set(persistedDone)
+    let changed = false
+    for (const step of steps) {
+      if (step.done && !persistedDone.has(step.id)) {
+        newDone.add(step.id)
+        changed = true
+      }
+    }
+    if (changed) {
+      setPersistedDone(newDone)
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...newDone])) } catch {}
+    }
+  }, [liveSteps.map(s => s.done).join(",")])
 
   const stepLinks: Record<string, string> = {
     watchlist: "/dashboard",

@@ -262,7 +262,13 @@ function Top3Card({ signal, rank }: { signal: SignalResult; rank: number }) {
 
         {/* Button */}
         <button
-          onClick={() => router.push(`/signaux/${signal.symbol}`)}
+          onClick={() => {
+            const params = new URLSearchParams({ symbol: signal.symbol })
+            if (signal.entry_price) params.set("price", String(signal.entry_price))
+            if (signal.tp1) params.set("tp", String(signal.tp1))
+            if (signal.sl) params.set("sl", String(signal.sl))
+            router.push(`/dashboard?${params.toString()}`)
+          }}
           className="w-full text-[11px] font-bold py-2 rounded-xl transition-all hover:opacity-80"
           style={{
             background: isLong ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)",

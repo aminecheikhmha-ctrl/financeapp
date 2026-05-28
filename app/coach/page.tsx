@@ -126,9 +126,9 @@ export default function CoachPage() {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-green-500/15 border border-green-500/30 text-3xl mb-3">
             🤖
           </div>
-          <h1 className="text-2xl font-black text-white">Coach IA</h1>
+          <h1 className="text-2xl font-black text-white">Coach IA Trading</h1>
           <p className="text-gray-500 text-sm mt-1">
-            Ton coach personnel — analyse, conseils et stratégies
+            Outil éducatif interactif — ne constitue pas un conseil financier
           </p>
         </div>
 

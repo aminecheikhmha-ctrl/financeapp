@@ -109,6 +109,8 @@ export default function Dashboard() {
   const [demoLoaded, setDemoLoaded] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
   const [orderSide, setOrderSide] = useState<"buy" | "sell">("buy")
+  const [orderMode, setOrderMode] = useState<"qty" | "capital">("qty")
+  const [orderCapital, setOrderCapital] = useState("")
   const [rightPanel, setRightPanel] = useState<"watchlist" | "order">("order")
   const [showMobileOrder, setShowMobileOrder] = useState(false)
   const [priceFlash, setPriceFlash] = useState<"up" | "down" | null>(null)
@@ -510,10 +512,14 @@ export default function Dashboard() {
 
   const openBuy = () => {
     const p = activeData?.price ?? 0
+    const tpParam = searchParams.get("tp")
+    const slParam = searchParams.get("sl")
     setOrderModal("buy"); setOrderQty("1")
-    setOrderTp(p ? (p * 1.05).toFixed(2) : "")
-    setOrderSl(p ? (p * 0.97).toFixed(2) : "")
+    setOrderTp(tpParam || (p ? (p * 1.05).toFixed(2) : ""))
+    setOrderSl(slParam || (p ? (p * 0.97).toFixed(2) : ""))
     setOrderMsg("")
+    setOrderMode("qty")
+    setOrderCapital("")
   }
 
   // Personalized watchlist: add crypto if preferred
@@ -703,10 +709,10 @@ export default function Dashboard() {
       </div>
 
       {/* ── Main layout: left chart | right sidebar ──────────────────────── */}
-      <div className="flex flex-col md:flex-row items-start">
+      <div className="flex flex-col md:flex-row md:h-[calc(100vh-56px)] md:overflow-hidden">
 
         {/* LEFT — chart + tabs */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 md:overflow-y-auto">
 
           {/* Onboarding checklist */}
           {showChecklist && (
@@ -906,7 +912,7 @@ export default function Dashboard() {
               ))}
               {userProfile?.level === "débutant" && (
                 <div className="flex items-center gap-1 px-3 py-2.5 text-[10px] text-gray-700 border-b-2 border-transparent">
-                  🔒 Indicateurs avancés <span className="text-[9px]">(niveau intermédiaire)</span>
+                  🔒 Indicateurs avancés <span className="text-[9px] ml-1 px-1.5 py-0.5 rounded bg-green-500/10 text-green-500/60 border border-green-500/15">Fonctionnalité Pro</span>
                 </div>
               )}
             </div>
@@ -958,6 +964,23 @@ export default function Dashboard() {
 
               {/* Indicateurs */}
               {activeTab === "technique" && (() => {
+                if (!chartData || loadingChart) {
+                  return (
+                    <div className="p-6 text-center">
+                      {loadingChart ? (
+                        <div className="flex items-center justify-center gap-2 text-gray-600 text-xs">
+                          <div className="w-3.5 h-3.5 border-2 border-gray-600 border-t-white rounded-full animate-spin" />
+                          Calcul des indicateurs...
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-gray-600 text-xs mb-3">Aucune donnée disponible pour calculer les indicateurs.</p>
+                          <button onClick={loadChart} className="text-[10px] px-3 py-1.5 rounded-lg bg-white/5 text-gray-500 hover:text-white transition">↻ Charger les données</button>
+                        </>
+                      )}
+                    </div>
+                  )
+                }
                 const bars = chartData?.bars ?? []
                 const closes = bars.map((b: any) => b.close).filter(Boolean)
                 const highs  = bars.map((b: any) => b.high).filter(Boolean)
@@ -1733,22 +1756,65 @@ export default function Dashboard() {
             </div>
 
             <div className="space-y-3">
-              {/* Quantité */}
+              {/* Mode toggle: Quantité vs Capital */}
+              <div className="flex rounded-lg overflow-hidden border border-white/10">
+                <button onClick={() => setOrderMode("qty")}
+                  className={`flex-1 py-1.5 text-xs font-bold transition ${orderMode === "qty" ? "bg-white/10 text-white" : "text-gray-600 hover:text-gray-400"}`}>
+                  Quantité
+                </button>
+                <button onClick={() => setOrderMode("capital")}
+                  className={`flex-1 py-1.5 text-xs font-bold transition ${orderMode === "capital" ? "bg-white/10 text-white" : "text-gray-600 hover:text-gray-400"}`}>
+                  Capital ($)
+                </button>
+              </div>
+
+              {/* Quantité / Capital */}
               <div>
-                <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5 block">Quantité</label>
-                <div className="flex gap-1.5">
-                  <input type="number" value={orderQty} onChange={(e) => setOrderQty(e.target.value)}
-                    min="0.001" step="0.001"
-                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-white/20" />
-                  {["0.5", "1", "5", "10"].map(q => (
-                    <button key={q} onClick={() => setOrderQty(q)}
-                      className={`px-2.5 py-2 rounded-lg text-xs font-bold border transition ${
-                        orderQty === q ? "bg-white/10 text-white border-white/20" : "bg-white/[0.03] text-gray-500 border-white/8 hover:text-white"
-                      }`}>{q}</button>
-                  ))}
-                </div>
+                {orderMode === "qty" ? (
+                  <>
+                    <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5 block">Quantité</label>
+                    <div className="flex gap-1.5">
+                      <input type="number" value={orderQty} onChange={(e) => setOrderQty(e.target.value)}
+                        min="0.001" step="0.001"
+                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-white/20" />
+                      {["0.5", "1", "5", "10"].map(q => (
+                        <button key={q} onClick={() => setOrderQty(q)}
+                          className={`px-2.5 py-2 rounded-lg text-xs font-bold border transition ${
+                            orderQty === q ? "bg-white/10 text-white border-white/20" : "bg-white/[0.03] text-gray-500 border-white/8 hover:text-white"
+                          }`}>{q}</button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5 block">Montant ($)</label>
+                    <div className="flex gap-1.5">
+                      <input type="number" value={orderCapital} onChange={(e) => {
+                        setOrderCapital(e.target.value)
+                        const price = activeData?.price ?? 0
+                        if (price > 0 && e.target.value) {
+                          setOrderQty((parseFloat(e.target.value) / price).toFixed(4))
+                        }
+                      }}
+                        min="1" step="1" placeholder="ex: 500"
+                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-white/20" />
+                      {["100", "250", "500", "1000"].map(c => (
+                        <button key={c} onClick={() => {
+                          setOrderCapital(c)
+                          const price = activeData?.price ?? 0
+                          if (price > 0) setOrderQty((parseFloat(c) / price).toFixed(4))
+                        }}
+                          className={`px-2 py-2 rounded-lg text-xs font-bold border transition ${
+                            orderCapital === c ? "bg-white/10 text-white border-white/20" : "bg-white/[0.03] text-gray-500 border-white/8 hover:text-white"
+                          }`}>${c}</button>
+                      ))}
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-between mt-1.5 px-0.5">
-                  <span className="text-[10px] text-gray-600">Total estimé</span>
+                  <span className="text-[10px] text-gray-600">
+                    {orderMode === "capital" ? `≈ ${parseFloat(orderQty || "0").toFixed(4)} unités` : "Total estimé"}
+                  </span>
                   <span className="text-[10px] font-bold text-white">${((activeData?.price ?? 0) * parseFloat(orderQty || "0")).toFixed(2)}</span>
                 </div>
               </div>

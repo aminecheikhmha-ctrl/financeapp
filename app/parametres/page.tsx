@@ -160,7 +160,13 @@ export default function ParametresPage() {
         const p = profileRes.value.data
         setEditUsername(p.username ?? "")
         setEditColor(p.avatar_color ?? "#4ade80")
-        if (p.settings) setSettings({ ...DEFAULT_SETTINGS, ...p.settings })
+        if (p.settings) {
+          const merged = { ...DEFAULT_SETTINGS, ...p.settings }
+          setSettings(merged)
+          // Apply compact mode on load
+          if (merged.compact_mode) document.body.classList.add("compact-mode")
+          else document.body.classList.remove("compact-mode")
+        }
       }
       if (planRes.status === "fulfilled" && planRes.value.data?.plan) {
         setPlan(planRes.value.data.plan)
@@ -175,6 +181,11 @@ export default function ParametresPage() {
     const next = { ...settings, [key]: value }
     setSettings(next)
     setSaved(key)
+    // Apply compact mode immediately to body
+    if (key === "compact_mode") {
+      if (value) document.body.classList.add("compact-mode")
+      else document.body.classList.remove("compact-mode")
+    }
     await supabase.from("user_profiles")
       .update({ settings: next })
       .eq("id", user?.id)

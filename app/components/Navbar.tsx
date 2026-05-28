@@ -35,9 +35,7 @@ export default function Navbar() {
   const navLinks = [
     { href: "/#features", label: "Fonctionnalités" },
     { href: "/pricing", label: "Tarifs" },
-    { href: "/apprendre", label: "Académie" },
     { href: "/blog", label: "Blog" },
-    { href: "/signaux", label: "Signaux" },
   ]
 
   // Logged-in user on a public route → minimal bar with dashboard link
