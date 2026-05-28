@@ -105,12 +105,7 @@ export default function Sidebar() {
 
   const [user,          setUser]          = useState<any>(null)
   const [plan,          setPlan]          = useState("free")
-  const [collapsed,     setCollapsed]     = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("sidebar_collapsed") !== "false"
-    }
-    return true
-  })
+  const [collapsed,     setCollapsed]     = useState(true) // always start collapsed (matches server render)
   const [strongCount,   setStrongCount]   = useState(0)
   const [learnProgress, setLearnProgress] = useState(0)
   const [forumCount,    setForumCount]    = useState(0)
@@ -121,6 +116,14 @@ export default function Sidebar() {
   const [levelName,     setLevelName]     = useState("Novice")
   const [userLevel,     setUserLevel]     = useState<string>("")
   const [unreadCount,   setUnreadCount]   = useState(0)
+
+  // Restore collapsed state from localStorage after hydration (avoids server/client mismatch)
+  useEffect(() => {
+    const stored = localStorage.getItem("sidebar_collapsed")
+    if (stored !== null) {
+      setCollapsed(stored !== "false")
+    }
+  }, [])
 
   // Sync --sidebar-w CSS variable so Topbar + main content shift together
   useEffect(() => {
@@ -305,7 +308,7 @@ export default function Sidebar() {
         </button>
         {!collapsed && (
           <button onClick={toggleCollapsed} className="ml-auto text-white/20 hover:text-white/50 transition p-1 rounded" title="Réduire">
-            <ChevronRight size={14} />
+            <ChevronLeft size={14} />
           </button>
         )}
       </div>
@@ -319,7 +322,7 @@ export default function Sidebar() {
             aria-label="Agrandir"
             title="Agrandir"
           >
-            <ChevronLeft size={14} />
+            <ChevronRight size={14} />
           </button>
         )}
 

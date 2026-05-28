@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useRef, useState, useCallback, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/app/components/Toast"
@@ -57,7 +57,7 @@ function formatVolume(v?: number | null): string {
   return String(v)
 }
 
-export default function Dashboard() {
+function DashboardContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const toast = useToast()
@@ -2035,5 +2035,13 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function Dashboard() {
+  return (
+    <Suspense fallback={null}>
+      <DashboardContent />
+    </Suspense>
   )
 }
