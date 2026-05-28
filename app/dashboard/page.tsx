@@ -891,7 +891,7 @@ export default function Dashboard() {
           {/* Analysis tabs */}
           <div className="border-t border-white/[0.05]">
             <div className="flex border-b border-white/[0.05] overflow-x-auto scrollbar-hide">
-              {(userProfile?.level === "débutant"
+              {((userProfile?.xp ?? 0) < 1500
                 ? [
                     { key: "ia", label: "Que dit l'IA ? 🤖" },
                     { key: "chart", label: "Signaux" },
@@ -910,9 +910,9 @@ export default function Dashboard() {
                     activeTab === tab.key ? "text-white border-white" : "text-gray-600 border-transparent hover:text-gray-400"
                   }`}>{tab.label}</button>
               ))}
-              {userProfile?.level === "débutant" && (
+              {(userProfile?.xp ?? 0) < 1500 && (
                 <div className="flex items-center gap-1 px-3 py-2.5 text-[10px] text-gray-700 border-b-2 border-transparent">
-                  🔒 Indicateurs avancés <span className="text-[9px] ml-1 px-1.5 py-0.5 rounded bg-green-500/10 text-green-500/60 border border-green-500/15">Fonctionnalité Pro</span>
+                  🔒 Indicateurs <span className="text-[9px] ml-1 px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500/60 border border-yellow-500/15">Niveau Trader requis</span>
                 </div>
               )}
             </div>
@@ -1521,12 +1521,16 @@ export default function Dashboard() {
               className="w-full py-3 rounded-xl btn-primary text-sm tracking-wide">
               Acheter {ticker.replace("-USD", "")}
             </button>
-            {position && (
-              <button onClick={isDemo ? () => setShowSignupModal(true) : () => { setOrderModal("sell"); setOrderQty(String(position.qty)) }}
-                className="w-full py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 text-sm font-bold transition">
-                Vendre {position.qty} parts
-              </button>
-            )}
+            <button
+              onClick={isDemo ? () => setShowSignupModal(true) : position ? () => { setOrderModal("sell"); setOrderQty(String(position.qty)) } : undefined}
+              disabled={!position && !isDemo}
+              className={`w-full py-2.5 rounded-xl text-sm font-bold transition ${
+                position
+                  ? "bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 cursor-pointer"
+                  : "bg-white/[0.03] border border-white/8 text-white/20 cursor-not-allowed"
+              }`}>
+              {position ? `Vendre ${position.qty} parts` : `Pas de position sur ${ticker.replace("-USD", "")}`}
+            </button>
           </div>
 
           {/* Price alerts */}

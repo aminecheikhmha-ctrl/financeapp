@@ -53,16 +53,21 @@ interface NavItemProps {
   active: boolean
   collapsed: boolean
   badge?: React.ReactNode
+  soon?: boolean
 }
 
-function NavItem({ href, Icon, label, active, collapsed, badge }: NavItemProps) {
+function NavItem({ href, Icon, label, active, collapsed, badge, soon }: NavItemProps) {
+  const Tag = soon ? "div" : "a"
   return (
-    <a
-      href={href}
+    <Tag
+      {...(!soon ? { href } : {})}
+      onClick={soon ? (e: React.MouseEvent) => e.preventDefault() : undefined}
       className={cn(
         "relative flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-150 group",
         active
           ? "bg-white/8 text-white"
+          : soon
+          ? "text-white/20 cursor-not-allowed"
           : "text-white/40 hover:text-white/80 hover:bg-white/4",
         collapsed && "justify-center px-0"
       )}
@@ -90,7 +95,7 @@ function NavItem({ href, Icon, label, active, collapsed, badge }: NavItemProps) 
           {label}
         </span>
       )}
-    </a>
+    </Tag>
   )
 }
 
@@ -299,8 +304,8 @@ export default function Sidebar() {
           )}
         </button>
         {!collapsed && (
-          <button onClick={toggleCollapsed} className="ml-auto text-white/20 hover:text-white/50 transition p-1 rounded">
-            <ChevronLeft size={14} />
+          <button onClick={toggleCollapsed} className="ml-auto text-white/20 hover:text-white/50 transition p-1 rounded" title="Réduire">
+            <ChevronRight size={14} />
           </button>
         )}
       </div>
@@ -312,8 +317,9 @@ export default function Sidebar() {
             onClick={toggleCollapsed}
             className="w-full flex justify-center py-1.5 mb-2 text-white/20 hover:text-white/50 transition"
             aria-label="Agrandir"
+            title="Agrandir"
           >
-            <ChevronRight size={14} />
+            <ChevronLeft size={14} />
           </button>
         )}
 
@@ -348,6 +354,7 @@ export default function Sidebar() {
               active={pathname === item.href || pathname.startsWith(item.href + "/")}
               collapsed={collapsed}
               badge={badgeFor(item.href)}
+              soon={item.href === "/social"}
             />
           ))}
         </div>

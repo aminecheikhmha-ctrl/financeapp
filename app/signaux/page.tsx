@@ -317,7 +317,13 @@ function SignalRow({ signal, blurred, onUpgrade }: { signal: SignalResult; blurr
         gridTemplateColumns: "140px 1fr 90px 60px 140px 50px 70px 80px",
         borderTop: `1px solid ${D.border}`,
       }}
-      onClick={() => router.push(`/signaux/${signal.symbol}`)}
+      onClick={() => {
+        const params = new URLSearchParams({ symbol: signal.symbol })
+        if (signal.entry_price) params.set("price", String(signal.entry_price))
+        if (signal.tp1) params.set("tp", String(signal.tp1))
+        if (signal.sl) params.set("sl", String(signal.sl))
+        router.push(`/dashboard?${params.toString()}`)
+      }}
       onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.015)")}
       onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
     >
@@ -382,8 +388,15 @@ function SignalRow({ signal, blurred, onUpgrade }: { signal: SignalResult; blurr
           border: isLong ? "1px solid rgba(34,197,94,0.25)" : "1px solid rgba(239,68,68,0.25)",
           color: isLong ? D.green : D.red,
         }}
-        onClick={e => { e.stopPropagation(); router.push(`/signaux/${signal.symbol}`) }}>
-        Analyse →
+        onClick={e => {
+          e.stopPropagation()
+          const params = new URLSearchParams({ symbol: signal.symbol })
+          if (signal.entry_price) params.set("price", String(signal.entry_price))
+          if (signal.tp1) params.set("tp", String(signal.tp1))
+          if (signal.sl) params.set("sl", String(signal.sl))
+          router.push(`/dashboard?${params.toString()}`)
+        }}>
+        Voir le graphe →
       </button>
     </div>
   )
@@ -415,7 +428,13 @@ function SignalRowMobile({ signal, blurred, onUpgrade }: { signal: SignalResult;
   return (
     <div className="flex items-center gap-3 px-4 py-3 md:hidden"
       style={{ borderTop: `1px solid ${D.border}` }}
-      onClick={() => router.push(`/signaux/${signal.symbol}`)}>
+      onClick={() => {
+        const params = new URLSearchParams({ symbol: signal.symbol })
+        if (signal.entry_price) params.set("price", String(signal.entry_price))
+        if (signal.tp1) params.set("tp", String(signal.tp1))
+        if (signal.sl) params.set("sl", String(signal.sl))
+        router.push(`/dashboard?${params.toString()}`)
+      }}>
       <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded flex-shrink-0"
         style={{ background: b.bg, border: `1px solid ${b.border}`, color: b.color }}>
         {b.label}
@@ -452,7 +471,13 @@ function GridCard({ signal, blurred, onUpgrade }: { signal: SignalResult; blurre
   return (
     <div className="relative rounded-xl overflow-hidden cursor-pointer transition-all hover:scale-[1.01]"
       style={{ background: D.card, border: `1px solid ${D.border}` }}
-      onClick={() => router.push(`/signaux/${signal.symbol}`)}>
+      onClick={() => {
+        const params = new URLSearchParams({ symbol: signal.symbol })
+        if (signal.entry_price) params.set("price", String(signal.entry_price))
+        if (signal.tp1) params.set("tp", String(signal.tp1))
+        if (signal.sl) params.set("sl", String(signal.sl))
+        router.push(`/dashboard?${params.toString()}`)
+      }}>
       {blurred && (
         <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl"
           style={{ backdropFilter: "blur(6px)", background: "rgba(5,5,5,0.75)" }}>
