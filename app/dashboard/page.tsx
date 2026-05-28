@@ -103,6 +103,7 @@ function DashboardContent() {
   const [challenges, setChallenges] = useState<any[]>([])
   const [showTour, setShowTour] = useState(false)
   const [analyticsOpen, setAnalyticsOpen] = useState(false)
+  const [rightTab, setRightTab] = useState<"trade" | "calc" | "ordres">("trade")
   const [perfSnapshots, setPerfSnapshots] = useState<{ date: string; daily_pnl: number; daily_pnl_pct: number; portfolio_value: number }[]>([])
   const [perfAlerts, setPerfAlerts] = useState<string[]>([])
   const [isDemo, setIsDemo] = useState(false)
@@ -1434,279 +1435,313 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* RIGHT — sidebar */}
-        <div className="w-full md:w-72 md:flex-shrink-0 border-t md:border-t-0 md:border-l border-white/[0.05] flex flex-col md:overflow-y-auto" style={{ background: "#0c0c0c" }}>
+        {/* RIGHT — fixed sidebar with tabs */}
+        <div className="w-full md:w-72 md:flex-shrink-0 border-t md:border-t-0 md:border-l border-white/[0.05] flex flex-col md:sticky md:top-14 md:h-[calc(100vh-56px)]" style={{ background: "#0c0c0c" }}>
 
-          {/* Cash */}
-          <div className="px-4 pt-4 pb-3 border-b border-white/[0.05]">
-            <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-1">
-              {userProfile?.level === "débutant" ? "Capital virtuel disponible" : "Cash disponible"}
-            </p>
-            <p className="text-xl font-black text-white tabular-nums">
-              {account ? `$${account.cash.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
-            </p>
-            {userProfile?.level === "débutant" && (
-              <p className="text-[10px] text-gray-600 mt-1">💡 Argent fictif — achète sans aucun risque réel</p>
-            )}
-          </div>
-
-          {/* Position */}
-          {position ? (
-            <div className="px-4 py-3 border-b border-white/[0.05]">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[9px] text-gray-600 uppercase tracking-widest">Ma Position · {ticker.replace("-USD", "")}</p>
-                <button onClick={() => setTpSlModal(true)} className="text-[9px] text-gray-600 hover:text-gray-300 transition px-2 py-0.5 rounded border border-white/10">⚙️ TP/SL</button>
-              </div>
-              <div className="grid grid-cols-2 gap-2 mb-2">
+          {/* ── Header: cash + tab bar ── */}
+          <div className="flex-shrink-0">
+            {/* Cash */}
+            <div className="px-4 pt-3 pb-2 border-b border-white/[0.05]">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[9px] text-gray-600 uppercase tracking-widest">Quantité</p>
-                  <p className="text-sm font-bold text-white mt-0.5">{position.qty}</p>
-                </div>
-                <div>
-                  <p className="text-[9px] text-gray-600 uppercase tracking-widest">Moy. achat</p>
-                  <p className="text-sm font-bold text-white mt-0.5">${position.avg_price.toFixed(2)}</p>
-                </div>
-                <div>
-                  <p className="text-[9px] text-gray-600 uppercase tracking-widest">Valeur</p>
-                  <p className="text-sm font-bold text-white mt-0.5">{activeData ? `$${(activeData.price * position.qty).toFixed(2)}` : "—"}</p>
-                </div>
-                <div>
-                  <p className="text-[9px] text-gray-600 uppercase tracking-widest">P&L</p>
-                  <p className={`text-sm font-bold mt-0.5 ${(positionPnl ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
-                    {(positionPnl ?? 0) >= 0 ? "+" : ""}${positionPnl?.toFixed(2)}
-                    <span className="text-[10px] ml-1 opacity-70">({positionPnlPct?.toFixed(1)}%)</span>
+                  <p className="text-[9px] text-gray-600 uppercase tracking-widest">
+                    {userProfile?.level === "débutant" ? "Capital virtuel" : "Cash"}
+                  </p>
+                  <p className="text-lg font-black text-white tabular-nums">
+                    {account ? `$${account.cash.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
                   </p>
                 </div>
-              </div>
-              {(position.take_profit != null || position.stop_loss != null) && (
-                <div className="flex gap-2 mt-1">
-                  {position.take_profit != null && (
-                    <div className="flex-1 bg-green-500/5 border border-green-500/15 rounded-lg px-2 py-1.5">
-                      <p className="text-[9px] text-green-500/60 uppercase tracking-widest">TP</p>
-                      <p className="text-xs font-bold text-green-400">${position.take_profit.toFixed(2)}</p>
-                    </div>
-                  )}
-                  {position.stop_loss != null && (
-                    <div className="flex-1 bg-red-500/5 border border-red-500/15 rounded-lg px-2 py-1.5">
-                      <p className="text-[9px] text-red-500/60 uppercase tracking-widest">SL</p>
-                      <p className="text-xs font-bold text-red-400">${position.stop_loss.toFixed(2)}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="px-4 py-3 border-b border-white/[0.05]">
-              {userProfile?.level === "débutant" ? (
-                <div className="space-y-1">
-                  <p className="text-xs text-gray-500 font-semibold">Tu n&apos;as pas encore acheté {ticker.replace("-USD", "")}</p>
-                  <p className="text-[10px] text-gray-700">Clique sur &quot;Acheter&quot; pour simuler ton premier achat ↓</p>
-                </div>
-              ) : (
-                <p className="text-[9px] text-gray-700 uppercase tracking-widest">Aucune position ouverte sur {ticker.replace("-USD", "")}</p>
-              )}
-            </div>
-          )}
-
-          {/* Position Calculator */}
-          <div className="px-4 py-3 border-b border-white/[0.05]">
-            <PositionCalculator
-              currentPrice={activeData?.price ?? 0}
-              symbol={ticker}
-              accountSize={account?.cash}
-              onApply={(qty, tp, sl) => {
-                setOrderQty(String(qty))
-                setOrderTp(String(tp))
-                setOrderSl(String(sl))
-                openBuy()
-              }}
-            />
-          </div>
-
-          {/* Buy / Sell buttons */}
-          <div data-tour="buy-btn" className="px-4 py-3 border-b border-white/[0.05] space-y-2">
-            <button onClick={isDemo ? () => setShowSignupModal(true) : openBuy}
-              className="w-full py-3 rounded-xl btn-primary text-sm tracking-wide">
-              Acheter {ticker.replace("-USD", "")}
-            </button>
-            <button
-              onClick={isDemo ? () => setShowSignupModal(true) : () => {
-                if (position && position.qty > 0) {
-                  setOrderModal("sell"); setOrderQty(String(position.qty))
-                } else if (position && position.qty < 0) {
-                  // Racheter le short
-                  setOrderModal("buy"); setOrderQty(String(Math.abs(position.qty)))
-                } else {
-                  setOrderModal("short"); setOrderQty("1")
-                }
-              }}
-              className="w-full py-2.5 rounded-xl text-sm font-bold transition bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 cursor-pointer">
-              {position && position.qty > 0
-                ? `Vendre ${position.qty} parts`
-                : position && position.qty < 0
-                  ? `🔄 Racheter (Short ${Math.abs(position.qty)})`
-                  : `📉 Shorter ${ticker.replace("-USD", "")}`}
-            </button>
-          </div>
-
-          {/* Price alerts */}
-          <div data-tour="alerts">
-          <AlertsPanel
-            symbol={ticker}
-            currentPrice={activeData?.price}
-            token={token}
-          />
-          </div>
-
-          {/* Market stats */}
-          {activeData && (
-            <div className="px-4 py-3 border-b border-white/[0.05]">
-              <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-2">Marché</p>
-              <div className="space-y-1.5">
-                {[
-                  { l: "Prix actuel", v: `$${activeData.price.toFixed(2)}`, c: up ? "text-green-400" : "text-red-400" },
-                  { l: "Variation 24h", v: `${up ? "+" : ""}${activeData.change.toFixed(2)}%`, c: up ? "text-green-400" : "text-red-400" },
-                  { l: "Haut du jour", v: activeData.high ? `$${activeData.high.toFixed(2)}` : "—" },
-                  { l: "Bas du jour", v: activeData.low ? `$${activeData.low.toFixed(2)}` : "—" },
-                  { l: "Clôture préc.", v: activeData.previousClose ? `$${activeData.previousClose.toFixed(2)}` : "—" },
-                  { l: "Market Cap", v: fmt(activeData.marketCap) },
-                  { l: "Volume", v: fmt(activeData.volume, "") },
-                ].map(k => (
-                  <div key={k.l} className="flex justify-between items-center">
-                    <span className="text-[10px] text-gray-600">{k.l}</span>
-                    <span className={`text-[10px] font-semibold tabular-nums ${k.c ?? "text-gray-300"}`}>{k.v}</span>
+                {activeData && (
+                  <div className="text-right">
+                    <p className={`text-xs font-black tabular-nums ${up ? "text-green-400" : "text-red-400"}`}>
+                      ${activeData.price.toFixed(2)}
+                    </p>
+                    <p className={`text-[10px] font-semibold ${up ? "text-green-400" : "text-red-400"}`}>
+                      {up ? "+" : ""}{activeData.change.toFixed(2)}%
+                    </p>
                   </div>
-                ))}
+                )}
               </div>
             </div>
-          )}
 
-          {/* Order history */}
-          {orderHistory.length > 0 && (
-            <div className="px-4 py-3 flex-1">
-              <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-2">Mes ordres · {ticker.replace("-USD", "")}</p>
-              <div className="space-y-1.5">
-                {[...orderHistory].reverse().slice(0, 8).map((o, i) => (
-                  <div key={i} className={`flex items-center justify-between px-2.5 py-2 rounded-lg border ${
-                    o.type === "buy" ? "bg-green-500/5 border-green-500/10" : "bg-red-500/5 border-red-500/10"
+            {/* Tab bar */}
+            <div className="flex border-b border-white/[0.05]">
+              {([
+                { key: "trade",  label: "Trade",  icon: "⚡" },
+                { key: "calc",   label: "Calc",   icon: "🧮" },
+                { key: "ordres", label: "Ordres", icon: "📋" },
+              ] as const).map(t => (
+                <button key={t.key} onClick={() => setRightTab(t.key)}
+                  className={`flex-1 py-2 text-[11px] font-bold transition border-b-2 ${
+                    rightTab === t.key
+                      ? "text-white border-white"
+                      : "text-gray-600 border-transparent hover:text-gray-400"
                   }`}>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[10px] font-black ${o.type === "buy" ? "text-green-400" : "text-red-400"}`}>
-                        {o.type === "buy" ? "▲" : "▼"}
-                      </span>
-                      <div>
-                        <p className={`text-[10px] font-bold ${o.type === "buy" ? "text-green-400" : "text-red-400"}`}>
-                          {o.type === "buy" ? "Achat" : "Vente"} ×{o.qty}
-                        </p>
-                        <p className="text-[9px] text-gray-600">{o.date}</p>
-                      </div>
-                    </div>
-                    <p className="text-[10px] font-bold text-white tabular-nums">${o.price.toFixed(2)}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Performance alerts */}
-          {perfAlerts.length > 0 && (
-            <div className="px-4 pt-3 space-y-2">
-              {perfAlerts.map((alert, i) => (
-                <div key={i} className={`px-3 py-2.5 rounded-xl border text-xs font-semibold ${
-                  alert.startsWith("⚠️") ? "bg-orange-500/8 border-orange-500/20 text-orange-300" :
-                  alert.startsWith("🔥") ? "bg-green-500/8 border-green-500/20 text-green-300" :
-                  "bg-blue-500/8 border-blue-500/20 text-blue-300"
-                }`}>{alert}</div>
+                  {t.icon} {t.label}
+                </button>
               ))}
             </div>
-          )}
-
-          {/* Analytics widget */}
-          <div className="px-4 pt-3">
-            <button onClick={() => setAnalyticsOpen(!analyticsOpen)}
-              className="w-full flex items-center justify-between px-3 py-2.5 bg-[#111] border border-white/5 rounded-xl hover:bg-white/3 transition">
-              <span className="text-white font-bold text-xs">📊 Analytics 30 jours</span>
-              <span className="text-gray-600 text-[10px]">{analyticsOpen ? "▲" : "▼"}</span>
-            </button>
-            {analyticsOpen && perfSnapshots.length === 0 && (
-              <div className="mt-1.5 bg-[#111] border border-white/5 rounded-xl p-4 text-center space-y-1">
-                <p className="text-2xl">📈</p>
-                <p className="text-white text-xs font-semibold">Pas encore de données</p>
-                <p className="text-gray-600 text-[10px]">Les statistiques apparaîtront après tes premiers trades et la génération du snapshot quotidien.</p>
-              </div>
-            )}
-            {analyticsOpen && perfSnapshots.length > 0 && (() => {
-              const thisWeek = perfSnapshots.slice(-7)
-              const lastWeek = perfSnapshots.slice(-14, -7)
-              const weekPnl = thisWeek.reduce((s, d) => s + (d.daily_pnl ?? 0), 0)
-              const lastWeekPnl = lastWeek.reduce((s, d) => s + (d.daily_pnl ?? 0), 0)
-              let streak = 0
-              for (let i = perfSnapshots.length - 1; i >= 0; i--) {
-                if ((perfSnapshots[i].daily_pnl ?? 0) > 0) streak++
-                else break
-              }
-              return (
-                <div className="mt-1.5 bg-[#111] border border-white/5 rounded-xl p-3 space-y-3">
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="text-center">
-                      <p className={`text-base font-black ${weekPnl >= 0 ? "text-green-400" : "text-red-400"}`}>
-                        {weekPnl >= 0 ? "+" : ""}${Math.abs(weekPnl).toFixed(0)}
-                      </p>
-                      <p className="text-gray-600 text-[9px]">Cette semaine</p>
-                    </div>
-                    <div className="text-center">
-                      <p className={`text-base font-black ${weekPnl >= lastWeekPnl ? "text-green-400" : "text-red-400"}`}>
-                        {weekPnl >= lastWeekPnl ? "▲" : "▼"}
-                      </p>
-                      <p className="text-gray-600 text-[9px]">vs S-1</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-base font-black text-orange-400">🔥 {streak}</p>
-                      <p className="text-gray-600 text-[9px]">Jours prof.</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-0.5">
-                    {perfSnapshots.map((s, i) => (
-                      <div key={i} title={`${s.date}: ${(s.daily_pnl ?? 0) >= 0 ? "+" : ""}$${(s.daily_pnl ?? 0).toFixed(0)}`}
-                        className={`w-4 h-4 rounded-sm ${(s.daily_pnl ?? 0) > 0 ? "bg-green-500/60" : (s.daily_pnl ?? 0) < 0 ? "bg-red-500/50" : "bg-white/5"}`} />
-                    ))}
-                  </div>
-                  <a href="/reports" className="block text-center text-[10px] text-green-400 font-bold hover:text-green-300 transition">
-                    Rapport complet →
-                  </a>
-                </div>
-              )
-            })()}
           </div>
 
-          {/* Weekly Challenges */}
-          {challenges.length > 0 && (
-            <div className="px-4 py-3 border-t border-white/[0.05]">
-              <h3 className="text-white font-bold text-sm mb-3">🎯 Défis de la semaine</h3>
-              <div className="grid grid-cols-1 gap-2">
-                {challenges.map((c: any) => (
-                  <div key={c.id} className={`rounded-xl p-3 border flex items-center gap-3 ${c.completed ? "bg-green-500/5 border-green-500/20" : "bg-[#111] border-white/5"}`}>
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg flex-shrink-0 ${c.completed ? "bg-green-500/20" : "bg-white/5"}`}>
-                      {c.completed ? "✅" : "🎯"}
+          {/* ── Scrollable tab content ── */}
+          <div className="flex-1 overflow-y-auto">
+
+            {/* ── TAB: TRADE ── */}
+            {rightTab === "trade" && (
+              <div className="flex flex-col gap-0">
+                {/* Position */}
+                {position ? (
+                  <div className="px-4 py-3 border-b border-white/[0.05]">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[9px] text-gray-600 uppercase tracking-widest">Position · {ticker.replace("-USD", "")}</p>
+                      <button onClick={() => setTpSlModal(true)} className="text-[9px] text-gray-600 hover:text-gray-300 transition px-2 py-0.5 rounded border border-white/10">⚙️ TP/SL</button>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-xs font-bold ${c.completed ? "text-green-400" : "text-white"}`}>{c.title}</p>
-                      <p className="text-gray-600 text-[10px] truncate">{c.description}</p>
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      <div>
+                        <p className="text-[9px] text-gray-600 uppercase tracking-widest">Quantité</p>
+                        <p className="text-sm font-bold text-white mt-0.5">{position.qty}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] text-gray-600 uppercase tracking-widest">Moy. achat</p>
+                        <p className="text-sm font-bold text-white mt-0.5">${position.avg_price.toFixed(2)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] text-gray-600 uppercase tracking-widest">Valeur</p>
+                        <p className="text-sm font-bold text-white mt-0.5">{activeData ? `$${(activeData.price * position.qty).toFixed(2)}` : "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] text-gray-600 uppercase tracking-widest">P&L</p>
+                        <p className={`text-sm font-bold mt-0.5 ${(positionPnl ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                          {(positionPnl ?? 0) >= 0 ? "+" : ""}${positionPnl?.toFixed(2)}
+                          <span className="text-[10px] ml-1 opacity-70">({positionPnlPct?.toFixed(1)}%)</span>
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-xs font-black text-yellow-400">+{c.reward_xp} XP</p>
-                      {c.progress !== undefined && !c.completed && (
-                        <p className="text-[10px] text-gray-600">{c.progress}%</p>
-                      )}
+                    {(position.take_profit != null || position.stop_loss != null) && (
+                      <div className="flex gap-2 mt-1">
+                        {position.take_profit != null && (
+                          <div className="flex-1 bg-green-500/5 border border-green-500/15 rounded-lg px-2 py-1.5">
+                            <p className="text-[9px] text-green-500/60 uppercase tracking-widest">TP</p>
+                            <p className="text-xs font-bold text-green-400">${position.take_profit.toFixed(2)}</p>
+                          </div>
+                        )}
+                        {position.stop_loss != null && (
+                          <div className="flex-1 bg-red-500/5 border border-red-500/15 rounded-lg px-2 py-1.5">
+                            <p className="text-[9px] text-red-500/60 uppercase tracking-widest">SL</p>
+                            <p className="text-xs font-bold text-red-400">${position.stop_loss.toFixed(2)}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="px-4 py-3 border-b border-white/[0.05]">
+                    <p className="text-[9px] text-gray-700 uppercase tracking-widest">Aucune position sur {ticker.replace("-USD", "")}</p>
+                  </div>
+                )}
+
+                {/* Buy / Sell */}
+                <div data-tour="buy-btn" className="px-4 py-3 border-b border-white/[0.05] space-y-2">
+                  <button onClick={isDemo ? () => setShowSignupModal(true) : openBuy}
+                    className="w-full py-3 rounded-xl btn-primary text-sm tracking-wide">
+                    Acheter {ticker.replace("-USD", "")}
+                  </button>
+                  <button
+                    onClick={isDemo ? () => setShowSignupModal(true) : () => {
+                      if (position && position.qty > 0) {
+                        setOrderModal("sell"); setOrderQty(String(position.qty))
+                      } else if (position && position.qty < 0) {
+                        setOrderModal("buy"); setOrderQty(String(Math.abs(position.qty)))
+                      } else {
+                        setOrderModal("short"); setOrderQty("1")
+                      }
+                    }}
+                    className="w-full py-2.5 rounded-xl text-sm font-bold transition bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 cursor-pointer">
+                    {position && position.qty > 0
+                      ? `Vendre ${position.qty} parts`
+                      : position && position.qty < 0
+                        ? `🔄 Racheter (Short ${Math.abs(position.qty)})`
+                        : `📉 Shorter ${ticker.replace("-USD", "")}`}
+                  </button>
+                </div>
+
+                {/* Price alerts */}
+                <div data-tour="alerts">
+                  <AlertsPanel symbol={ticker} currentPrice={activeData?.price} token={token} />
+                </div>
+              </div>
+            )}
+
+            {/* ── TAB: CALC ── */}
+            {rightTab === "calc" && (
+              <div className="flex flex-col gap-0">
+                {/* Market stats */}
+                {activeData && (
+                  <div className="px-4 py-3 border-b border-white/[0.05]">
+                    <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-2">Marché · {ticker.replace("-USD", "")}</p>
+                    <div className="space-y-1.5">
+                      {[
+                        { l: "Variation 24h", v: `${up ? "+" : ""}${activeData.change.toFixed(2)}%`, c: up ? "text-green-400" : "text-red-400" },
+                        { l: "Haut du jour",  v: activeData.high ? `$${activeData.high.toFixed(2)}` : "—" },
+                        { l: "Bas du jour",   v: activeData.low  ? `$${activeData.low.toFixed(2)}`  : "—" },
+                        { l: "Clôture préc.", v: activeData.previousClose ? `$${activeData.previousClose.toFixed(2)}` : "—" },
+                        { l: "Market Cap",    v: fmt(activeData.marketCap) },
+                        { l: "Volume",        v: fmt(activeData.volume, "") },
+                      ].map(k => (
+                        <div key={k.l} className="flex justify-between items-center">
+                          <span className="text-[10px] text-gray-600">{k.l}</span>
+                          <span className={`text-[10px] font-semibold tabular-nums ${k.c ?? "text-gray-300"}`}>{k.v}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ))}
+                )}
+                {/* Position Calculator */}
+                <div className="px-4 py-3">
+                  <PositionCalculator
+                    currentPrice={activeData?.price ?? 0}
+                    symbol={ticker}
+                    accountSize={account?.cash}
+                    onApply={(qty, tp, sl) => {
+                      setOrderQty(String(qty))
+                      setOrderTp(String(tp))
+                      setOrderSl(String(sl))
+                      setRightTab("trade")
+                      openBuy()
+                    }}
+                  />
+                </div>
               </div>
-            </div>
-          )}
+            )}
+
+            {/* ── TAB: ORDRES ── */}
+            {rightTab === "ordres" && (
+              <div className="flex flex-col gap-0">
+                {/* Order history */}
+                <div className="px-4 py-3 border-b border-white/[0.05]">
+                  <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-2">Mes ordres · {ticker.replace("-USD", "")}</p>
+                  {orderHistory.length === 0 ? (
+                    <p className="text-[10px] text-gray-700 py-2">Aucun ordre sur cet actif</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {[...orderHistory].reverse().slice(0, 10).map((o, i) => (
+                        <div key={i} className={`flex items-center justify-between px-2.5 py-2 rounded-lg border ${
+                          o.type === "buy" ? "bg-green-500/5 border-green-500/10" : "bg-red-500/5 border-red-500/10"
+                        }`}>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[10px] font-black ${o.type === "buy" ? "text-green-400" : "text-red-400"}`}>
+                              {o.type === "buy" ? "▲" : "▼"}
+                            </span>
+                            <div>
+                              <p className={`text-[10px] font-bold ${o.type === "buy" ? "text-green-400" : "text-red-400"}`}>
+                                {o.type === "buy" ? "Achat" : "Vente"} ×{o.qty}
+                              </p>
+                              <p className="text-[9px] text-gray-600">{o.date}</p>
+                            </div>
+                          </div>
+                          <p className="text-[10px] font-bold text-white tabular-nums">${o.price.toFixed(2)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Performance alerts */}
+                {perfAlerts.length > 0 && (
+                  <div className="px-4 pt-3 pb-1 space-y-2 border-b border-white/[0.05]">
+                    {perfAlerts.map((alert, i) => (
+                      <div key={i} className={`px-3 py-2.5 rounded-xl border text-xs font-semibold ${
+                        alert.startsWith("⚠️") ? "bg-orange-500/8 border-orange-500/20 text-orange-300" :
+                        alert.startsWith("🔥") ? "bg-green-500/8 border-green-500/20 text-green-300" :
+                        "bg-blue-500/8 border-blue-500/20 text-blue-300"
+                      }`}>{alert}</div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Analytics widget */}
+                <div className="px-4 pt-3 pb-3">
+                  <button onClick={() => setAnalyticsOpen(!analyticsOpen)}
+                    className="w-full flex items-center justify-between px-3 py-2.5 bg-[#111] border border-white/5 rounded-xl hover:bg-white/3 transition">
+                    <span className="text-white font-bold text-xs">📊 Analytics 30 jours</span>
+                    <span className="text-gray-600 text-[10px]">{analyticsOpen ? "▲" : "▼"}</span>
+                  </button>
+                  {analyticsOpen && perfSnapshots.length === 0 && (
+                    <div className="mt-1.5 bg-[#111] border border-white/5 rounded-xl p-4 text-center space-y-1">
+                      <p className="text-2xl">📈</p>
+                      <p className="text-white text-xs font-semibold">Pas encore de données</p>
+                      <p className="text-gray-600 text-[10px]">Les stats apparaîtront après tes premiers trades.</p>
+                    </div>
+                  )}
+                  {analyticsOpen && perfSnapshots.length > 0 && (() => {
+                    const thisWeek = perfSnapshots.slice(-7)
+                    const lastWeek = perfSnapshots.slice(-14, -7)
+                    const weekPnl = thisWeek.reduce((s, d) => s + (d.daily_pnl ?? 0), 0)
+                    const lastWeekPnl = lastWeek.reduce((s, d) => s + (d.daily_pnl ?? 0), 0)
+                    let streak = 0
+                    for (let i = perfSnapshots.length - 1; i >= 0; i--) {
+                      if ((perfSnapshots[i].daily_pnl ?? 0) > 0) streak++
+                      else break
+                    }
+                    return (
+                      <div className="mt-1.5 bg-[#111] border border-white/5 rounded-xl p-3 space-y-3">
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="text-center">
+                            <p className={`text-base font-black ${weekPnl >= 0 ? "text-green-400" : "text-red-400"}`}>
+                              {weekPnl >= 0 ? "+" : ""}${Math.abs(weekPnl).toFixed(0)}
+                            </p>
+                            <p className="text-gray-600 text-[9px]">Cette sem.</p>
+                          </div>
+                          <div className="text-center">
+                            <p className={`text-base font-black ${weekPnl >= lastWeekPnl ? "text-green-400" : "text-red-400"}`}>
+                              {weekPnl >= lastWeekPnl ? "▲" : "▼"}
+                            </p>
+                            <p className="text-gray-600 text-[9px]">vs S-1</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-base font-black text-orange-400">🔥 {streak}</p>
+                            <p className="text-gray-600 text-[9px]">Jours prof.</p>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-0.5">
+                          {perfSnapshots.map((s, i) => (
+                            <div key={i} title={`${s.date}: ${(s.daily_pnl ?? 0) >= 0 ? "+" : ""}$${(s.daily_pnl ?? 0).toFixed(0)}`}
+                              className={`w-4 h-4 rounded-sm ${(s.daily_pnl ?? 0) > 0 ? "bg-green-500/60" : (s.daily_pnl ?? 0) < 0 ? "bg-red-500/50" : "bg-white/5"}`} />
+                          ))}
+                        </div>
+                        <a href="/reports" className="block text-center text-[10px] text-green-400 font-bold hover:text-green-300 transition">
+                          Rapport complet →
+                        </a>
+                      </div>
+                    )
+                  })()}
+                </div>
+
+                {/* Weekly Challenges */}
+                {challenges.length > 0 && (
+                  <div className="px-4 pb-3 border-t border-white/[0.05] pt-3">
+                    <h3 className="text-white font-bold text-xs mb-2">🎯 Défis de la semaine</h3>
+                    <div className="space-y-2">
+                      {challenges.map((c: any) => (
+                        <div key={c.id} className={`rounded-xl p-2.5 border flex items-center gap-2 ${c.completed ? "bg-green-500/5 border-green-500/20" : "bg-[#111] border-white/5"}`}>
+                          <span className="text-base flex-shrink-0">{c.completed ? "✅" : "🎯"}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-[10px] font-bold ${c.completed ? "text-green-400" : "text-white"}`}>{c.title}</p>
+                            <p className="text-gray-600 text-[9px] truncate">{c.description}</p>
+                          </div>
+                          <p className="text-[10px] font-black text-yellow-400 flex-shrink-0">+{c.reward_xp} XP</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+          </div>
 
           {/* Footer */}
-          <div className="px-4 py-3 mt-auto border-t border-white/[0.05]">
+          <div className="flex-shrink-0 px-4 py-2 border-t border-white/[0.05]">
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
               <span className="text-[9px] text-gray-700">Yahoo Finance · Groq AI · Live</span>
