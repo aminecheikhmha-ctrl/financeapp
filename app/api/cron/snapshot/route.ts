@@ -31,9 +31,9 @@ export async function GET(req: NextRequest) {
     }
   } catch {}
 
-  // Get all users with paper accounts
+  // Get all users with trading accounts
   const { data: accounts } = await supabase
-    .from("paper_accounts")
+    .from("trading_accounts")
     .select("user_id, cash")
 
   if (!accounts) return NextResponse.json({ snapped: 0 })

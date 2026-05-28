@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
     .eq("user_id", user.id)
 
   const { data: account } = await supabase
-    .from("paper_accounts")
+    .from("trading_accounts")
     .select("cash")
     .eq("user_id", user.id)
     .single()

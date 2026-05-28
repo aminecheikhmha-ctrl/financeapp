@@ -1624,6 +1624,13 @@ function DashboardContent() {
               <span className="text-white font-bold text-xs">📊 Analytics 30 jours</span>
               <span className="text-gray-600 text-[10px]">{analyticsOpen ? "▲" : "▼"}</span>
             </button>
+            {analyticsOpen && perfSnapshots.length === 0 && (
+              <div className="mt-1.5 bg-[#111] border border-white/5 rounded-xl p-4 text-center space-y-1">
+                <p className="text-2xl">📈</p>
+                <p className="text-white text-xs font-semibold">Pas encore de données</p>
+                <p className="text-gray-600 text-[10px]">Les statistiques apparaîtront après tes premiers trades et la génération du snapshot quotidien.</p>
+              </div>
+            )}
             {analyticsOpen && perfSnapshots.length > 0 && (() => {
               const thisWeek = perfSnapshots.slice(-7)
               const lastWeek = perfSnapshots.slice(-14, -7)
