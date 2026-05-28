@@ -1,15 +1,11 @@
-const CACHE_VERSION = "tradex-v3"
+const CACHE_VERSION = "tradex-v5"
 const STATIC_CACHE  = `${CACHE_VERSION}-static`
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`
 const API_CACHE     = `${CACHE_VERSION}-api`
 const API_TTL       = 5 * 60 * 1000 // 5 min
 
+// Only cache truly static assets — NOT app pages (they update with each deploy)
 const STATIC_ASSETS = [
-  "/",
-  "/dashboard",
-  "/signaux",
-  "/portfolio",
-  "/apprendre",
   "/offline",
   "/manifest.json",
   "/icon-192.png",
@@ -63,9 +59,9 @@ self.addEventListener("fetch", (event) => {
     return
   }
 
-  // Pages → Stale-while-revalidate
+  // Pages → Network first (always fresh), fallback to cache only when offline
   if (request.mode === "navigate") {
-    event.respondWith(staleWhileRevalidate(request))
+    event.respondWith(networkFirstPage(request))
     return
   }
 })
@@ -121,16 +117,20 @@ async function cacheFirst(request) {
   }
 }
 
-async function staleWhileRevalidate(request) {
-  const cached = await caches.match(request)
-  const fetchPromise = fetch(request).then(response => {
+async function networkFirstPage(request) {
+  try {
+    const response = await fetch(request)
     if (response.ok) {
-      caches.open(DYNAMIC_CACHE).then(cache => cache.put(request, response.clone()))
+      // Cache for offline fallback only
+      const cache = await caches.open(DYNAMIC_CACHE)
+      cache.put(request, response.clone())
     }
     return response
-  }).catch(() => caches.match("/offline") || cached)
-
-  return cached ?? fetchPromise
+  } catch {
+    // Offline fallback
+    const cached = await caches.match(request)
+    return cached ?? caches.match("/offline") ?? new Response("Offline", { status: 503 })
+  }
 }
 
 // ── Push Notifications ─────────────────────────────────────────────────────────
