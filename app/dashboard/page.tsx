@@ -715,10 +715,10 @@ function DashboardContent() {
       </div>
 
       {/* ── Main layout: left chart | right sidebar ──────────────────────── */}
-      <div className="flex flex-col md:flex-row md:h-[calc(100vh-56px)] md:overflow-hidden">
+      <div className="flex flex-col md:flex-row">
 
         {/* LEFT — chart + tabs */}
-        <div className="flex-1 flex flex-col min-w-0 md:overflow-y-auto">
+        <div className="flex-1 flex flex-col min-w-0">
 
           {/* Onboarding checklist */}
           {showChecklist && (
@@ -1435,8 +1435,8 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* RIGHT — fixed sidebar with tabs */}
-        <div className="w-full md:w-72 md:flex-shrink-0 border-t md:border-t-0 md:border-l border-white/[0.05] flex flex-col md:sticky md:top-14 md:h-[calc(100vh-56px)]" style={{ background: "#0c0c0c" }}>
+        {/* RIGHT — sticky sidebar with tabs */}
+        <div className="w-full md:w-72 md:flex-shrink-0 border-t md:border-t-0 md:border-l border-white/[0.05] flex flex-col md:sticky md:top-14 md:self-start md:max-h-[calc(100vh-56px)]" style={{ background: "#0c0c0c" }}>
 
           {/* ── Header: cash + tab bar ── */}
           <div className="flex-shrink-0">
@@ -1484,7 +1484,7 @@ function DashboardContent() {
           </div>
 
           {/* ── Scrollable tab content ── */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 56px - 88px)" }}>
 
             {/* ── TAB: TRADE ── */}
             {rightTab === "trade" && (
