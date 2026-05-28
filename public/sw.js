@@ -1,10 +1,9 @@
-const CACHE_VERSION = "tradex-v5"
+const CACHE_VERSION = "tradex-v6"
 const STATIC_CACHE  = `${CACHE_VERSION}-static`
-const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`
 const API_CACHE     = `${CACHE_VERSION}-api`
 const API_TTL       = 5 * 60 * 1000 // 5 min
 
-// Only cache truly static assets — NOT app pages (they update with each deploy)
+// Only immutable static assets — NEVER HTML pages
 const STATIC_ASSETS = [
   "/offline",
   "/manifest.json",
@@ -21,15 +20,11 @@ self.addEventListener("install", (event) => {
   self.skipWaiting()
 })
 
-// ── Activate — purge old caches ────────────────────────────────────────────────
+// ── Activate — purge ALL old caches ───────────────────────────────────────────
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(
-        keys
-          .filter(k => !k.startsWith(CACHE_VERSION))
-          .map(k => caches.delete(k))
-      )
+      Promise.all(keys.map(k => caches.delete(k))) // delete everything, start clean
     )
   )
   self.clients.claim()
@@ -43,25 +38,23 @@ self.addEventListener("fetch", (event) => {
   // Same-origin only
   if (url.origin !== self.location.origin) return
 
+  // HTML page navigations → ALWAYS pass through to network, never cache
+  // This ensures users always get the latest deployed code on every page load
+  if (request.mode === "navigate") return
+
   // API → Network first with short cache
   if (url.pathname.startsWith("/api/")) {
     event.respondWith(networkFirstAPI(request))
     return
   }
 
-  // Static Next.js assets → Cache first (immutable)
+  // Static Next.js assets → Cache first (immutable hashed filenames)
   if (url.pathname.startsWith("/_next/static/") ||
       url.pathname.startsWith("/icon") ||
       url.pathname.endsWith(".png") ||
       url.pathname.endsWith(".svg") ||
       url.pathname === "/manifest.json") {
     event.respondWith(cacheFirst(request))
-    return
-  }
-
-  // Pages → Network first (always fresh), fallback to cache only when offline
-  if (request.mode === "navigate") {
-    event.respondWith(networkFirstPage(request))
     return
   }
 })
@@ -114,22 +107,6 @@ async function cacheFirst(request) {
     return response
   } catch {
     return new Response("Not found", { status: 404 })
-  }
-}
-
-async function networkFirstPage(request) {
-  try {
-    const response = await fetch(request)
-    if (response.ok) {
-      // Cache for offline fallback only
-      const cache = await caches.open(DYNAMIC_CACHE)
-      cache.put(request, response.clone())
-    }
-    return response
-  } catch {
-    // Offline fallback
-    const cached = await caches.match(request)
-    return cached ?? caches.match("/offline") ?? new Response("Offline", { status: 503 })
   }
 }
 
