@@ -85,7 +85,7 @@ export default function Dashboard() {
   // Position & ordre
   const [position, setPosition] = useState<Position | null>(null)
   const [orderHistory, setOrderHistory] = useState<{ type: "buy" | "sell"; price: number; qty: number; date: string }[]>([])
-  const [orderModal, setOrderModal] = useState<"buy" | "sell" | null>(null)
+  const [orderModal, setOrderModal] = useState<"buy" | "sell" | "short" | null>(null)
   const [orderQty, setOrderQty] = useState("1")
   const [orderLoading, setOrderLoading] = useState(false)
   const [orderMsg, setOrderMsg] = useState("")
@@ -322,7 +322,7 @@ export default function Dashboard() {
     } catch {}
   }
 
-  async function placeOrder(side: "buy" | "sell") {
+  async function placeOrder(side: "buy" | "sell" | "short") {
     setOrderLoading(true)
     setOrderMsg("")
     const token = await getToken()
@@ -338,12 +338,13 @@ export default function Dashboard() {
         const { haptic } = await import("@/lib/capacitor")
         await haptic("success")
         const isPending = data.status === "pending"
+        const sideLabel = side === "buy" ? "Acheté" : side === "short" ? "Shorté" : "Vendu"
         setOrderMsg(isPending
           ? `⏳ Ordre planifié — exécution à l'ouverture`
-          : `✅ ${side === "buy" ? "Acheté" : "Vendu"} à $${data.price.toFixed(2)}`)
+          : `✅ ${sideLabel} à $${data.price.toFixed(2)}`)
         toast.success(isPending
           ? "Ordre planifié ✓ — exécution à l'ouverture du marché"
-          : `Ordre exécuté ✓ — ${side === "buy" ? "Acheté" : "Vendu"} à $${data.price.toFixed(2)}`)
+          : `Ordre exécuté ✓ — ${sideLabel} à $${data.price.toFixed(2)}`)
         if (side === "buy" && (orderTp || orderSl)) {
           await fetch("/api/trading/positions", {
             method: "PATCH",
@@ -1395,10 +1396,13 @@ export default function Dashboard() {
                               Acheter {ticker.replace("-USD", "")}
                             </button>
                           )}
-                          {prediction.recommendation === "VENDRE" && position && (
-                            <button onClick={isDemo ? () => setShowSignupModal(true) : () => { setOrderModal("sell"); setOrderQty(String(position.qty)) }}
+                          {prediction.recommendation === "VENDRE" && (
+                            <button onClick={isDemo ? () => setShowSignupModal(true) : () => {
+                              if (position && position.qty > 0) { setOrderModal("sell"); setOrderQty(String(position.qty)) }
+                              else { setOrderModal("short"); setOrderQty("1") }
+                            }}
                               className="w-full py-2 rounded-lg bg-red-500 hover:bg-red-400 text-white text-xs font-bold transition">
-                              Vendre {ticker.replace("-USD", "")}
+                              {position && position.qty > 0 ? `Vendre ${ticker.replace("-USD", "")}` : `Shorter ${ticker.replace("-USD", "")}`}
                             </button>
                           )}
                         </div>
@@ -1522,14 +1526,22 @@ export default function Dashboard() {
               Acheter {ticker.replace("-USD", "")}
             </button>
             <button
-              onClick={isDemo ? () => setShowSignupModal(true) : position ? () => { setOrderModal("sell"); setOrderQty(String(position.qty)) } : undefined}
-              disabled={!position && !isDemo}
-              className={`w-full py-2.5 rounded-xl text-sm font-bold transition ${
-                position
-                  ? "bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 cursor-pointer"
-                  : "bg-white/[0.03] border border-white/8 text-white/20 cursor-not-allowed"
-              }`}>
-              {position ? `Vendre ${position.qty} parts` : `Pas de position sur ${ticker.replace("-USD", "")}`}
+              onClick={isDemo ? () => setShowSignupModal(true) : () => {
+                if (position && position.qty > 0) {
+                  setOrderModal("sell"); setOrderQty(String(position.qty))
+                } else if (position && position.qty < 0) {
+                  // Racheter le short
+                  setOrderModal("buy"); setOrderQty(String(Math.abs(position.qty)))
+                } else {
+                  setOrderModal("short"); setOrderQty("1")
+                }
+              }}
+              className="w-full py-2.5 rounded-xl text-sm font-bold transition bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 cursor-pointer">
+              {position && position.qty > 0
+                ? `Vendre ${position.qty} parts`
+                : position && position.qty < 0
+                  ? `🔄 Racheter (Short ${Math.abs(position.qty)})`
+                  : `📉 Shorter ${ticker.replace("-USD", "")}`}
             </button>
           </div>
 
@@ -1703,11 +1715,16 @@ export default function Dashboard() {
               <div className="flex items-center gap-3">
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isPending ? "bg-yellow-500/20" : orderModal === "buy" ? "bg-green-500/20" : "bg-red-500/20"}`}>
                   <span className={`text-sm font-black ${isPending ? "text-yellow-400" : orderModal === "buy" ? "text-green-400" : "text-red-400"}`}>
-                    {isPending ? "⏳" : orderModal === "buy" ? "B" : "S"}
+                    {isPending ? "⏳" : orderModal === "buy" ? "B" : orderModal === "short" ? "↓" : "S"}
                   </span>
                 </div>
                 <div>
-                  <p className="text-base font-black">{orderModal === "buy" ? "Acheter" : "Vendre"} {ticker.replace("-USD", "")}</p>
+                  <p className="text-base font-black">
+                    {orderModal === "buy" ? "Acheter" : orderModal === "short" ? "Shorter" : "Vendre"} {ticker.replace("-USD", "")}
+                  </p>
+                  {orderModal === "short" && (
+                    <p className="text-[10px] text-orange-400/70 mt-0.5">📉 Vente à découvert — position négative</p>
+                  )}
                   <p className="text-[10px] text-gray-500">
                     {activeData?.name} · {isPending ? "Ordre différé" : "Marché au prix actuel"}
                   </p>
@@ -1823,8 +1840,8 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* TP/SL pour les achats */}
-              {orderModal === "buy" && (
+              {/* TP/SL pour les achats et les shorts */}
+              {(orderModal === "buy" || orderModal === "short") && (
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="text-[10px] text-green-400/80 uppercase tracking-widest mb-1.5 block">Take Profit</label>
@@ -1867,14 +1884,16 @@ export default function Dashboard() {
                       ? "linear-gradient(135deg, #d97706, #b45309)"
                       : orderModal === "buy"
                         ? "linear-gradient(135deg, #22c55e, #16a34a)"
-                        : "linear-gradient(135deg, #ef4444, #dc2626)",
+                        : orderModal === "short"
+                          ? "linear-gradient(135deg, #f97316, #ea580c)"
+                          : "linear-gradient(135deg, #ef4444, #dc2626)",
                   }}>
                   {orderLoading && (
                     <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   )}
                   {orderLoading ? "En cours..." : isPending
-                    ? `⏳ Planifier l'${orderModal === "buy" ? "achat" : "vente"}`
-                    : orderModal === "buy" ? "🟢 Confirmer l'achat" : "🔴 Confirmer la vente"
+                    ? `⏳ Planifier ${orderModal === "buy" ? "l'achat" : orderModal === "short" ? "le short" : "la vente"}`
+                    : orderModal === "buy" ? "🟢 Confirmer l'achat" : orderModal === "short" ? "📉 Confirmer le short" : "🔴 Confirmer la vente"
                   }
                 </button>
               </div>

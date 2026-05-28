@@ -62,8 +62,42 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Short : vente à découvert — pas besoin de position existante
+  // On crédite le cash (produit de la vente empruntée) et on enregistre une position négative
+
   // Si ordre immédiat → exécute maintenant
   if (orderStatus === "filled") {
+    if (side === "short") {
+      // Créditer le cash (produit de la vente à découvert)
+      await supabase
+        .from("trading_accounts")
+        .update({ cash: account.cash + total })
+        .eq("user_id", user.id)
+
+      // Upsert position avec qty négative
+      const { data: existing } = await supabase
+        .from("positions")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("symbol", symbol)
+        .single()
+
+      if (existing) {
+        // Ajouter au short existant (qty devient plus négative)
+        const newQty = existing.qty - quantity
+        const newAvg = (Math.abs(existing.avg_price) * Math.abs(existing.qty) + price * quantity) / (Math.abs(existing.qty) + quantity)
+        await supabase
+          .from("positions")
+          .update({ qty: newQty, avg_price: newAvg, updated_at: new Date().toISOString() })
+          .eq("user_id", user.id)
+          .eq("symbol", symbol)
+      } else {
+        await supabase
+          .from("positions")
+          .insert({ user_id: user.id, symbol, name: name ?? symbol, qty: -quantity, avg_price: price })
+      }
+    }
+
     if (side === "buy") {
       await supabase
         .from("trading_accounts")
@@ -79,12 +113,26 @@ export async function POST(req: NextRequest) {
 
       if (existing) {
         const newQty = existing.qty + quantity
-        const newAvg = (existing.avg_price * existing.qty + price * quantity) / newQty
-        await supabase
-          .from("positions")
-          .update({ qty: newQty, avg_price: newAvg, updated_at: new Date().toISOString() })
-          .eq("user_id", user.id)
-          .eq("symbol", symbol)
+        if (newQty <= 0) {
+          // Rachète le short en entier (ou reste encore short)
+          if (newQty === 0) {
+            await supabase.from("positions").delete()
+              .eq("user_id", user.id).eq("symbol", symbol)
+          } else {
+            await supabase
+              .from("positions")
+              .update({ qty: newQty, updated_at: new Date().toISOString() })
+              .eq("user_id", user.id).eq("symbol", symbol)
+          }
+        } else {
+          // Achat normal sur position longue existante
+          const newAvg = (existing.avg_price * existing.qty + price * quantity) / newQty
+          await supabase
+            .from("positions")
+            .update({ qty: newQty, avg_price: newAvg, updated_at: new Date().toISOString() })
+            .eq("user_id", user.id)
+            .eq("symbol", symbol)
+        }
       } else {
         await supabase
           .from("positions")
@@ -118,11 +166,18 @@ export async function POST(req: NextRequest) {
       }
     }
   } else {
-    // Ordre pending → réserve le cash (pour les achats)
+    // Ordre pending → réserve/crédite le cash
     if (side === "buy") {
       await supabase
         .from("trading_accounts")
         .update({ cash: account.cash - total })
+        .eq("user_id", user.id)
+    }
+    if (side === "short") {
+      // Pour un short pending, on crédite quand même le cash (simplifié)
+      await supabase
+        .from("trading_accounts")
+        .update({ cash: account.cash + total })
         .eq("user_id", user.id)
     }
   }
@@ -142,8 +197,9 @@ export async function POST(req: NextRequest) {
     market_session:  marketStatus.session,
   }).select().single()
 
+  const sideLabel = side === "buy" ? "Acheté" : side === "short" ? "Shorté" : "Vendu"
   const message = orderStatus === "filled"
-    ? `✅ Ordre exécuté — ${quantity} ${symbol} à $${price.toFixed(2)}`
+    ? `✅ Ordre exécuté — ${sideLabel} ${quantity} ${symbol} à $${price.toFixed(2)}`
     : `⏳ Ordre planifié — s'exécutera à l'ouverture du marché`
 
   return NextResponse.json({
