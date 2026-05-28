@@ -215,18 +215,22 @@ function DashboardContent() {
   useEffect(() => {
     let active = true
     async function tick() {
+      if (!active) return
       try {
         const res = await fetch(`/api/price?symbol=${ticker}`)
-        if (!res.ok) return
+        if (!res.ok || !active) return
         const { price, change } = await res.json()
         if (active && price != null) {
-          setActiveData(prev => prev ? { ...prev, price, change } : prev)
+          setActiveData(prev => prev
+            ? { ...prev, price, change }
+            : { symbol: ticker, name: ticker, price, change, marketCap: null, volume: null, high: null, low: null, previousClose: null, history: [] }
+          )
         }
       } catch {}
+      if (active) setTimeout(tick, 1000)
     }
-    tick() // immediate first fetch
-    const id = setInterval(tick, 1000)
-    return () => { active = false; clearInterval(id) }
+    tick()
+    return () => { active = false }
   }, [ticker])
 
   // Price flash effect
@@ -1431,7 +1435,7 @@ function DashboardContent() {
         </div>
 
         {/* RIGHT — sidebar */}
-        <div className="w-full md:w-72 md:flex-shrink-0 border-t md:border-t-0 md:border-l border-white/[0.05] flex flex-col overflow-y-auto md:sticky md:top-0 md:h-screen" style={{ background: "#0c0c0c" }}>
+        <div className="w-full md:w-72 md:flex-shrink-0 border-t md:border-t-0 md:border-l border-white/[0.05] flex flex-col md:overflow-y-auto" style={{ background: "#0c0c0c" }}>
 
           {/* Cash */}
           <div className="px-4 pt-4 pb-3 border-b border-white/[0.05]">
