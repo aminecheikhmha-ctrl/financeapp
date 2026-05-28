@@ -1,80 +1,71 @@
-"use client"
+import type { Metadata } from "next"
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="mb-8">
-      <h2 className="text-white font-bold text-lg mb-3">{title}</h2>
-      <div className="text-gray-400 text-sm leading-relaxed space-y-3">{children}</div>
-    </div>
-  )
+export const metadata: Metadata = {
+  title: "Politique de Cookies — Tradex",
+  description: "Politique d'utilisation des cookies sur la plateforme Tradex",
 }
 
 export default function CookiesPage() {
-  function resetConsent() {
-    localStorage.removeItem("cookie_consent")
-    window.location.reload()
-  }
-
   return (
-    <div className="min-h-screen bg-[#080808] text-white pb-20">
-      <div className="max-w-3xl mx-auto px-4 pt-8 md:pt-12">
-        <div className="mb-8">
-          <h1 className="text-3xl font-black text-white mb-2">Politique de cookies</h1>
-          <p className="text-gray-500 text-sm">Dernière mise à jour : 18 mai 2026</p>
-        </div>
+    <article className="article-content">
+      <h1 style={{ fontSize: "2rem", fontWeight: 900, color: "white", marginBottom: "0.5rem" }}>
+        Politique de Cookies
+      </h1>
+      <p style={{ color: "rgba(255,255,255,0.3)", fontSize: "13px", marginBottom: "2rem" }}>
+        Dernière mise à jour : mai 2026
+      </p>
 
-        <Section title="Qu'est-ce qu'un cookie ?">
-          <p>Un cookie est un petit fichier texte déposé sur votre navigateur lors de la visite d&apos;un site. Il permet de mémoriser des informations entre les visites.</p>
-        </Section>
+      <h2>Qu&apos;est-ce qu&apos;un cookie ?</h2>
+      <p>
+        Un cookie est un petit fichier texte déposé sur votre navigateur lors de la visite d&apos;un site.
+        Il permet de mémoriser des informations entre les visites et d&apos;améliorer votre expérience.
+      </p>
 
-        <Section title="Cookies que nous utilisons">
-          <div className="space-y-4">
-            {[
-              { type: "Essentiels", color: "green", required: true, desc: "Nécessaires au fonctionnement du service. Ne peuvent pas être désactivés.", examples: "Session d'authentification (Supabase), préférences de l'interface, panier d'abonnement" },
-              { type: "Analytiques", color: "blue", required: false, desc: "Nous permettent de comprendre comment les utilisateurs interagissent avec l'app.", examples: "Vercel Analytics — données anonymisées, pas de tracking cross-site" },
-              { type: "Performance", color: "purple", required: false, desc: "Mesurent les performances de l'app pour l'optimiser.", examples: "Vercel Speed Insights — temps de chargement des pages" },
-            ].map(cookie => (
-              <div key={cookie.type} className="bg-[#0f0f0f] border border-white/8 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                    cookie.color === "green" ? "bg-green-500/15 text-green-400" :
-                    cookie.color === "blue" ? "bg-blue-500/15 text-blue-400" :
-                    "bg-purple-500/15 text-purple-400"
-                  }`}>{cookie.type}</span>
-                  {cookie.required && <span className="text-xs text-gray-600">Obligatoire</span>}
-                </div>
-                <p className="text-gray-300 text-sm mb-1">{cookie.desc}</p>
-                <p className="text-gray-600 text-xs">Ex : {cookie.examples}</p>
-              </div>
-            ))}
-          </div>
-        </Section>
+      <h2>Cookies essentiels (obligatoires)</h2>
+      <p>Ces cookies sont nécessaires au fonctionnement du site et ne peuvent pas être désactivés :</p>
+      <ul>
+        <li><strong>sb-auth-token</strong> : session d&apos;authentification Supabase (durée : session)</li>
+        <li><strong>tradex_preferences</strong> : préférences utilisateur locales (durée : 1 an)</li>
+        <li><strong>cookie_consent</strong> : mémorisation de vos choix de cookies (durée : 13 mois)</li>
+      </ul>
 
-        <Section title="Gérer vos préférences">
-          <p>Vous pouvez modifier vos préférences cookies à tout moment en cliquant sur le bouton ci-dessous ou dans les paramètres de votre navigateur.</p>
-          <div className="mt-3">
-            <button
-              onClick={resetConsent}
-              className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white hover:bg-white/10 transition"
-            >
-              Modifier mes préférences
-            </button>
-          </div>
-        </Section>
+      <h2>Cookies analytiques (optionnels)</h2>
+      <p>Ces cookies nous aident à comprendre et améliorer le service (données anonymisées) :</p>
+      <ul>
+        <li><strong>Vercel Analytics</strong> : statistiques d&apos;utilisation anonymisées, sans tracking cross-site</li>
+        <li><strong>Vercel Speed Insights</strong> : mesure des performances de l&apos;application</li>
+      </ul>
 
-        <Section title="Durée de conservation">
-          <ul className="list-disc list-inside space-y-1 ml-2">
-            <li>Cookies de session : supprimés à la fermeture du navigateur</li>
-            <li>Cookies persistants : 12 mois maximum</li>
-            <li>Préférences cookies : 13 mois</li>
-          </ul>
-        </Section>
+      <h2>Cookies tiers</h2>
+      <ul>
+        <li><strong>Stripe</strong> : cookies de sécurité pour le traitement des paiements</li>
+      </ul>
 
-        <div className="flex gap-3 mt-8 flex-wrap">
-          <a href="/legal/privacy" className="text-green-400 text-sm hover:underline">Confidentialité →</a>
-          <a href="/legal/terms" className="text-green-400 text-sm hover:underline">CGU →</a>
-        </div>
-      </div>
-    </div>
+      <h2>Durée de conservation</h2>
+      <ul>
+        <li>Cookies de session : supprimés à la fermeture du navigateur</li>
+        <li>Cookies persistants : 12 mois maximum</li>
+        <li>Préférences cookies : 13 mois</li>
+      </ul>
+
+      <h2>Gestion de vos préférences</h2>
+      <p>
+        Vous pouvez modifier vos préférences cookies à tout moment via la bannière cookies ou depuis les
+        paramètres de votre navigateur. La désactivation des cookies essentiels peut empêcher la connexion à Tradex.
+      </p>
+      <p>
+        Pour en savoir plus sur la gestion des cookies selon votre navigateur :{" "}
+        <a href="https://www.cnil.fr/fr/cookies-et-autres-traceurs/comment-se-proteger/maitriser-votre-navigateur"
+          target="_blank" rel="noopener noreferrer" style={{ color: "#4ade80" }}>
+          Guide CNIL
+        </a>
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        Pour toute question sur nos cookies :{" "}
+        <a href="mailto:privacy@tradex.io" style={{ color: "#4ade80" }}>privacy@tradex.io</a>
+      </p>
+    </article>
   )
 }

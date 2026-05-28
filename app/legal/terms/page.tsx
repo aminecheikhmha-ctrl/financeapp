@@ -1,119 +1,95 @@
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Conditions Générales d'Utilisation",
-  description: "CGU de Tradex — plateforme de paper trading éducative",
-}
-
-const LAST_UPDATED = "18 mai 2026"
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="mb-8">
-      <h2 className="text-white font-bold text-lg mb-3">{title}</h2>
-      <div className="text-gray-400 text-sm leading-relaxed space-y-3">{children}</div>
-    </div>
-  )
+  title: "Conditions Générales d'Utilisation — Tradex",
+  description: "CGU de la plateforme Tradex",
 }
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-[#080808] text-white pb-20">
-      <div className="max-w-3xl mx-auto px-4 pt-8 md:pt-12">
-        <div className="mb-8">
-          <h1 className="text-3xl font-black text-white mb-2">Conditions Générales d&apos;Utilisation</h1>
-          <p className="text-gray-500 text-sm">Dernière mise à jour : {LAST_UPDATED}</p>
-        </div>
+    <article className="article-content">
+      <h1 style={{ fontSize: "2rem", fontWeight: 900, color: "white", marginBottom: "0.5rem" }}>
+        Conditions Générales d&apos;Utilisation
+      </h1>
+      <p style={{ color: "rgba(255,255,255,0.3)", fontSize: "13px", marginBottom: "2rem" }}>
+        Dernière mise à jour : mai 2026
+      </p>
 
-        <div className="bg-amber-500/8 border border-amber-500/20 rounded-2xl p-5 mb-8">
-          <p className="text-amber-300 text-sm font-semibold mb-1">⚠️ Important — Paper Trading uniquement</p>
-          <p className="text-amber-200/70 text-sm">Tradex est une plateforme d&apos;éducation financière utilisant exclusivement du capital virtuel. Aucun ordre réel n&apos;est passé sur les marchés financiers. Les performances passées ne préjugent pas des résultats futurs.</p>
-        </div>
+      <h2>1. Présentation du service</h2>
+      <p>
+        Tradex est une plateforme éducative de paper trading (trading fictif) et d&apos;analyse des marchés financiers.
+        Tradex ne fournit pas de conseils d&apos;investissement et n&apos;est pas un service d&apos;investissement réglementé.
+        Tout le trading effectué sur Tradex est simulé avec de l&apos;argent fictif.
+      </p>
 
-        <Section title="1. Objet">
-          <p>Les présentes CGU régissent l&apos;utilisation de Tradex, plateforme éducative de simulation de trading accessible sur tradex-kappa-six.vercel.app et ses sous-domaines.</p>
-        </Section>
+      <h2>2. Inscription et compte</h2>
+      <p>
+        Pour utiliser Tradex, vous devez créer un compte avec une adresse email valide.
+        Vous êtes responsable de la sécurité de votre compte et de votre mot de passe.
+        Vous devez avoir au moins 18 ans pour utiliser le service.
+        Tradex se réserve le droit de supprimer tout compte qui violerait les présentes CGU.
+      </p>
 
-        <Section title="2. Acceptation des conditions">
-          <p>En créant un compte ou en utilisant Tradex, vous acceptez les présentes CGU dans leur intégralité. Si vous n&apos;acceptez pas ces conditions, vous ne devez pas utiliser le service.</p>
-        </Section>
+      <h2>3. Nature du service — Paper Trading</h2>
+      <p>
+        <strong>Important :</strong> Tradex est exclusivement un outil éducatif de paper trading.
+        Aucune transaction financière réelle n&apos;est effectuée. Les $100 000 de capital fictif sont des tokens virtuels
+        sans valeur monétaire réelle. Les performances passées dans Tradex ne préjugent pas de performances
+        futures sur des marchés réels.
+      </p>
 
-        <Section title="3. Description du service">
-          <p>Tradex est une plateforme éducative proposant :</p>
-          <ul className="list-disc list-inside space-y-1 ml-2">
-            <li>Du paper trading (simulation avec capital virtuel de 100 000 $)</li>
-            <li>Des signaux de trading générés par intelligence artificielle (à titre éducatif)</li>
-            <li>Des analyses de marché et screener d&apos;actifs</li>
-            <li>Une académie de trading avec cours et quiz</li>
-            <li>Un forum communautaire</li>
-            <li>Des rapports de performance simulée</li>
-          </ul>
-          <p className="font-semibold text-white">Ce service ne constitue PAS un conseil en investissement, une gestion de portefeuille, ni une activité réglementée au sens de l&apos;AMF ou de la MiFID II.</p>
-        </Section>
+      <h2>4. Données de marché</h2>
+      <p>
+        Les données de marché sont fournies à titre indicatif via des services tiers (Yahoo Finance).
+        Tradex ne garantit pas l&apos;exactitude, l&apos;exhaustivité ou la ponctualité des données.
+        Ces données ne doivent pas être utilisées comme seule base pour des décisions d&apos;investissement réelles.
+      </p>
 
-        <Section title="4. Création de compte">
-          <p>Pour accéder au service, vous devez :</p>
-          <ul className="list-disc list-inside space-y-1 ml-2">
-            <li>Avoir au moins 18 ans</li>
-            <li>Fournir une adresse email valide</li>
-            <li>Choisir un mot de passe sécurisé</li>
-            <li>Accepter les présentes CGU et la politique de confidentialité</li>
-          </ul>
-          <p>Un seul compte par personne est autorisé.</p>
-        </Section>
+      <h2>5. Signaux IA — Avertissement</h2>
+      <p>
+        Les signaux générés par l&apos;IA de Tradex sont des outils d&apos;aide à la décision éducatifs.
+        Ils ne constituent pas des conseils d&apos;investissement. Toute utilisation de ces signaux sur
+        des marchés réels est faite sous l&apos;entière responsabilité de l&apos;utilisateur.
+        Tradex décline toute responsabilité pour les pertes financières découlant d&apos;une telle utilisation.
+      </p>
 
-        <Section title="5. Plans et abonnements">
-          <p>Tradex propose plusieurs niveaux d&apos;accès :</p>
-          <ul className="list-disc list-inside space-y-1 ml-2">
-            <li><strong className="text-white">Plan Free :</strong> accès limité gratuit sans limite de durée</li>
-            <li><strong className="text-white">Plan Pro :</strong> abonnement mensuel avec accès étendu</li>
-            <li><strong className="text-white">Plan Premium :</strong> abonnement mensuel avec accès complet</li>
-          </ul>
-          <p>Les abonnements sont facturés via Stripe. Vous pouvez résilier à tout moment depuis votre profil. Aucun remboursement partiel n&apos;est accordé pour le mois en cours.</p>
-        </Section>
+      <h2>6. Abonnements et paiements</h2>
+      <p>
+        Les abonnements payants sont facturés mensuellement ou annuellement selon le choix de l&apos;utilisateur.
+        Tout abonnement peut être annulé à tout moment depuis les paramètres du compte.
+        En cas d&apos;annulation, l&apos;accès reste disponible jusqu&apos;à la fin de la période payée.{" "}
+        <strong>Politique de remboursement :</strong> 30 jours après toute nouvelle souscription, remboursement intégral sur demande.
+      </p>
 
-        <Section title="6. Utilisation acceptable">
-          <p>Il est interdit de :</p>
-          <ul className="list-disc list-inside space-y-1 ml-2">
-            <li>Utiliser le service à des fins illégales ou frauduleuses</li>
-            <li>Tenter de contourner les mesures de sécurité</li>
-            <li>Publier du contenu offensant, trompeur ou diffamatoire sur le forum</li>
-            <li>Manipuler les classements ou badges de manière artificielle</li>
-            <li>Revendre ou redistribuer l&apos;accès au service</li>
-            <li>Scraper ou automatiser l&apos;accès aux données sans autorisation</li>
-          </ul>
-        </Section>
+      <h2>7. Propriété intellectuelle</h2>
+      <p>
+        L&apos;ensemble du contenu de Tradex (algorithmes, textes, graphiques, code, marque) est protégé par le droit
+        d&apos;auteur et appartient à Tradex SAS. Toute reproduction non autorisée est interdite.
+      </p>
 
-        <Section title="7. Propriété intellectuelle">
-          <p>L&apos;ensemble du contenu de Tradex (code, design, cours, signaux, analyses) est la propriété exclusive de Tradex SAS et protégé par les lois sur la propriété intellectuelle. Toute reproduction sans autorisation est interdite.</p>
-        </Section>
+      <h2>8. Limitation de responsabilité</h2>
+      <p>
+        Tradex ne peut être tenu responsable des pertes financières résultant de l&apos;utilisation de ses
+        outils, signaux ou analyses sur des marchés réels. Le service est fourni &quot;en l&apos;état&quot; sans garantie
+        de performance ou de disponibilité continue.
+      </p>
 
-        <Section title="8. Disclaimer — Pas de conseil financier">
-          <p>Tradex fournit des informations à titre éducatif uniquement. Les signaux, analyses et scores générés par l&apos;IA ne constituent pas des conseils en investissement. Toute décision d&apos;investissement réel doit être prise avec l&apos;aide d&apos;un professionnel agréé AMF.</p>
-          <p>Tradex ne peut être tenu responsable des pertes financières résultant d&apos;une utilisation des informations fournies sur des marchés réels.</p>
-        </Section>
+      <h2>9. Modifications des CGU</h2>
+      <p>
+        Tradex se réserve le droit de modifier les présentes CGU. Les utilisateurs seront informés
+        par email de toute modification substantielle.
+      </p>
 
-        <Section title="9. Limitation de responsabilité">
-          <p>Tradex s&apos;efforce de maintenir un service disponible 24h/24 mais ne garantit pas l&apos;absence d&apos;interruptions. La responsabilité de Tradex est limitée au montant des abonnements payés au cours des 12 derniers mois.</p>
-        </Section>
+      <h2>10. Droit applicable</h2>
+      <p>
+        Les présentes CGU sont soumises au droit français. Tout litige relèvera de la compétence
+        exclusive des tribunaux français.
+      </p>
 
-        <Section title="10. Résiliation">
-          <p>Vous pouvez fermer votre compte à tout moment depuis les paramètres de votre profil. Tradex se réserve le droit de suspendre ou supprimer un compte en cas de violation des présentes CGU.</p>
-        </Section>
-
-        <Section title="11. Modification des CGU">
-          <p>Nous pouvons modifier les présentes CGU à tout moment. Vous serez notifié par email des modifications importantes. La poursuite de l&apos;utilisation du service après modification vaut acceptation.</p>
-        </Section>
-
-        <Section title="12. Droit applicable">
-          <p>Les présentes CGU sont soumises au droit français. Tout litige sera soumis à la compétence des tribunaux de Paris.</p>
-        </Section>
-
-        <div className="flex gap-3 mt-8 flex-wrap">
-          <a href="/legal/privacy" className="text-green-400 text-sm hover:underline">Confidentialité →</a>
-          <a href="/legal/cookies" className="text-green-400 text-sm hover:underline">Cookies →</a>
-        </div>
-      </div>
-    </div>
+      <h2>11. Contact</h2>
+      <p>
+        Pour toute question : <a href="mailto:legal@tradex.io" style={{ color: "#4ade80" }}>legal@tradex.io</a>
+      </p>
+    </article>
   )
 }

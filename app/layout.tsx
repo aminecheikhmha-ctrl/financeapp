@@ -86,6 +86,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://query1.finance.yahoo.com" />
       </head>
       <body className={`${inter.variable} font-sans bg-[#050505] text-white`}>
+        <a href="#main-content" className="skip-link">Aller au contenu principal</a>
         <ToastProvider>
           <AppSplashScreen />
           <NativePushSetup />
@@ -95,7 +96,7 @@ export default function RootLayout({
           <Topbar />
           <MobileHeader />
           <BottomNav />
-          <main className="sidebar-main">
+          <main id="main-content" className="sidebar-main">
             {children}
           </main>
           <PWAInstallBanner />

@@ -1,286 +1,406 @@
 "use client"
-
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
-import { getPricingVariant, trackABEvent, type ABVariant } from "@/lib/ab-test"
+import { Check, X, Zap, Shield, Star } from "lucide-react"
+import TradexLogo from "@/app/components/TradexLogo"
 
-const PRO_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID
-const PREMIUM_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PREMIUM_PRICE_ID
+type BillingPeriod = "monthly" | "annual"
 
-const PRICING_FAQS = [
-  { q: "Puis-je changer de plan à tout moment ?", a: "Oui, tu peux upgrader ou downgrader à tout moment. La différence est calculée au prorata." },
-  { q: "Comment fonctionne la garantie 30 jours ?", a: "Si tu n'es pas satisfait dans les 30 premiers jours, on te rembourse intégralement, sans question." },
-  { q: "Y a-t-il un engagement minimum ?", a: "Non, aucun engagement. Tu peux annuler à tout moment depuis ton profil. Tu gardes les avantages jusqu'à la fin de ta période." },
-  { q: "Le plan annuel est-il auto-renouvelable ?", a: "Oui, les plans annuels se renouvellent automatiquement. Tu recevras un email de rappel 7 jours avant le renouvellement." },
-  { q: "Puis-je obtenir une facture pour ma comptabilité ?", a: "Oui, toutes les factures sont disponibles dans l'espace client Stripe et peuvent être téléchargées en PDF." },
+const PLANS = [
+  {
+    key: "free",
+    name: "Free",
+    icon: "🌱",
+    color: "#9ca3af",
+    monthlyPrice: 0,
+    annualPrice: 0,
+    description: "Parfait pour découvrir le trading",
+    cta: "Commencer gratuitement",
+    ctaStyle: "secondary",
+    badge: undefined as string | undefined,
+    stripePriceId: undefined as string | undefined,
+    stripePriceIdAnnual: undefined as string | undefined,
+    features: [
+      { text: "3 signaux IA par jour", included: true },
+      { text: "Dashboard avec graphes", included: true },
+      { text: "Paper trading ($100k fictifs)", included: true },
+      { text: "Cours débutant complets", included: true },
+      { text: "Forum communautaire", included: true },
+      { text: "Coach IA (5 questions/jour)", included: true },
+      { text: "Signaux illimités", included: false },
+      { text: "Screener 160+ actifs", included: false },
+      { text: "Alertes de prix illimitées", included: false },
+      { text: "Backtest de stratégies", included: false },
+      { text: "Rapports avancés", included: false },
+      { text: "API publique", included: false },
+    ],
+  },
+  {
+    key: "pro",
+    name: "Pro",
+    icon: "⭐",
+    color: "#22c55e",
+    monthlyPrice: 19,
+    annualPrice: 15,
+    description: "Pour les traders actifs sérieux",
+    cta: "Passer à Pro",
+    ctaStyle: "primary",
+    badge: "LE PLUS POPULAIRE" as string | undefined,
+    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID,
+    stripePriceIdAnnual: process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID,
+    features: [
+      { text: "Tout le plan Free inclus", included: true },
+      { text: "Signaux IA illimités", included: true },
+      { text: "Screener 160+ actifs", included: true },
+      { text: "Alertes de prix illimitées", included: true },
+      { text: "Tous les cours (tous niveaux)", included: true },
+      { text: "Backtest de stratégies", included: true },
+      { text: "Rapports avancés (Sharpe, DD)", included: true },
+      { text: "Scanner IA de patterns", included: true },
+      { text: "Coach IA illimité", included: true },
+      { text: "Rapport hebdomadaire IA", included: true },
+      { text: "Support prioritaire", included: false },
+      { text: "API publique", included: false },
+    ],
+  },
+  {
+    key: "premium",
+    name: "Premium",
+    icon: "💎",
+    color: "#fbbf24",
+    monthlyPrice: 49,
+    annualPrice: 39,
+    description: "Pour les traders professionnels",
+    cta: "Passer Premium",
+    ctaStyle: "gold",
+    badge: undefined as string | undefined,
+    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PREMIUM_MONTHLY_PRICE_ID,
+    stripePriceIdAnnual: process.env.NEXT_PUBLIC_STRIPE_PREMIUM_ANNUAL_PRICE_ID,
+    features: [
+      { text: "Tout le plan Pro inclus", included: true },
+      { text: "API publique Tradex", included: true },
+      { text: "Support prioritaire 24h", included: true },
+      { text: "Accès bêta aux nouvelles features", included: true },
+      { text: "Rapport IA ultra-personnalisé", included: true },
+      { text: "Signaux haute confluence prioritaires", included: true },
+      { text: "Onboarding personnalisé 1-1", included: true },
+      { text: "Exportation données CSV/PDF", included: true },
+      { text: "Intégrations tierces (à venir)", included: true },
+      { text: "Label blanc possible", included: true },
+      { text: "Formation privée (à venir)", included: true },
+      { text: "Tout illimité", included: true },
+    ],
+  },
+]
+
+const FAQS = [
+  { q: "Est-ce que Tradex utilise de vraies données de marché ?", a: "Oui, toutes les données proviennent de Yahoo Finance en temps réel. Les prix, variations et volumes sont mis à jour en continu pendant les heures de marché." },
+  { q: "Le paper trading c'est quoi exactement ?", a: "C'est du trading simulé avec $100,000 fictifs. Tu apprends à trader sans risquer un seul euro. Parfait pour débuter ou tester de nouvelles stratégies avant de les appliquer sur de vrais marchés." },
+  { q: "Les signaux IA sont-ils fiables ?", a: "Nos signaux combinent 20+ indicateurs techniques avec un score de confluence algorithmique. Plus la confluence est haute (>70%), plus le signal est statistiquement fiable. Ce ne sont pas des garanties, mais des outils d'aide à la décision." },
+  { q: "Puis-je annuler à tout moment ?", a: "Oui, sans engagement et sans frais d'annulation. Tu peux annuler depuis tes paramètres en un clic. Tu gardes l'accès jusqu'à la fin de la période payée." },
+  { q: "Y a-t-il une période d'essai ?", a: "Le plan Free est illimité dans le temps — tu peux l'utiliser sans limite. Il te donne accès aux fonctionnalités essentielles pour évaluer Tradex avant de passer à Pro." },
+  { q: "Tradex est-il un conseiller financier ?", a: "Non. Tradex est un outil éducatif de paper trading. Les signaux et analyses sont fournis à titre informatif uniquement et ne constituent pas des conseils d'investissement. Trade toujours avec ton propre jugement." },
+  { q: "Comment fonctionne le paiement ?", a: "Le paiement est sécurisé par Stripe, le leader mondial du paiement en ligne. Nous acceptons toutes les cartes bancaires. Aucune information de paiement n'est stockée sur nos serveurs." },
+  { q: "Y a-t-il une app mobile ?", a: "Tradex est une PWA (Progressive Web App) installable sur iOS et Android depuis le navigateur. Une app native Capacitor est en cours de soumission sur l'App Store et Play Store." },
+]
+
+const TESTIMONIALS = [
+  { name: "Thomas M.", role: "Trader débutant", stars: 5, text: "En 2 mois avec Tradex, j'ai appris plus qu'en 1 an seul sur YouTube. Les simulations sur données réelles sont incroyables.", avatar: "T", color: "#4ade80" },
+  { name: "Sarah K.", role: "Investisseuse", stars: 5, text: "Les signaux IA sont bluffants. La confluence algorithmique m'a permis d'identifier des opportunités que je n'aurais jamais vues seule.", avatar: "S", color: "#60a5fa" },
+  { name: "Marc D.", role: "Swing trader", stars: 5, text: "Le screener 160 actifs + les alertes en temps réel ont complètement changé ma façon de trader. Indispensable pour Pro.", avatar: "M", color: "#a78bfa" },
+  { name: "Julie L.", role: "Crypto trader", stars: 5, text: "Le coach IA répond à toutes mes questions à n'importe quelle heure. C'est comme avoir un mentor expert disponible 24/7.", avatar: "J", color: "#f97316" },
 ]
 
 const COMPARISON_ROWS = [
-  { feature: "Actifs en watchlist",       free: "5",           pro: "Illimité",     premium: "Illimité" },
-  { feature: "Mises à jour des prix",     free: "Délai 15min", pro: "Temps réel",   premium: "Temps réel" },
-  { feature: "Graphes techniques",        free: "Basiques",    pro: "Pro complets", premium: "Pro complets" },
-  { feature: "Indicateurs",              free: "3",           pro: "20+",          premium: "20+" },
-  { feature: "Signaux IA",               free: "3/jour",      pro: "Illimités",    premium: "Illimités" },
-  { feature: "Analyses IA",              free: "1/jour",      pro: "Illimitées",   premium: "Illimitées" },
-  { feature: "Paper trading capital",    free: "10 000 $",    pro: "100 000 $",    premium: "100 000 $" },
-  { feature: "Alertes de prix",          free: "—",           pro: "10",           premium: "Illimitées" },
-  { feature: "Académie",                 free: "Débutant",    pro: "Complète",     premium: "Complète" },
-  { feature: "Screener",                 free: "—",           pro: "—",            premium: "160 actifs" },
-  { feature: "Backtesting",              free: "—",           pro: "Basique",      premium: "Avancé" },
-  { feature: "API access",               free: "—",           pro: "—",            premium: "✓" },
-  { feature: "Signaux SMS",              free: "—",           pro: "—",            premium: "✓" },
-  { feature: "Coaching mensuel",         free: "—",           pro: "—",            premium: "1h/mois" },
-  { feature: "Accès bêta features",      free: "—",           pro: "—",            premium: "✓" },
-  { feature: "Support",                  free: "Email",       pro: "Prioritaire",  premium: "Prioritaire" },
+  { feature: "Signaux IA",        free: "3/jour",           pro: "Illimités",     premium: "Illimités + priorité" },
+  { feature: "Indicateurs",       free: "RSI, MACD, BB",    pro: "20+",           premium: "20+" },
+  { feature: "Screener",          free: "Top 5 seulement",  pro: "160+ actifs",   premium: "160+ actifs" },
+  { feature: "Alertes de prix",   free: "3 max",            pro: "Illimitées",    premium: "Illimitées" },
+  { feature: "Cours académie",    free: "Niveau débutant",  pro: "Tous niveaux",  premium: "Tous niveaux" },
+  { feature: "Coach IA",          free: "5/jour",           pro: "Illimité",      premium: "Illimité" },
+  { feature: "Backtest",          free: "✗",                pro: "✓",             premium: "✓" },
+  { feature: "Scanner IA",        free: "✗",                pro: "✓",             premium: "✓" },
+  { feature: "API publique",      free: "✗",                pro: "✗",             premium: "✓" },
+  { feature: "Support",           free: "Forum",            pro: "Email",         premium: "Prioritaire 24h" },
+  { feature: "Rapport hebdo IA",  free: "✗",                pro: "✓",             premium: "Ultra-personnalisé" },
 ]
 
-export default function Pricing() {
-  const [user, setUser] = useState<any>(null)
-  const [annual, setAnnual] = useState(false)
+export default function PricingPage() {
+  const router = useRouter()
+  const [billing, setBilling] = useState<BillingPeriod>("monthly")
   const [loading, setLoading] = useState<string | null>(null)
-  const [openFaq, setOpenFaq] = useState<number | null>(null)
-  const [abVariant, setAbVariant] = useState<ABVariant>("control")
+  const [currentPlan, setCurrentPlan] = useState("free")
+  const [expandedFaq, setExpandedFaq] = useState<number | null>(null)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user))
-    const variant = getPricingVariant()
-    setAbVariant(variant)
-    trackABEvent(variant, "shown")
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!data.session) return
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("plan")
+        .eq("id", data.session.user.id)
+        .single()
+      if (profile?.plan) setCurrentPlan(profile.plan)
+    })
   }, [])
 
-  async function handleCheckout(priceId: string, planName: string) {
-    if (!user) { window.location.href = "/signup"; return }
-    setLoading(planName)
-    const res = await fetch("/api/stripe/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ priceId, email: user.email }),
-    })
-    const data = await res.json()
-    if (data.url) window.location.href = data.url
-    else alert("Erreur lors du paiement")
+  async function handleSubscribe(plan: typeof PLANS[0]) {
+    if (plan.key === "free") { router.push("/signup"); return }
+    if (currentPlan === plan.key) return
+    setLoading(plan.key)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { router.push("/signup"); return }
+      const priceId = billing === "annual" ? plan.stripePriceIdAnnual : plan.stripePriceId
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ priceId, billingPeriod: billing }),
+      })
+      const data = await res.json()
+      if (data.url) window.location.href = data.url
+    } catch (e) {
+      console.error(e)
+    }
     setLoading(null)
   }
 
-  const plans = [
-    {
-      name: "Free",
-      monthlyPrice: 0,
-      annualPrice: 0,
-      color: "border-white/10",
-      badge: null,
-      badgeBg: "",
-      priceId: null,
-      desc: "Pour découvrir la plateforme",
-      features: [
-        "5 actifs en watchlist",
-        "Prix avec délai de 15 min",
-        "Graphes basiques",
-        "3 signaux IA / jour",
-        "1 analyse IA / jour",
-        "Paper trading 10 000 $",
-        "Cours débutant seulement",
-        "Support email",
-      ],
-    },
-    {
-      name: "Pro",
-      monthlyPrice: 19,
-      annualPrice: 15,
-      color: "border-green-500/40",
-      badge: "⭐ Le plus populaire",
-      badgeBg: "bg-green-500 text-black",
-      priceId: PRO_PRICE_ID,
-      desc: "Pour les traders sérieux",
-      features: [
-        "Watchlist illimitée",
-        "Prix en temps réel",
-        "Graphes pro + 20+ indicateurs",
-        "Signaux IA illimités",
-        "Analyses IA illimitées",
-        "Paper trading 100 000 $",
-        "10 alertes de prix",
-        "Académie complète (15 cours)",
-        "Backtesting basique",
-        "Support prioritaire",
-      ],
-    },
-    {
-      name: "Premium",
-      monthlyPrice: 49,
-      annualPrice: 39,
-      color: "border-yellow-500/30",
-      badge: "💎 Pour les pros",
-      badgeBg: "bg-yellow-500/20 border border-yellow-500/30 text-yellow-300",
-      priceId: PREMIUM_PRICE_ID,
-      desc: "Pour les traders professionnels",
-      features: [
-        "Tout ce qui est dans Pro",
-        "Screener 160 actifs temps réel",
-        "Alertes de prix illimitées",
-        "Backtesting avancé",
-        "API access",
-        "Signaux SMS",
-        "1h de coaching mensuel",
-        "Accès bêta features",
-        "Support prioritaire 7j/7",
-      ],
-    },
-  ]
+  const savingsAnnual = Math.round((1 - 15 / 19) * 100)
 
   return (
-    <div className="min-h-screen bg-[#080808] text-white pb-24 overflow-x-hidden">
+    <div className="min-h-screen" style={{ background: "#050505" }}>
 
       {/* Header */}
-      <div className="pt-20 md:pt-24 pb-10 md:pb-12 px-4 md:px-6 text-center">
-        <span className="text-xs font-bold uppercase tracking-widest text-green-400">Tarifs</span>
-        <h1 className="text-3xl md:text-5xl font-black text-white mt-2 mb-3">Choisissez votre plan</h1>
-        <p className="text-gray-400 text-lg mb-4">Commence gratuitement, upgrade quand tu es prêt.</p>
+      <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
+        <TradexLogo size={28} showText textSize="sm" />
+        <div className="flex gap-3">
+          <a href="/login" className="px-4 py-2 rounded-lg text-sm text-white/50 hover:text-white transition">
+            Se connecter
+          </a>
+          <a href="/dashboard"
+            className="px-4 py-2 rounded-lg text-sm font-bold text-black transition hover:opacity-90"
+            style={{ background: "#22c55e" }}>
+            Essayer gratuitement
+          </a>
+        </div>
+      </div>
 
-        {/* A/B test: trial banner for variant B */}
-        {abVariant === "trial" && (
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/15 border border-green-500/30 text-green-400 text-sm font-bold mb-6 animate-pulse">
-            🎁 Offre limitée — Essai gratuit 7 jours sur le plan Pro
-          </div>
-        )}
+      {/* Hero */}
+      <div className="text-center px-6 py-16 max-w-3xl mx-auto">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6"
+          style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
+          <Zap size={14} className="text-green-400" />
+          <span className="text-xs text-green-400 font-bold">30 jours satisfait ou remboursé</span>
+        </div>
+        <h1 className="text-4xl md:text-5xl font-black text-white mb-4 leading-tight">
+          Investis dans ton<br />
+          <span style={{
+            background: "linear-gradient(135deg, #4ade80, #22c55e)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+          }}>
+            éducation financière
+          </span>
+        </h1>
+        <p className="text-white/50 text-lg mb-8">
+          Commence gratuitement. Upgrade quand tu es prêt. Annulation à tout moment.
+        </p>
 
-        {/* Toggle mensuel/annuel */}
-        <div className="inline-flex items-center gap-3 bg-[#111] border border-white/8 rounded-xl p-1">
+        {/* Billing toggle */}
+        <div className="inline-flex items-center gap-4 p-1.5 rounded-2xl"
+          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
           <button
-            onClick={() => setAnnual(false)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${!annual ? "bg-white/10 text-white" : "text-gray-500 hover:text-gray-300"}`}
-          >
+            onClick={() => setBilling("monthly")}
+            className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${billing === "monthly" ? "bg-white text-black" : "text-white/50 hover:text-white"}`}>
             Mensuel
           </button>
           <button
-            onClick={() => setAnnual(true)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${annual ? "bg-white/10 text-white" : "text-gray-500 hover:text-gray-300"}`}
-          >
+            onClick={() => setBilling("annual")}
+            className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${billing === "annual" ? "bg-white text-black" : "text-white/50 hover:text-white"}`}>
             Annuel
-            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">-20%</span>
+            <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full"
+              style={{
+                background: billing === "annual" ? "#22c55e" : "rgba(34,197,94,0.2)",
+                color: billing === "annual" ? "black" : "#4ade80",
+              }}>
+              -{savingsAnnual}%
+            </span>
           </button>
         </div>
       </div>
 
-      {/* Plans */}
-      <div className="max-w-5xl mx-auto px-4 md:px-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-          {plans.map(plan => {
-            const price = annual ? plan.annualPrice : plan.monthlyPrice
-            const isHighlight = plan.name === "Pro"
+      {/* Plan cards */}
+      <div className="max-w-5xl mx-auto px-6 pb-16">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {PLANS.map(plan => {
+            const price = billing === "annual" ? plan.annualPrice : plan.monthlyPrice
+            const isCurrent = currentPlan === plan.key
+            const isPopular = plan.badge !== undefined
             return (
-              <div key={plan.name} className={`relative flex flex-col bg-[#111] border ${plan.color} rounded-2xl p-6 ${isHighlight ? "shadow-xl shadow-green-500/10" : ""}`}>
+              <div key={plan.key}
+                className={`relative rounded-3xl overflow-hidden ${isPopular ? "md:scale-[1.03] md:-mt-3" : ""}`}
+                style={{
+                  background: isPopular ? "rgba(34,197,94,0.05)" : "#0a0a0a",
+                  border: `2px solid ${isPopular ? "rgba(34,197,94,0.3)" : "rgba(255,255,255,0.08)"}`,
+                  boxShadow: isPopular ? "0 0 40px rgba(34,197,94,0.1)" : "none",
+                }}>
                 {plan.badge && (
-                  <span className={`absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-black whitespace-nowrap ${plan.badgeBg}`}>
+                  <div className="absolute top-0 left-0 right-0 py-2 text-center text-[10px] font-black text-black uppercase tracking-widest"
+                    style={{ background: "#22c55e" }}>
                     {plan.badge}
-                  </span>
-                )}
-                <div className="mt-2 mb-5">
-                  <h2 className="text-xl font-black text-white mb-1">{plan.name}</h2>
-                  <p className="text-gray-500 text-xs mb-4">{plan.desc}</p>
-                  <div className="flex items-end gap-1">
-                    <span className="text-4xl font-black text-white">{price === 0 ? "Gratuit" : `${price}$`}</span>
-                    {price > 0 && <span className="text-gray-500 text-sm mb-1">{annual ? "/mois, facturé annuellement" : "/mois"}</span>}
                   </div>
-                  {annual && price > 0 && (
-                    <p className="text-xs text-green-400 mt-1">Économise {((plan.monthlyPrice - plan.annualPrice) * 12)}$ par an</p>
-                  )}
-                </div>
-                <ul className="space-y-2.5 flex-1 mb-6">
-                  {plan.features.map(f => (
-                    <li key={f} className="flex items-start gap-2 text-sm text-gray-300">
-                      <span className="text-green-400 flex-shrink-0 mt-0.5">✓</span>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                {plan.priceId ? (
-                  <button
-                    onClick={() => { trackABEvent(abVariant, "clicked_cta"); handleCheckout(plan.priceId as string, plan.name) }}
-                    disabled={loading === plan.name}
-                    className={`w-full py-3 rounded-xl font-bold text-sm transition disabled:opacity-50 ${
-                      isHighlight
-                        ? "bg-green-500 hover:bg-green-400 text-black shadow-lg shadow-green-500/25"
-                        : "border border-white/15 hover:border-white/30 text-white"
-                    }`}
-                  >
-                    {loading === plan.name
-                      ? "Redirection..."
-                      : isHighlight && abVariant === "trial"
-                        ? "Essayer 7 jours gratuitement →"
-                        : `Choisir ${plan.name}`}
-                  </button>
-                ) : (
-                  <a href="/signup" className="w-full py-3 rounded-xl font-bold text-sm border border-white/15 hover:border-white/30 text-white text-center block transition">
-                    Commencer gratuitement
-                  </a>
                 )}
+                <div className={`p-7 ${plan.badge ? "pt-10" : ""}`}>
+                  <div className="flex items-center gap-2.5 mb-4">
+                    <span className="text-3xl">{plan.icon}</span>
+                    <div>
+                      <p className="font-black text-white text-lg">{plan.name}</p>
+                      <p className="text-xs text-white/40">{plan.description}</p>
+                    </div>
+                  </div>
+                  <div className="mb-6">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-4xl font-black text-white">{price === 0 ? "0€" : `${price}€`}</span>
+                      {price > 0 && <span className="text-white/30 text-sm">/mois</span>}
+                    </div>
+                    {billing === "annual" && price > 0 && (
+                      <p className="text-[11px] text-white/30 mt-1">
+                        Facturé {price * 12}€/an · Économise {(plan.monthlyPrice - price) * 12}€
+                      </p>
+                    )}
+                    {price === 0 && <p className="text-[11px] text-white/30 mt-1">Pour toujours</p>}
+                  </div>
+                  <button
+                    onClick={() => handleSubscribe(plan)}
+                    disabled={isCurrent || loading === plan.key}
+                    className={`w-full py-3.5 rounded-2xl text-sm font-black transition-all mb-6 disabled:opacity-60 ${!isCurrent ? "hover:scale-[1.02] active:scale-[0.98]" : ""}`}
+                    style={{
+                      background: isCurrent ? "rgba(255,255,255,0.06)"
+                        : plan.ctaStyle === "primary" ? "linear-gradient(135deg, #22c55e, #16a34a)"
+                        : plan.ctaStyle === "gold" ? "linear-gradient(135deg, #fbbf24, #f59e0b)"
+                        : "rgba(255,255,255,0.08)",
+                      color: isCurrent ? "rgba(255,255,255,0.4)"
+                        : (plan.ctaStyle === "primary" || plan.ctaStyle === "gold") ? "black"
+                        : "white",
+                      border: plan.ctaStyle === "secondary" ? "1px solid rgba(255,255,255,0.12)" : "none",
+                    }}>
+                    {loading === plan.key ? "⏳ Chargement..." : isCurrent ? "✓ Plan actuel" : plan.cta}
+                  </button>
+                  <div className="space-y-2.5">
+                    {plan.features.map((feature, i) => (
+                      <div key={i} className="flex items-center gap-2.5">
+                        {feature.included
+                          ? <Check size={15} className="flex-shrink-0" style={{ color: plan.color }} />
+                          : <X size={15} className="flex-shrink-0 text-white/15" />
+                        }
+                        <span className={`text-sm ${feature.included ? "text-white/70" : "text-white/25 line-through"}`}>
+                          {feature.text}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )
           })}
         </div>
 
-        {/* Comparison table */}
-        <div className="mb-16">
-          <h2 className="text-2xl font-black text-white mb-6 text-center">Comparaison complète</h2>
-          <div className="bg-[#111] border border-white/8 rounded-2xl overflow-hidden">
-            <div className="overflow-x-auto">
-            {/* Header */}
-            <div className="grid grid-cols-4 px-4 py-3 border-b border-white/8 bg-[#0d0d0d] min-w-[360px]">
-              <span className="text-xs font-bold uppercase tracking-wide text-gray-600">Fonctionnalité</span>
-              {["Free","Pro","Premium"].map(p => (
-                <span key={p} className={`text-xs font-black text-center uppercase tracking-wide ${p==="Pro"?"text-green-400":p==="Premium"?"text-yellow-400":"text-gray-500"}`}>{p}</span>
-              ))}
-            </div>
-            {COMPARISON_ROWS.map((row, i) => (
-              <div key={row.feature} className={`grid grid-cols-4 px-4 py-3 min-w-[360px] ${i%2===0?"":"bg-white/[0.015]"} hover:bg-white/5 transition`}>
-                <span className="text-sm text-gray-400 font-medium">{row.feature}</span>
-                {[row.free, row.pro, row.premium].map((val, j) => (
-                  <span key={j} className={`text-xs text-center font-semibold ${
-                    val === "—" ? "text-gray-700" :
-                    val === "✓" ? "text-green-400" :
-                    j === 1 ? "text-green-300" :
-                    j === 2 ? "text-yellow-300" :
-                    "text-gray-400"
-                  }`}>{val}</span>
-                ))}
-              </div>
-            ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Guarantee */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-16">
+        {/* Trust badges */}
+        <div className="mt-8 flex flex-col md:flex-row items-center justify-center gap-6 text-center">
           {[
-            { icon: "🛡️", title: "30 jours satisfait", desc: "ou remboursé intégralement, sans condition" },
-            { icon: "⚡", title: "Annulation facile", desc: "en un clic depuis ton profil, sans engagement" },
-            { icon: "💬", title: "Support 7j/7", desc: "une équipe disponible pour t'aider à tout moment" },
-          ].map(g => (
-            <div key={g.title} className="bg-[#111] border border-white/8 rounded-2xl p-5 text-center hover:border-white/15 transition">
-              <div className="text-3xl mb-3">{g.icon}</div>
-              <div className="text-white font-bold text-sm mb-1">{g.title}</div>
-              <div className="text-gray-500 text-xs">{g.desc}</div>
+            { icon: <Shield size={18} className="text-green-400" />, text: "30 jours satisfait ou remboursé" },
+            { icon: <Check size={18} className="text-green-400" />, text: "Annulation à tout moment, sans frais" },
+            { icon: <Star size={18} className="text-green-400" />, text: "Paiement 100% sécurisé par Stripe" },
+          ].map((item, i) => (
+            <div key={i} className="flex items-center gap-2 text-sm text-white/40">
+              {item.icon}{item.text}
             </div>
           ))}
         </div>
+      </div>
 
-        {/* FAQ */}
+      {/* Comparison table */}
+      <div className="border-t border-white/5 py-16 px-6">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-3xl font-black text-white text-center mb-12">Comparaison détaillée</h2>
+          <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div className="grid grid-cols-[2fr_1fr_1fr_1fr]" style={{ background: "rgba(255,255,255,0.02)" }}>
+              <div className="px-5 py-4 text-[10px] text-white/25 uppercase tracking-widest font-bold">Fonctionnalité</div>
+              {PLANS.map(plan => (
+                <div key={plan.key} className="px-4 py-4 text-center">
+                  <p className="text-sm font-black" style={{ color: plan.color }}>{plan.name}</p>
+                </div>
+              ))}
+            </div>
+            {COMPARISON_ROWS.map((row, i) => (
+              <div key={i} className="grid grid-cols-[2fr_1fr_1fr_1fr] border-t border-white/[0.04] hover:bg-white/[0.01] transition">
+                <div className="px-5 py-3 text-sm text-white/50">{row.feature}</div>
+                {[row.free, row.pro, row.premium].map((val, j) => (
+                  <div key={j} className="px-4 py-3 text-center text-sm">
+                    <span style={{
+                      color: val === "✗" ? "rgba(255,255,255,0.15)"
+                        : val.includes("✓") ? "#4ade80"
+                        : "rgba(255,255,255,0.7)"
+                    }}>{val}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Testimonials */}
+      <div className="border-t border-white/5 py-16 px-6">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-3xl font-black text-white text-center mb-12">Ce que disent nos traders</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {TESTIMONIALS.map(t => (
+              <div key={t.name} className="rounded-2xl p-5"
+                style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="flex mb-3">
+                  {[...Array(t.stars)].map((_, i) => <span key={i} className="text-yellow-400 text-sm">★</span>)}
+                </div>
+                <p className="text-sm text-white/55 leading-relaxed mb-4">&ldquo;{t.text}&rdquo;</p>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black text-black"
+                    style={{ background: t.color }}>
+                    {t.avatar}
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-white">{t.name}</p>
+                    <p className="text-[10px] text-white/30">{t.role}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* FAQ */}
+      <div className="border-t border-white/5 py-16 px-6">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-2xl font-black text-white mb-6 text-center">Questions sur la facturation</h2>
-          <div className="space-y-2">
-            {PRICING_FAQS.map((faq, i) => (
-              <div key={i} className="border border-white/8 rounded-xl overflow-hidden">
-                <button
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-white/3 transition"
-                >
-                  <span className="text-white font-semibold text-sm pr-4">{faq.q}</span>
-                  <span className={`text-green-400 text-xl font-light flex-shrink-0 transition-transform duration-200 ${openFaq === i ? "rotate-45" : ""}`}>+</span>
-                </button>
-                {openFaq === i && (
-                  <div className="px-5 pb-4 border-t border-white/5">
-                    <p className="text-gray-400 text-sm leading-relaxed pt-3">{faq.a}</p>
+          <h2 className="text-3xl font-black text-white text-center mb-12">Questions fréquentes</h2>
+          <div className="space-y-3">
+            {FAQS.map((faq, i) => (
+              <div key={i}
+                className="rounded-2xl overflow-hidden cursor-pointer transition-all"
+                style={{
+                  background: expandedFaq === i ? "rgba(34,197,94,0.04)" : "#0a0a0a",
+                  border: `1px solid ${expandedFaq === i ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.06)"}`,
+                }}
+                onClick={() => setExpandedFaq(expandedFaq === i ? null : i)}>
+                <div className="flex items-center justify-between px-5 py-4">
+                  <p className="text-sm font-bold text-white pr-4">{faq.q}</p>
+                  <span className="text-white/30 text-xl flex-shrink-0 transition-transform"
+                    style={{ transform: expandedFaq === i ? "rotate(45deg)" : "rotate(0deg)" }}>+</span>
+                </div>
+                {expandedFaq === i && (
+                  <div className="px-5 pb-4">
+                    <p className="text-sm text-white/50 leading-relaxed">{faq.a}</p>
                   </div>
                 )}
               </div>
@@ -288,6 +408,36 @@ export default function Pricing() {
           </div>
         </div>
       </div>
+
+      {/* Final CTA */}
+      <div className="border-t border-white/5 py-20 px-6 text-center">
+        <h2 className="text-4xl font-black text-white mb-4">
+          Commence aujourd&apos;hui,<br />gratuitement
+        </h2>
+        <p className="text-white/40 mb-8 max-w-md mx-auto">
+          Rejoins des milliers de traders qui utilisent Tradex pour progresser chaque jour.
+        </p>
+        <a href="/signup"
+          className="inline-flex items-center gap-2 px-10 py-5 rounded-2xl text-lg font-black text-black transition-all hover:scale-[1.03]"
+          style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", boxShadow: "0 0 50px rgba(34,197,94,0.25)" }}>
+          Créer mon compte gratuit →
+        </a>
+        <p className="text-xs text-white/20 mt-4">✓ Sans carte de crédit · ✓ Sans engagement · ✓ $100k fictifs offerts</p>
+      </div>
+
+      {/* Footer */}
+      <footer className="border-t border-white/5 py-8 px-6 text-center">
+        <div className="flex items-center justify-center gap-6 flex-wrap text-xs text-white/25">
+          <a href="/legal/terms" className="hover:text-white transition">CGU</a>
+          <a href="/legal/privacy" className="hover:text-white transition">Confidentialité</a>
+          <a href="/legal/cookies" className="hover:text-white transition">Cookies</a>
+          <a href="/support" className="hover:text-white transition">Support</a>
+          <span>© 2026 Tradex</span>
+        </div>
+        <p className="text-[10px] text-white/15 mt-3 max-w-lg mx-auto">
+          Tradex est un outil éducatif de paper trading. Les performances passées ne garantissent pas les résultats futurs. Trading comporte des risques.
+        </p>
+      </footer>
     </div>
   )
 }

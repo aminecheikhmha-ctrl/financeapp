@@ -1,0 +1,80 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "signals": "Signals",
+    "portfolio": "Portfolio",
+    "academy": "Academy",
+    "news": "News",
+    "forum": "Forum",
+    "social": "Social",
+    "compare": "Compare",
+    "watchlist": "Watchlist",
+    "reports": "Reports",
+    "coach": "AI Coach",
+    "profile": "Profile",
+    "settings": "Settings"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "export": "Export",
+    "refresh": "Refresh",
+    "noResults": "No results"
+  },
+  "trading": {
+    "buy": "Buy",
+    "sell": "Sell",
+    "price": "Price",
+    "quantity": "Quantity",
+    "total": "Total",
+    "pnl": "P&L",
+    "return": "Return",
+    "signal": "Signal",
+    "confluence": "Confluence",
+    "take_profit": "Take Profit",
+    "stop_loss": "Stop Loss",
+    "entry": "Entry",
+    "pending": "Pending",
+    "filled": "Filled",
+    "cancelled": "Cancelled"
+  },
+  "signals": {
+    "strong_buy": "Strong Buy",
+    "buy": "Buy",
+    "neutral": "Neutral",
+    "sell": "Sell",
+    "strong_sell": "Strong Sell"
+  },
+  "plans": {
+    "free": "Free",
+    "pro": "Pro",
+    "premium": "Premium",
+    "upgrade": "Upgrade to",
+    "current": "Current plan",
+    "monthly": "Monthly",
+    "annual": "Annual"
+  },
+  "auth": {
+    "login": "Sign in",
+    "logout": "Sign out",
+    "signup": "Create account",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "rememberMe": "Remember me"
+  }
+}
