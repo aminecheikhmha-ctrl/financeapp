@@ -354,15 +354,6 @@ export default function Sidebar() {
             </div>
           )}
 
-          {/* Level badge (collapsed) */}
-          {!expanded && levelInfo && (
-            <div className="flex justify-center">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black text-black"
-                style={{ background: levelInfo.color }}>
-                {levelInfo.level}
-              </div>
-            </div>
-          )}
 
           {/* User row */}
           <div className="flex items-center gap-2.5">
