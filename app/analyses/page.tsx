@@ -258,7 +258,8 @@ const REGIONS = [
 
 const SECTORS = [
   "Tous", "Technology", "Finance", "Healthcare", "Energy",
-  "Consumer", "Industrials", "Real Estate", "Commodities",
+  "Consumer", "Industrials", "Luxury", "Automotive", "Defense",
+  "Commodities", "Crypto", "ETF",
 ]
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -439,7 +440,7 @@ export default function AnalysesPage() {
         symbol:          a.symbol,
         name:            a.name,
         type:            (a.category ?? a.type ?? "stock") as AssetFlow["type"],
-        region:          a.symbol.includes("USD") ? "crypto" : "us" as AssetFlow["region"],
+        region:          (a.region ?? (a.symbol.includes("USD") ? "crypto" : "us")) as AssetFlow["region"],
         sector:          a.sector ?? "Other",
         price:           a.price      ?? 0,
         change_1d:       a.change_1d  ?? 0,
