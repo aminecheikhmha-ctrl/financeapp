@@ -473,43 +473,49 @@ type Check = {
 }
 
 const BUY_CHECKS: Check[] = [
-  { name: "RSI·14",       points: 2, pass: (d) => d.rsi14 < 35 },
-  { name: "RSI·7",        points: 1, pass: (d) => d.rsi7 < 30 },
-  { name: "Stoch·%K",     points: 2, pass: (d) => d.stoch_k < 20 },
-  { name: "Stoch·%D",     points: 1, pass: (d) => d.stoch_d < 20 },
-  { name: "Williams·%R",  points: 1, pass: (d) => d.williams_r < -80 },
-  { name: "CCI",          points: 1, pass: (d) => d.cci < -100 },
-  { name: "BB·Lower",     points: 2, pass: (d) => d.bb_position < 5 },
+  // Momentum oscillators — relaxed thresholds for normal markets
+  { name: "RSI·14",       points: 3, pass: (d) => d.rsi14 < 45 },
+  { name: "RSI·7",        points: 2, pass: (d) => d.rsi7 < 40 },
+  { name: "Stoch·%K",     points: 2, pass: (d) => d.stoch_k < 40 },
+  { name: "Stoch·%D",     points: 1, pass: (d) => d.stoch_d < 40 },
+  { name: "Williams·%R",  points: 1, pass: (d) => d.williams_r < -55 },
+  { name: "CCI",          points: 1, pass: (d) => d.cci < -50 },
+  // Bollinger
+  { name: "BB·Lower",     points: 3, pass: (d) => d.bb_position < 25 },
   { name: "BB·Squeeze",   points: 1, pass: (d) => d.bb_width < d.bb_width_avg },
-  { name: "MACD·Hist↑",  points: 2, pass: (d) => d.macd_hist > 0 && d.macd_hist > d.macd_prev_hist },
-  { name: "EMA·Cross",    points: 1, pass: (d) => d.ema9 > d.ema21 },
+  // Trend
+  { name: "MACD·Hist↑",  points: 3, pass: (d) => d.macd_hist > 0 && d.macd_hist > d.macd_prev_hist },
+  { name: "EMA·Cross",    points: 2, pass: (d) => d.ema9 > d.ema21 },
   { name: "Prix·MA20",    points: 1, pass: (d) => d.price > d.ma20 },
-  { name: "Support",      points: 1, pass: (d) => d.price > d.support * 1.001 },
-  { name: "OBV↑",        points: 1, pass: (d) => d.obv_rising },
-  { name: "Volume·élevé", points: 2, pass: (d) => d.volume_ratio > 1.5 },
+  // Support / structure
+  { name: "Support",      points: 1, pass: (d) => d.price_position < 35 },
+  { name: "OBV↑",        points: 2, pass: (d) => d.obv_rising },
+  { name: "Volume·élevé", points: 2, pass: (d) => d.volume_ratio > 1.2 },
   { name: "VWAP",         points: 1, pass: (d) => d.price < d.vwap },
   { name: "ATR·élevé",   points: 1, pass: (d) => d.atr > d.atr_avg },
-  { name: "Range·Bas",    points: 1, pass: (d) => d.price_position < 30 },
 ]
 
 const SELL_CHECKS: Check[] = [
-  { name: "RSI·14",       points: 2, pass: (d) => d.rsi14 > 65 },
-  { name: "RSI·7",        points: 1, pass: (d) => d.rsi7 > 70 },
-  { name: "Stoch·%K",     points: 2, pass: (d) => d.stoch_k > 80 },
-  { name: "Stoch·%D",     points: 1, pass: (d) => d.stoch_d > 80 },
-  { name: "Williams·%R",  points: 1, pass: (d) => d.williams_r > -20 },
-  { name: "CCI",          points: 1, pass: (d) => d.cci > 100 },
-  { name: "BB·Upper",     points: 2, pass: (d) => d.bb_position > 95 },
+  // Momentum oscillators
+  { name: "RSI·14",       points: 3, pass: (d) => d.rsi14 > 55 },
+  { name: "RSI·7",        points: 2, pass: (d) => d.rsi7 > 60 },
+  { name: "Stoch·%K",     points: 2, pass: (d) => d.stoch_k > 60 },
+  { name: "Stoch·%D",     points: 1, pass: (d) => d.stoch_d > 60 },
+  { name: "Williams·%R",  points: 1, pass: (d) => d.williams_r > -45 },
+  { name: "CCI",          points: 1, pass: (d) => d.cci > 50 },
+  // Bollinger
+  { name: "BB·Upper",     points: 3, pass: (d) => d.bb_position > 75 },
   { name: "BB·Squeeze",   points: 1, pass: (d) => d.bb_width < d.bb_width_avg },
-  { name: "MACD·Hist↓",  points: 2, pass: (d) => d.macd_hist < 0 && d.macd_hist < d.macd_prev_hist },
-  { name: "EMA·Cross↓",  points: 1, pass: (d) => d.ema9 < d.ema21 },
+  // Trend
+  { name: "MACD·Hist↓",  points: 3, pass: (d) => d.macd_hist < 0 && d.macd_hist < d.macd_prev_hist },
+  { name: "EMA·Cross↓",  points: 2, pass: (d) => d.ema9 < d.ema21 },
   { name: "Prix·MA20↓",  points: 1, pass: (d) => d.price < d.ma20 },
-  { name: "Résistance",   points: 1, pass: (d) => d.price < d.resistance * 0.999 },
-  { name: "OBV↓",        points: 1, pass: (d) => !d.obv_rising },
-  { name: "Volume·élevé", points: 2, pass: (d) => d.volume_ratio > 1.5 },
+  // Resistance / structure
+  { name: "Résistance",   points: 1, pass: (d) => d.price_position > 65 },
+  { name: "OBV↓",        points: 2, pass: (d) => !d.obv_rising },
+  { name: "Volume·élevé", points: 2, pass: (d) => d.volume_ratio > 1.2 },
   { name: "VWAP↓",       points: 1, pass: (d) => d.price > d.vwap },
   { name: "ATR·élevé",   points: 1, pass: (d) => d.atr > d.atr_avg },
-  { name: "Range·Haut",   points: 1, pass: (d) => d.price_position > 70 },
 ]
 
 // ─── Groq batch comment generator ─────────────────────────────────────────────
@@ -734,7 +740,7 @@ async function processAsset(asset: Asset, sentimentScore?: number): Promise<Sign
       else if (sentimentScore < -30) { sell_score += 3; sell_confirmed.push("News·Bearish") }
     }
 
-    const MAX_POINTS = 32 // 29 original + 3 news sentiment max
+    const MAX_POINTS = 28 // sum of base checks (extras can push above → clamped to 100)
     const isBuy = buy_score >= sell_score
     const winning_points = isBuy ? buy_score : sell_score
     const confirmed_by = isBuy ? buy_confirmed : sell_confirmed
