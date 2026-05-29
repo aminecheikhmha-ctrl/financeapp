@@ -1,337 +1,85 @@
 "use client"
-
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
-import UpgradeModal from "@/app/components/UpgradeModal"
-import ScannerIA from "@/app/components/ScannerIA"
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from "recharts"
+import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts"
+import { Search } from "lucide-react"
 
-// ── Design tokens ──────────────────────────────────────────────────────────────
-const UP     = "#4ade80"
-const DOWN   = "#f87171"
-const WARN   = "#facc15"
-const PURPLE = "#a78bfa"
-const BLUE   = "#60a5fa"
+// ── Phases de cycle ────────────────────────────────────────────────────────────
+type CyclePhase =
+  | "accumulation"
+  | "tendance_forte"
+  | "surchauffe"
+  | "capitulation"
+  | "distribution"
+  | "recovery"
 
-// ── Types ──────────────────────────────────────────────────────────────────────
-type AssetResult = {
+type AssetFlow = {
   symbol: string
   name: string
-  category: "stock" | "crypto" | "etf"
-  sector?: string
-  type?: string
+  type: "stock" | "crypto" | "etf" | "forex" | "commodity" | "index"
+  region: "us" | "eu" | "asia" | "em" | "global" | "crypto"
+  sector: string
   price: number
-  change: number
   change_1d: number
   change_1w: number
   change_1m: number
-  rsi: number
-  ma20: number | null
-  ma50: number | null
+  change_ytd: number
+  change_1y: number
   volume: number
   volume_ratio: number
-  volRatio: number
-  macd_signal: "bullish" | "bearish" | "neutral"
-  bb_position: "upper" | "middle" | "lower" | "above" | "below"
-  confluence: number
-  news_sentiment: number
-  score: number
-  signal: string
-  signal_legacy: "ACHETER" | "ATTENDRE" | "ÉVITER"
-  category_legacy?: string
-  above_ma200: boolean
+  market_cap?: number
+  phase: CyclePhase
+  phase_score: number
+  flow_strength: number
+  sentiment_score: number
+  sparkline: number[]
+  breadth: number
 }
 
-type ScreenerData = {
-  assets: AssetResult[]
-  top_buys: AssetResult[]
-  top_sells: AssetResult[]
-  neutral: AssetResult[]
-  updated_at: string
+const REGIONS = [
+  { key: "all",    label: "🌍 Monde entier" },
+  { key: "us",     label: "🇺🇸 États-Unis" },
+  { key: "eu",     label: "🇪🇺 Europe" },
+  { key: "asia",   label: "🌏 Asie" },
+  { key: "em",     label: "🌐 Émergents" },
+  { key: "crypto", label: "₿ Crypto" },
+]
+
+const SECTORS = [
+  "Tous", "Technology", "Finance", "Healthcare", "Energy",
+  "Consumer", "Industrials", "Real Estate", "Commodities",
+  "AI & Robotics", "Luxury", "Automotive", "Defense",
+]
+
+const PHASE_CONFIG: Record<CyclePhase, { label: string; color: string; bg: string; desc: string }> = {
+  accumulation:   { label: "Accumulation",   color: "#60a5fa", bg: "rgba(96,165,250,0.12)",  desc: "Smart money achète discrètement. Opportunité de fond." },
+  tendance_forte: { label: "Tendance Forte", color: "#22c55e", bg: "rgba(34,197,94,0.12)",   desc: "Momentum haussier confirmé. Tendance en place." },
+  surchauffe:     { label: "Surchauffé",     color: "#ef4444", bg: "rgba(239,68,68,0.12)",   desc: "Valorisation extrême. Danger de retournement." },
+  capitulation:   { label: "Capitulation",   color: "#f97316", bg: "rgba(249,115,22,0.12)",  desc: "Vente panique. Potentiel point de fond." },
+  distribution:   { label: "Distribution",   color: "#f59e0b", bg: "rgba(245,158,11,0.12)",  desc: "Smart money vend. Retournement proche." },
+  recovery:       { label: "Recovery",       color: "#a78bfa", bg: "rgba(167,139,250,0.12)", desc: "Rebond après capitulation. Momentum qui revient." },
 }
 
-type MarketSummary = {
-  summary: string
-  sentiment: "bullish" | "bearish" | "neutral"
-  date: string
-  top_movers: { symbol: string; name: string; price: number; change: number }[]
-  market_data: { symbol: string; name: string; price: number; change: number }[]
+function computePhase(asset: Partial<AssetFlow>): CyclePhase {
+  const change1m    = asset.change_1m    ?? 0
+  const change1y    = asset.change_1y    ?? 0
+  const volumeRatio = asset.volume_ratio ?? 1
+  if (change1m < -15 && volumeRatio > 1.5 && change1y < -20) return "capitulation"
+  if (change1m > 15  && change1y > 50    && volumeRatio > 1.3) return "surchauffe"
+  if (change1m < -5  && change1y > 20    && volumeRatio > 1.2) return "distribution"
+  if (Math.abs(change1m) < 5 && change1y < -10 && volumeRatio < 0.9) return "accumulation"
+  if (change1m > 5  && change1y > 10) return "tendance_forte"
+  if (change1m > 3  && change1y < 0)  return "recovery"
+  return "tendance_forte"
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
-function signalColor(signal: string) {
-  if (signal === "ACHAT_FORT") return UP
-  if (signal === "ACHAT")      return "#86efac"
-  if (signal === "VENTE_FORT") return DOWN
-  if (signal === "VENTE")      return "#fca5a5"
-  return WARN
+function computeFlowStrength(change1d: number, change1w: number, volumeRatio: number): number {
+  const momentum    = change1d * 0.4 + change1w * 0.6
+  const volumeBoost = volumeRatio > 1.5 ? 1.3 : volumeRatio > 1.2 ? 1.1 : 1
+  return Math.max(-100, Math.min(100, momentum * volumeBoost * 5))
 }
 
-function signalLabel(signal: string) {
-  if (signal === "ACHAT_FORT") return "ACHAT FORT ⚡"
-  if (signal === "ACHAT")      return "ACHAT ↗"
-  if (signal === "VENTE_FORT") return "VENTE FORTE ⚡"
-  if (signal === "VENTE")      return "VENTE ↘"
-  return "NEUTRE"
-}
-
-function signalBg(signal: string) {
-  if (signal === "ACHAT_FORT" || signal === "ACHAT") return "rgba(74,222,128,0.1)"
-  if (signal === "VENTE_FORT" || signal === "VENTE") return "rgba(248,113,113,0.1)"
-  return "rgba(250,204,21,0.08)"
-}
-
-function signalBorder(signal: string) {
-  if (signal === "ACHAT_FORT" || signal === "ACHAT") return "rgba(74,222,128,0.25)"
-  if (signal === "VENTE_FORT" || signal === "VENTE") return "rgba(248,113,113,0.25)"
-  return "rgba(250,204,21,0.2)"
-}
-
-function fmtPrice(p: number) {
-  return p >= 1000
-    ? `$${p.toLocaleString("en-US", { maximumFractionDigits: 0 })}`
-    : `$${p.toFixed(2)}`
-}
-
-function fmtTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
-}
-
-function fmtChange(v: number) {
-  return `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`
-}
-
-function sentimentConfig(s: string) {
-  if (s === "bullish") return { label: "🟢 Haussier", color: UP,   bg: "rgba(74,222,128,0.1)",  border: "rgba(74,222,128,0.25)"  }
-  if (s === "bearish") return { label: "🔴 Baissier", color: DOWN, bg: "rgba(248,113,113,0.1)", border: "rgba(248,113,113,0.25)" }
-  return                      { label: "🟡 Neutre",   color: WARN, bg: "rgba(250,204,21,0.08)", border: "rgba(250,204,21,0.2)"   }
-}
-
-function macdColor(s: string) {
-  if (s === "bullish") return UP
-  if (s === "bearish") return DOWN
-  return "#555"
-}
-
-function macdLabel(s: string) {
-  if (s === "bullish") return "↑ Haussier"
-  if (s === "bearish") return "↓ Baissier"
-  return "→ Neutre"
-}
-
-function bbLabel(s: string) {
-  if (s === "above") return "↑ Au-dessus"
-  if (s === "below") return "↓ En-dessous"
-  if (s === "upper") return "Haute"
-  if (s === "lower") return "Basse"
-  return "Milieu"
-}
-
-function exportCSV(assets: AssetResult[]) {
-  const headers = ["Symbole", "Nom", "Catégorie", "Secteur", "Prix", "Var 1j%", "Var 1S%", "Var 1M%", "RSI", "MACD", "BB", "MA20", "MA50", "Confluence", "Vol Ratio", "Score", "Signal"]
-  const rows = assets.map(a => [
-    a.symbol, a.name, a.category, a.sector ?? "",
-    a.price, a.change_1d, a.change_1w, a.change_1m,
-    a.rsi, a.macd_signal, a.bb_position,
-    a.ma20 ?? "", a.ma50 ?? "",
-    a.confluence, a.volume_ratio, a.score, a.signal
-  ].join(","))
-  const csv = [headers.join(","), ...rows].join("\n")
-  const blob = new Blob([csv], { type: "text/csv" })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement("a")
-  a.href = url
-  a.download = `screener_${new Date().toISOString().slice(0, 10)}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
-}
-
-// ── Skeleton ───────────────────────────────────────────────────────────────────
-function Skeleton({ h = "h-5", w = "w-full" }: { h?: string; w?: string }) {
-  return <div className={`${h} ${w} rounded-lg animate-pulse`} style={{ background: "#151515" }} />
-}
-
-// ── Asset Card (Cards view) ────────────────────────────────────────────────────
-function AssetCard({ asset, onClick }: { asset: AssetResult; onClick: () => void }) {
-  const sc = signalColor(asset.signal)
-  const up = asset.change_1d >= 0
-
-  return (
-    <div
-      onClick={onClick}
-      className="rounded-xl p-3.5 cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99]"
-      style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderLeft: `3px solid ${sc}` }}
-    >
-      <div className="flex items-start justify-between mb-2">
-        <div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-white font-black text-sm">{asset.symbol.replace("-USD", "")}</span>
-            <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold"
-              style={{ background: "rgba(255,255,255,0.06)", color: "#555" }}>
-              {asset.category === "stock" ? "Action" : asset.category === "crypto" ? "Crypto" : "ETF"}
-            </span>
-          </div>
-          <p className="text-[10px] text-gray-600 mt-0.5 truncate max-w-[130px]">{asset.name}</p>
-        </div>
-        <div className="text-right flex-shrink-0">
-          <p className="text-white font-bold text-sm tabular-nums">{fmtPrice(asset.price)}</p>
-          <p className="text-[11px] font-semibold tabular-nums" style={{ color: up ? UP : DOWN }}>
-            {fmtChange(asset.change_1d)}
-          </p>
-        </div>
-      </div>
-
-      <div className="mb-2">
-        <div className="flex justify-between items-center mb-1">
-          <span className="text-[9px] text-gray-600 uppercase tracking-widest">Score IA</span>
-          <span className="text-[11px] font-black tabular-nums" style={{ color: sc }}>{asset.score}</span>
-        </div>
-        <div className="h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
-          <div className="h-full rounded-full transition-all"
-            style={{ width: `${asset.score}%`, background: `linear-gradient(90deg, ${sc}99, ${sc})` }} />
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-[10px] font-mono">
-          <span style={{ color: asset.rsi > 70 ? DOWN : asset.rsi < 30 ? UP : "#555" }}>
-            RSI {asset.rsi}
-          </span>
-          <span style={{ color: macdColor(asset.macd_signal) }}>MACD {asset.macd_signal === "bullish" ? "▲" : asset.macd_signal === "bearish" ? "▼" : "→"}</span>
-        </div>
-        <span className="text-[9px] font-black px-2 py-0.5 rounded-md"
-          style={{ background: signalBg(asset.signal), color: signalColor(asset.signal), border: `1px solid ${signalBorder(asset.signal)}` }}>
-          {signalLabel(asset.signal)}
-        </span>
-      </div>
-    </div>
-  )
-}
-
-// ── Heatmap Cell ───────────────────────────────────────────────────────────────
-function HeatmapCell({ asset, onClick }: { asset: AssetResult; onClick: () => void }) {
-  const pct = asset.change_1d
-  const abs = Math.abs(pct)
-  const intensity = Math.min(abs / 5, 1)
-  const bg = pct > 0
-    ? `rgba(74, 222, 128, ${0.1 + intensity * 0.4})`
-    : pct < 0
-    ? `rgba(248, 113, 113, ${0.1 + intensity * 0.4})`
-    : "rgba(255,255,255,0.04)"
-
-  return (
-    <div
-      onClick={onClick}
-      className="relative rounded-lg p-2.5 cursor-pointer transition-all hover:scale-[1.02] flex flex-col justify-between"
-      style={{ background: bg, border: "1px solid rgba(255,255,255,0.05)", minHeight: 64 }}
-    >
-      <p className="text-white font-black text-xs truncate">{asset.symbol.replace("-USD", "")}</p>
-      <div>
-        <p className="text-[10px] font-bold tabular-nums" style={{ color: pct >= 0 ? UP : DOWN }}>
-          {fmtChange(pct)}
-        </p>
-        <p className="text-[9px]" style={{ color: "rgba(255,255,255,0.3)" }}>{fmtPrice(asset.price)}</p>
-      </div>
-    </div>
-  )
-}
-
-// ── Screener Table Row ─────────────────────────────────────────────────────────
-type SortField = "score" | "price" | "change_1d" | "change_1w" | "change_1m" | "rsi" | "confluence" | "volume_ratio"
-
-function TableRow({ asset, onClick }: { asset: AssetResult; onClick: () => void }) {
-  const sc = signalColor(asset.signal)
-  const up1d = asset.change_1d >= 0
-
-  return (
-    <div
-      onClick={onClick}
-      className="grid items-center gap-2 px-4 py-2.5 cursor-pointer transition-colors text-xs"
-      style={{
-        gridTemplateColumns: "1.6fr 70px 80px 70px 70px 70px 50px 80px 80px 80px 110px",
-        borderBottom: "1px solid #111",
-      }}
-      onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")}
-      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-    >
-      {/* Asset */}
-      <div className="flex items-center gap-2 min-w-0">
-        <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: sc }} />
-        <div className="min-w-0">
-          <p className="text-white font-bold truncate">{asset.symbol.replace("-USD", "")}</p>
-          <p className="text-[9px] truncate" style={{ color: "#444" }}>{asset.name}</p>
-        </div>
-      </div>
-
-      {/* Price */}
-      <p className="text-white font-mono tabular-nums text-right">{fmtPrice(asset.price)}</p>
-
-      {/* 1d */}
-      <p className="font-bold tabular-nums text-right" style={{ color: up1d ? UP : DOWN }}>{fmtChange(asset.change_1d)}</p>
-
-      {/* 1w */}
-      <p className="font-mono tabular-nums text-right" style={{ color: asset.change_1w >= 0 ? UP : DOWN }}>{fmtChange(asset.change_1w)}</p>
-
-      {/* 1m */}
-      <p className="font-mono tabular-nums text-right" style={{ color: asset.change_1m >= 0 ? UP : DOWN }}>{fmtChange(asset.change_1m)}</p>
-
-      {/* RSI */}
-      <p className="font-mono tabular-nums text-right" style={{ color: asset.rsi > 70 ? DOWN : asset.rsi < 30 ? UP : "#888" }}>
-        {asset.rsi.toFixed(0)}
-      </p>
-
-      {/* MACD */}
-      <p className="text-right text-[10px] font-semibold" style={{ color: macdColor(asset.macd_signal) }}>
-        {asset.macd_signal === "bullish" ? "▲" : asset.macd_signal === "bearish" ? "▼" : "→"}
-      </p>
-
-      {/* Confluence */}
-      <div className="flex items-center gap-1.5">
-        <div className="flex-1 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
-          <div className="h-full rounded-full" style={{ width: `${asset.confluence}%`, background: asset.confluence >= 60 ? UP : asset.confluence >= 40 ? WARN : DOWN }} />
-        </div>
-        <span className="font-bold tabular-nums w-6 text-right" style={{ color: "#888" }}>{asset.confluence}</span>
-      </div>
-
-      {/* Vol Ratio */}
-      <p className="font-mono tabular-nums text-right" style={{ color: asset.volume_ratio > 1.5 ? PURPLE : "#555" }}>
-        {asset.volume_ratio.toFixed(1)}x
-      </p>
-
-      {/* Score */}
-      <div className="flex items-center gap-1.5">
-        <div className="flex-1 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
-          <div className="h-full rounded-full" style={{ width: `${asset.score}%`, background: sc }} />
-        </div>
-        <span className="font-black tabular-nums w-6 text-right" style={{ color: sc }}>{asset.score}</span>
-      </div>
-
-      {/* Signal */}
-      <span className="text-[9px] font-black px-2 py-0.5 rounded-md text-center"
-        style={{ background: signalBg(asset.signal), color: signalColor(asset.signal), border: `1px solid ${signalBorder(asset.signal)}` }}>
-        {signalLabel(asset.signal)}
-      </span>
-    </div>
-  )
-}
-
-// ── KPI stat pill ──────────────────────────────────────────────────────────────
-function KPIStat({ label, value, sub, color = "#fff" }: { label: string; value: string | number; sub?: string; color?: string }) {
-  return (
-    <div className="rounded-xl px-4 py-3" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
-      <p className="text-[9px] uppercase tracking-widest font-bold mb-1" style={{ color: "#444" }}>{label}</p>
-      <p className="text-lg font-black tabular-nums" style={{ color }}>{value}</p>
-      {sub && <p className="text-[10px] mt-0.5" style={{ color: "#555" }}>{sub}</p>}
-    </div>
-  )
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// BACKTEST TAB (preserved from original)
-// ══════════════════════════════════════════════════════════════════════════════
+// ── BacktestTab (preserved from original) ─────────────────────────────────────
 
 type BacktestTrade = {
   date: string; exit_date: string; type: "buy" | "sell"
@@ -351,18 +99,17 @@ type BacktestResult = {
 }
 
 const BT_STRATEGIES = [
-  { id: "rsi_reversal",  label: "RSI Reversal", icon: "📉", desc: "Achat RSI < 30, vente RSI > 70. Idéal pour les marchés en range." },
-  { id: "ma_crossover",  label: "MA Crossover",  icon: "✂️", desc: "Achat quand EMA9 croise EMA21 à la hausse, vente inverse." },
-  { id: "bb_bounce",     label: "BB Bounce",     icon: "🎯", desc: "Achat sur la bande basse de Bollinger, vente sur la bande haute." },
-  { id: "macd_cross",    label: "MACD Cross",    icon: "⚡", desc: "Achat quand le MACD croise au-dessus du signal, vente inverse." },
-  { id: "confluence_3",  label: "Confluence 3+", icon: "🔗", desc: "Achat si 3+ indicateurs alignés haussiers simultanément." },
+  { id: "rsi_reversal", label: "RSI Reversal", icon: "📉", desc: "Achat RSI<30, vente RSI>70." },
+  { id: "ma_crossover", label: "MA Crossover", icon: "✂️", desc: "Achat quand EMA9 croise EMA21." },
+  { id: "bb_bounce",    label: "BB Bounce",    icon: "🎯", desc: "Achat bande basse Bollinger." },
+  { id: "macd_cross",   label: "MACD Cross",   icon: "⚡", desc: "Achat quand MACD croise signal." },
+  { id: "confluence_3", label: "Confluence 3+",icon: "🔗", desc: "3+ indicateurs alignés." },
 ]
+
+const UP = "#4ade80", DOWN = "#f87171"
 
 function fmtCurrency(n: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n)
-}
-function fmtDateBt(d: string) {
-  return new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric" }).format(new Date(d))
 }
 function fmtN(n: number, dec = 2) { return n?.toFixed(dec) ?? "—" }
 
@@ -373,16 +120,6 @@ function BtKPI({ label, value, sub, positive }: { label: string; value: string; 
       <p className="text-[9px] uppercase tracking-widest font-bold mb-1" style={{ color: "#444" }}>{label}</p>
       <p className="text-xl font-black tabular-nums" style={{ color }}>{value}</p>
       {sub && <p className="text-[10px] mt-0.5" style={{ color: "#555" }}>{sub}</p>}
-    </div>
-  )
-}
-
-function EquityTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="rounded-lg px-3 py-2 text-sm" style={{ background: "#111", border: "1px solid #222" }}>
-      <p className="text-[10px]" style={{ color: "#666" }}>{label}</p>
-      <p className="text-white font-bold">{fmtCurrency(payload[0].value)}</p>
     </div>
   )
 }
@@ -410,8 +147,7 @@ function BacktestTab() {
       const data = await res.json()
       const items = (data?.quotes ?? []).filter((r: { symbol?: string; shortname?: string }) => r.symbol && r.shortname).slice(0, 6)
         .map((r: { symbol: string; shortname: string }) => ({ symbol: r.symbol, name: r.shortname }))
-      setSearchResults(items)
-      setShowSearch(items.length > 0)
+      setSearchResults(items); setShowSearch(items.length > 0)
     } catch {}
   }
 
@@ -444,165 +180,106 @@ function BacktestTab() {
   return (
     <div className="space-y-5">
       <div className="rounded-2xl p-5 space-y-5" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
-        <h2 className="text-base font-black">Paramètres</h2>
-
+        <h2 className="text-base font-black text-white">Paramètres Backtest</h2>
         <div ref={searchRef}>
-          <p className="text-[9px] uppercase tracking-widest font-bold mb-2" style={{ color: "#444" }}>Symbole</p>
+          <p className="text-[9px] uppercase tracking-widest font-bold mb-2 text-white/30">Symbole</p>
           <div className="relative">
-            <input type="text" value={symbol}
-              onChange={e => handleSearch(e.target.value)}
+            <input type="text" value={symbol} onChange={e => handleSearch(e.target.value)}
               onFocus={() => searchResults.length > 0 && setShowSearch(true)}
               placeholder="AAPL, NVDA, BTC-USD…"
-              className="w-full px-4 py-2.5 rounded-xl font-mono text-sm text-white outline-none transition"
+              className="w-full px-4 py-2.5 rounded-xl font-mono text-sm text-white outline-none"
               style={{ background: "#111", border: "1px solid #222" }} />
             {showSearch && (
               <div className="absolute top-full left-0 right-0 mt-1 rounded-xl overflow-hidden z-20 shadow-2xl"
                 style={{ background: "#0d0d0d", border: "1px solid #222" }}>
                 {searchResults.map(r => (
                   <button key={r.symbol} onClick={() => { setSymbol(r.symbol); setSearchResults([]); setShowSearch(false) }}
-                    className="w-full flex items-center justify-between px-4 py-2.5 text-left transition hover:brightness-125"
+                    className="w-full flex items-center justify-between px-4 py-2.5 hover:brightness-125"
                     style={{ background: "#0d0d0d" }}>
                     <span className="text-white font-mono font-bold text-sm">{r.symbol}</span>
-                    <span className="text-[11px] truncate ml-3" style={{ color: "#666" }}>{r.name}</span>
+                    <span className="text-[11px] truncate ml-3 text-white/40">{r.name}</span>
                   </button>
                 ))}
               </div>
             )}
           </div>
         </div>
-
         <div>
-          <p className="text-[9px] uppercase tracking-widest font-bold mb-2" style={{ color: "#444" }}>Stratégie</p>
+          <p className="text-[9px] uppercase tracking-widest font-bold mb-2 text-white/30">Stratégie</p>
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 mb-2">
             {BT_STRATEGIES.map(s => (
               <button key={s.id} onClick={() => setStrategy(s.id)}
                 className="flex flex-col items-center gap-1 px-2 py-2 rounded-xl text-[10px] font-bold transition"
-                style={{
-                  background: strategy === s.id ? "rgba(74,222,128,0.1)" : "#111",
-                  border: `1px solid ${strategy === s.id ? "rgba(74,222,128,0.3)" : "#1a1a1a"}`,
-                  color: strategy === s.id ? UP : "#555",
-                }}>
+                style={{ background: strategy === s.id ? "rgba(34,197,94,0.1)" : "#111", border: `1px solid ${strategy === s.id ? "rgba(34,197,94,0.3)" : "#1a1a1a"}`, color: strategy === s.id ? UP : "#555" }}>
                 <span className="text-base">{s.icon}</span>
                 <span className="text-center leading-tight">{s.label}</span>
               </button>
             ))}
           </div>
-          {strat && (
-            <p className="text-[11px] px-3 py-2 rounded-lg" style={{ background: "#111", color: "#777" }}>
-              <span className="font-bold" style={{ color: UP }}>{strat.icon} {strat.label}</span> — {strat.desc}
-            </p>
-          )}
+          {strat && <p className="text-[11px] px-3 py-2 rounded-lg text-white/50" style={{ background: "#111" }}>{strat.desc}</p>}
         </div>
-
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {[["Date début", "date", startDate, setStartDate], ["Date fin", "date", endDate, setEndDate]].map(([label, type, val, setter]) => (
+            <div key={label as string}>
+              <p className="text-[9px] uppercase tracking-widest font-bold mb-2 text-white/30">{label as string}</p>
+              <input type={type as string} value={val as string} onChange={e => (setter as (v: string) => void)(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl text-sm text-white outline-none" style={{ background: "#111", border: "1px solid #222" }} />
+            </div>
+          ))}
           <div>
-            <p className="text-[9px] uppercase tracking-widest font-bold mb-2" style={{ color: "#444" }}>Date début</p>
-            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl text-sm text-white outline-none"
-              style={{ background: "#111", border: "1px solid #222" }} />
-          </div>
-          <div>
-            <p className="text-[9px] uppercase tracking-widest font-bold mb-2" style={{ color: "#444" }}>Date fin</p>
-            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl text-sm text-white outline-none"
-              style={{ background: "#111", border: "1px solid #222" }} />
-          </div>
-          <div>
-            <p className="text-[9px] uppercase tracking-widest font-bold mb-2" style={{ color: "#444" }}>Capital initial</p>
+            <p className="text-[9px] uppercase tracking-widest font-bold mb-2 text-white/30">Capital</p>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "#555" }}>$</span>
-              <input type="number" value={capital} onChange={e => setCapital(Number(e.target.value))} min={100}
-                className="w-full pl-7 pr-3 py-2.5 rounded-xl text-sm text-white outline-none"
-                style={{ background: "#111", border: "1px solid #222" }} />
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-white/30">$</span>
+              <input type="number" value={capital} onChange={e => setCapital(Number(e.target.value))}
+                className="w-full pl-7 pr-3 py-2.5 rounded-xl text-sm text-white outline-none" style={{ background: "#111", border: "1px solid #222" }} />
             </div>
           </div>
         </div>
-
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <div className="flex justify-between mb-2">
-              <p className="text-[9px] uppercase tracking-widest font-bold" style={{ color: "#444" }}>Take Profit</p>
-              <span className="text-xs font-black" style={{ color: UP }}>{tpPct}%</span>
+          {[["TP", tpPct, setTpPct, 1, 50, 0.5, UP], ["SL", slPct, setSlPct, 0.5, 30, 0.5, DOWN]].map(([label, val, setter, min, max, step, color]) => (
+            <div key={label as string}>
+              <div className="flex justify-between mb-2">
+                <p className="text-[9px] uppercase tracking-widest font-bold text-white/30">{label as string}</p>
+                <span className="text-xs font-black" style={{ color: color as string }}>{val as number}%</span>
+              </div>
+              <input type="range" min={min as number} max={max as number} step={step as number} value={val as number}
+                onChange={e => (setter as (v: number) => void)(Number(e.target.value))}
+                className="w-full h-1.5 rounded-full appearance-none cursor-pointer outline-none"
+                style={{ background: `linear-gradient(to right, ${color} 0%, ${color} ${(((val as number) - (min as number)) / ((max as number) - (min as number))) * 100}%, #2d2d2d ${(((val as number) - (min as number)) / ((max as number) - (min as number))) * 100}%, #2d2d2d 100%)` }} />
             </div>
-            <input type="range" min={1} max={50} step={0.5} value={tpPct}
-              onChange={e => setTpPct(Number(e.target.value))}
-              className="w-full h-1.5 rounded-full appearance-none cursor-pointer outline-none"
-              style={{
-                background: `linear-gradient(to right, #4ade80 0%, #4ade80 ${((tpPct - 1) / 49) * 100}%, #2d2d2d ${((tpPct - 1) / 49) * 100}%, #2d2d2d 100%)`,
-                accentColor: "#4ade80",
-              }} />
-          </div>
-          <div>
-            <div className="flex justify-between mb-2">
-              <p className="text-[9px] uppercase tracking-widest font-bold" style={{ color: "#444" }}>Stop Loss</p>
-              <span className="text-xs font-black" style={{ color: DOWN }}>{slPct}%</span>
-            </div>
-            <input type="range" min={0.5} max={30} step={0.5} value={slPct}
-              onChange={e => setSlPct(Number(e.target.value))}
-              className="w-full h-1.5 rounded-full appearance-none cursor-pointer outline-none"
-              style={{
-                background: `linear-gradient(to right, #f87171 0%, #f87171 ${((slPct - 0.5) / 29.5) * 100}%, #2d2d2d ${((slPct - 0.5) / 29.5) * 100}%, #2d2d2d 100%)`,
-                accentColor: "#f87171",
-              }} />
-          </div>
+          ))}
         </div>
-
         <button onClick={runBacktest} disabled={loading || !symbol}
           className="w-full py-3 rounded-xl text-sm font-black uppercase tracking-wider transition disabled:opacity-40"
           style={{ background: "#4ade80", color: "#000" }}>
           {loading ? "⟳ Simulation en cours…" : "Lancer le backtest"}
         </button>
-        {error && <p className="text-center text-xs" style={{ color: DOWN }}>{error}</p>}
+        {error && <p className="text-center text-xs text-red-400">{error}</p>}
       </div>
-
       {result && (
         <div className="space-y-4">
-          <div className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{
-            background: pos ? "rgba(74,222,128,0.08)" : "rgba(248,113,113,0.08)",
-            border: `1px solid ${pos ? "rgba(74,222,128,0.2)" : "rgba(248,113,113,0.2)"}`,
-          }}>
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl"
+            style={{ background: pos ? "rgba(74,222,128,0.08)" : "rgba(248,113,113,0.08)", border: `1px solid ${pos ? "rgba(74,222,128,0.2)" : "rgba(248,113,113,0.2)"}` }}>
             <span className="text-xl">{pos ? "✅" : "❌"}</span>
             <div className="flex-1">
               <p className="text-white font-bold text-sm">{result.symbol} — {BT_STRATEGIES.find(s => s.id === result.strategy)?.label}</p>
-              <p className="text-[10px]" style={{ color: "#555" }}>{fmtDateBt(result.period.start)} → {fmtDateBt(result.period.end)} · {result.period.candles} séances</p>
+              <p className="text-[10px] text-white/30">{result.period.candles} séances</p>
             </div>
             <div className="text-right">
-              <p className="text-xl font-black tabular-nums" style={{ color: pos ? UP : DOWN }}>
-                {result.total_return >= 0 ? "+" : ""}{fmtN(result.total_return)}%
-              </p>
-              <p className="text-[10px]" style={{ color: "#555" }}>Rendement total</p>
+              <p className="text-xl font-black tabular-nums" style={{ color: pos ? UP : DOWN }}>{result.total_return >= 0 ? "+" : ""}{fmtN(result.total_return)}%</p>
             </div>
           </div>
-
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
             <BtKPI label="Win Rate" value={`${fmtN(result.win_rate, 1)}%`} sub={`${result.winning_trades}W / ${result.losing_trades}L`} positive={result.win_rate >= 50} />
             <BtKPI label="Rendement" value={`${result.total_return >= 0 ? "+" : ""}${fmtN(result.total_return)}%`} positive={result.total_return >= 0} />
-            <BtKPI label="Max Drawdown" value={`-${fmtN(result.max_drawdown)}%`} positive={result.max_drawdown < 10} />
+            <BtKPI label="Max DD" value={`-${fmtN(result.max_drawdown)}%`} positive={result.max_drawdown < 10} />
             <BtKPI label="Sharpe" value={fmtN(result.sharpe_ratio)} positive={result.sharpe_ratio >= 1} />
-            <BtKPI label="Profit Factor" value={fmtN(result.profit_factor)} positive={result.profit_factor >= 1} />
+            <BtKPI label="Profit F." value={fmtN(result.profit_factor)} positive={result.profit_factor >= 1} />
             <BtKPI label="Trades" value={String(result.total_trades)} sub={`Moy. ${fmtN(result.avg_trade_return)}%`} />
           </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{ background: "rgba(74,222,128,0.07)", border: "1px solid rgba(74,222,128,0.15)" }}>
-              <span className="text-lg">🏆</span>
-              <div>
-                <p className="text-[9px] uppercase tracking-widest font-bold" style={{ color: "#444" }}>Meilleur trade</p>
-                <p className="text-lg font-black" style={{ color: UP }}>+{fmtN(result.best_trade)}%</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{ background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.15)" }}>
-              <span className="text-lg">📉</span>
-              <div>
-                <p className="text-[9px] uppercase tracking-widest font-bold" style={{ color: "#444" }}>Pire trade</p>
-                <p className="text-lg font-black" style={{ color: DOWN }}>{fmtN(result.worst_trade)}%</p>
-              </div>
-            </div>
-          </div>
-
           <div className="rounded-2xl p-5" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
-            <p className="text-sm font-black mb-4">Courbe d'équité</p>
-            <ResponsiveContainer width="100%" height={220}>
+            <p className="text-sm font-black mb-4 text-white">Courbe d&apos;équité</p>
+            <ResponsiveContainer width="100%" height={200}>
               <AreaChart data={result.equity_curve} margin={{ top: 5, right: 5, left: 10, bottom: 5 }}>
                 <defs>
                   <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
@@ -613,60 +290,11 @@ function BacktestTab() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#151515" />
                 <XAxis dataKey="date" tick={{ fill: "#444", fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={d => d.slice(5)} interval="preserveStartEnd" />
                 <YAxis tick={{ fill: "#444", fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} width={42} />
-                <Tooltip content={<EquityTooltip />} />
+                <Tooltip contentStyle={{ background: "#111", border: "1px solid #222", color: "#fff", fontSize: 11 }} />
                 <Area type="monotone" dataKey="value" stroke={pos ? "#22c55e" : "#ef4444"} strokeWidth={1.5} fill="url(#eqGrad)" dot={false} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
-
-          {result.trades.length > 0 && (
-            <div className="rounded-2xl overflow-hidden" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
-              <div className="px-5 py-3 border-b" style={{ borderColor: "#1a1a1a" }}>
-                <p className="text-sm font-black">Trades ({result.trades.length})</p>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr style={{ color: "#444" }}>
-                      {["Entrée", "Sortie", "Prix ent.", "Prix sort.", "Raison", "P&L", "%"].map(h => (
-                        <th key={h} className={`px-4 py-2.5 font-semibold uppercase tracking-widest text-[9px] border-b ${["Prix ent.", "Prix sort.", "P&L", "%"].includes(h) ? "text-right" : "text-left"}`} style={{ borderColor: "#1a1a1a" }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.trades.map((t, i) => (
-                      <tr key={i} className="transition-colors hover:brightness-125 border-b" style={{ borderColor: "#111" }}>
-                        <td className="px-4 py-2.5 font-mono" style={{ color: "#777" }}>{t.date}</td>
-                        <td className="px-4 py-2.5 font-mono" style={{ color: "#777" }}>{t.exit_date}</td>
-                        <td className="px-4 py-2.5 text-right text-white font-mono">${t.price.toFixed(2)}</td>
-                        <td className="px-4 py-2.5 text-right text-white font-mono">${t.exit_price.toFixed(2)}</td>
-                        <td className="px-4 py-2.5 text-center">
-                          <span className="text-[9px] px-2 py-0.5 rounded-full font-bold" style={{
-                            background: t.exit_reason === "tp" ? "rgba(74,222,128,0.15)" : t.exit_reason === "sl" ? "rgba(248,113,113,0.15)" : "rgba(255,255,255,0.06)",
-                            color: t.exit_reason === "tp" ? UP : t.exit_reason === "sl" ? DOWN : "#888",
-                          }}>
-                            {t.exit_reason === "tp" ? "TP" : t.exit_reason === "sl" ? "SL" : "Signal"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2.5 text-right font-bold font-mono" style={{ color: t.pnl >= 0 ? UP : DOWN }}>
-                          {t.pnl >= 0 ? "+" : ""}{fmtCurrency(t.pnl)}
-                        </td>
-                        <td className="px-4 py-2.5 text-right font-bold font-mono" style={{ color: t.return_pct >= 0 ? UP : DOWN }}>
-                          {t.return_pct >= 0 ? "+" : ""}{t.return_pct.toFixed(2)}%
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {result.trades.length === 0 && (
-            <div className="text-center py-10" style={{ color: "#555" }}>
-              <p>Aucun trade généré. Essaie une période plus longue ou une autre stratégie.</p>
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -678,521 +306,438 @@ function BacktestTab() {
 // ══════════════════════════════════════════════════════════════════════════════
 export default function AnalysesPage() {
   const router = useRouter()
+  const [assets, setAssets]           = useState<AssetFlow[]>([])
+  const [loading, setLoading]         = useState(true)
+  const [region, setRegion]           = useState("all")
+  const [sector, setSector]           = useState("Tous")
+  const [search, setSearch]           = useState("")
+  const [view, setView]               = useState<"heatmap" | "table" | "flow" | "backtest">("heatmap")
+  const [lastUpdate, setLastUpdate]   = useState<Date | null>(null)
 
-  const [screener,     setScreener]     = useState<ScreenerData | null>(null)
-  const [summary,      setSummary]      = useState<MarketSummary | null>(null)
-  const [loadScreener, setLoadScreener] = useState(true)
-  const [loadSummary,  setLoadSummary]  = useState(true)
-  const [tab,          setTab]          = useState<"screener" | "heatmap" | "scanner" | "backtest" | "market">("screener")
-  const [filter,       setFilter]       = useState<"all" | "stock" | "crypto" | "etf">("all")
-  const [viewMode,     setViewMode]     = useState<"table" | "cards">("table")
-  const [sortField,    setSortField]    = useState<SortField>("score")
-  const [sortAsc,      setSortAsc]      = useState(false)
-  const [search,       setSearch]       = useState("")
-  const [plan,         setPlan]         = useState("free")
-  const [showUpgrade,  setShowUpgrade]  = useState(false)
-
-  useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) { router.push("/login"); return }
-      const { data: profile } = await supabase.from("profiles").select("plan").eq("email", data.user.email).single()
-      if (profile?.plan) setPlan(profile.plan)
-    })
-  }, [router])
-
-  const fetchScreener = useCallback(async (force = false) => {
-    setLoadScreener(true)
+  const loadData = useCallback(async () => {
+    setLoading(true)
     try {
-      const res = await fetch(`/api/screener${force ? `?t=${Date.now()}` : ""}`)
+      const res  = await fetch("/api/screener")
       const data = await res.json()
-      setScreener(data)
-    } catch {}
-    setLoadScreener(false)
+      const raw  = data.assets ?? data ?? []
+      const enriched: AssetFlow[] = raw.map((a: AssetFlow & { volRatio?: number; category?: string }) => ({
+        symbol:         a.symbol,
+        name:           a.name,
+        type:           (a.category ?? a.type ?? "stock") as AssetFlow["type"],
+        region:         a.symbol.includes("USD") ? "crypto" : "us" as AssetFlow["region"],
+        sector:         a.sector ?? "Other",
+        price:          a.price ?? 0,
+        change_1d:      a.change_1d ?? 0,
+        change_1w:      a.change_1w ?? 0,
+        change_1m:      a.change_1m ?? 0,
+        change_ytd:     a.change_ytd ?? 0,
+        change_1y:      a.change_1y ?? 0,
+        volume:         a.volume ?? 0,
+        volume_ratio:   a.volume_ratio ?? a.volRatio ?? 1,
+        market_cap:     a.market_cap,
+        breadth:        50,
+        phase:          computePhase(a),
+        phase_score:    Math.max(0, Math.min(100, 50 + (a.change_1m ?? 0) * 2)),
+        flow_strength:  computeFlowStrength(a.change_1d ?? 0, a.change_1w ?? 0, a.volume_ratio ?? a.volRatio ?? 1),
+        sentiment_score: Math.max(-100, Math.min(100, (a.change_1d ?? 0) * 5 + (a.change_1w ?? 0) * 2)),
+        sparkline:      (a as AssetFlow).sparkline ?? Array.from({ length: 30 }, (_, i) => 100 + Math.sin(i * 0.3) * (a.change_1m ?? 0) * 0.5),
+      }))
+      setAssets(enriched)
+      setLastUpdate(new Date())
+    } catch (e) { console.error(e) }
+    setLoading(false)
   }, [])
 
-  const fetchSummary = useCallback(async (force = false) => {
-    setLoadSummary(true)
-    try {
-      const res = await fetch(`/api/market-summary${force ? `?t=${Date.now()}` : ""}`)
-      const data = await res.json()
-      setSummary(data)
-    } catch {}
-    setLoadSummary(false)
-  }, [])
+  useEffect(() => { loadData() }, [loadData])
 
-  useEffect(() => {
-    Promise.all([fetchScreener(), fetchSummary()])
-  }, [fetchScreener, fetchSummary])
+  // Macro stats
+  const macroStats = useMemo(() => {
+    if (!assets.length) return null
+    const up = assets.filter(a => a.change_1d > 0).length
+    const avgFlow = assets.reduce((s, a) => s + a.flow_strength, 0) / assets.length
+    const phaseCounts = assets.reduce((acc, a) => { acc[a.phase] = (acc[a.phase] ?? 0) + 1; return acc }, {} as Record<string, number>)
+    const dominantPhase = Object.entries(phaseCounts).sort((a, b) => b[1] - a[1])[0]?.[0] as CyclePhase
+    const avgSentiment  = assets.reduce((s, a) => s + a.sentiment_score, 0) / assets.length
+    return { up, down: assets.length - up, avgFlow, dominantPhase, avgSentiment, total: assets.length }
+  }, [assets])
 
-  const sent = summary ? sentimentConfig(summary.sentiment) : null
-
-  const allAssets: AssetResult[] = screener?.assets ?? []
-
-  const baseFiltered = allAssets
-    .filter(a => filter === "all" || a.category === filter)
-    .filter(a => !search || a.symbol.toLowerCase().includes(search.toLowerCase()) || a.name.toLowerCase().includes(search.toLowerCase()))
-
-  const sorted = [...baseFiltered].sort((a, b) => {
-    const va = a[sortField] as number
-    const vb = b[sortField] as number
-    return sortAsc ? va - vb : vb - va
-  })
-
-  function toggleSort(field: SortField) {
-    if (sortField === field) setSortAsc(v => !v)
-    else { setSortField(field); setSortAsc(false) }
-  }
-
-  function SortBtn({ field, label }: { field: SortField; label: string }) {
-    const active = sortField === field
-    return (
-      <button onClick={() => toggleSort(field)}
-        className="flex items-center gap-0.5 text-[9px] uppercase tracking-widest font-bold transition"
-        style={{ color: active ? BLUE : "#444" }}>
-        {label}
-        {active && <span>{sortAsc ? " ↑" : " ↓"}</span>}
-      </button>
-    )
-  }
-
-  const buyCnt  = baseFiltered.filter(a => a.signal === "ACHAT_FORT" || a.signal === "ACHAT").length
-  const sellCnt = baseFiltered.filter(a => a.signal === "VENTE_FORT" || a.signal === "VENTE").length
-  const neutCnt = baseFiltered.filter(a => a.signal === "NEUTRE").length
-  const avgScore = baseFiltered.length > 0 ? Math.round(baseFiltered.reduce((s, a) => s + a.score, 0) / baseFiltered.length) : 0
-  const avgConf  = baseFiltered.length > 0 ? Math.round(baseFiltered.reduce((s, a) => s + a.confluence, 0) / baseFiltered.length) : 0
+  // Filtered + sorted
+  const filtered = useMemo(() => {
+    return assets.filter(a => {
+      if (region !== "all" && a.region !== region) return false
+      if (sector !== "Tous" && a.sector !== sector) return false
+      if (search && !a.symbol.toLowerCase().includes(search.toLowerCase()) &&
+          !a.name.toLowerCase().includes(search.toLowerCase()) &&
+          !(a.sector ?? "").toLowerCase().includes(search.toLowerCase())) return false
+      return true
+    }).sort((a, b) => Math.abs(b.flow_strength) - Math.abs(a.flow_strength))
+  }, [assets, region, sector, search])
 
   return (
-    <>
-    <div className="min-h-screen text-white overflow-x-hidden page-enter" style={{ background: "var(--bg-canvas)" }}>
-      <div className="max-w-7xl mx-auto px-4 md:px-5 py-6">
+    <div className="min-h-screen page-enter" style={{ background: "var(--bg-canvas)" }}>
 
-        {/* ── Header ──────────────────────────────────────────────────────── */}
-        <div className="flex items-start justify-between mb-5 flex-wrap gap-3">
+      {/* ── HEADER ── */}
+      <div className="px-6 py-5 border-b border-white/5">
+        <div className="flex items-center justify-between flex-wrap gap-4 mb-5">
           <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-xl md:text-2xl font-black tracking-tight">Terminal Analyses</h1>
-              {!loadScreener && screener && (
-                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black"
-                  style={{ background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.2)", color: UP }}>
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: UP }} />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: UP }} />
-                  </span>
-                  LIVE
-                </span>
-              )}
-            </div>
-            <p className="text-gray-600 text-sm">Screener · Heatmap · Scanner IA · Backtest · Briefing marché</p>
+            <h1 className="text-2xl font-black text-white">Analyses Macro</h1>
+            <p className="text-white/30 text-sm mt-0.5">
+              Où va l&apos;argent · {assets.length} actifs mondiaux
+              {lastUpdate && ` · ${lastUpdate.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`}
+            </p>
           </div>
-          <div className="flex items-center gap-2">
-            {sent && (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl font-bold text-sm"
-                style={{ background: sent.bg, color: sent.color, border: `1px solid ${sent.border}` }}>
-                {sent.label}
-              </div>
-            )}
-            {!loadScreener && screener && (
-              <p className="text-[10px]" style={{ color: "#444" }}>
-                MAJ {fmtTime(screener.updated_at)}
-              </p>
-            )}
-          </div>
+          <button onClick={loadData} disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white/40 hover:text-white border border-white/8 hover:border-white/16 transition disabled:opacity-40">
+            ↻ {loading ? "Chargement..." : "Actualiser"}
+          </button>
         </div>
 
-        {/* ── KPI stats (screener data) ────────────────────────────────────── */}
-        {!loadScreener && screener && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-5">
-            <KPIStat label="Actifs scannés" value={allAssets.length} />
-            <KPIStat label="Signaux achat" value={buyCnt} color={UP} />
-            <KPIStat label="Signaux vente" value={sellCnt} color={DOWN} />
-            <KPIStat label="Neutres" value={neutCnt} color={WARN} />
-            <KPIStat label="Score moyen" value={`${avgScore}/100`} color={avgScore >= 60 ? UP : avgScore >= 40 ? WARN : DOWN} />
-            <KPIStat label="Confluence moy." value={`${avgConf}%`} color={BLUE} />
+        {/* MACRO KPIs */}
+        {macroStats && (
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
+            {[
+              {
+                label: "Flux global",
+                value: macroStats.avgFlow > 10 ? "Entrant 🟢" : macroStats.avgFlow < -10 ? "Sortant 🔴" : "Neutre ⚪",
+                sub: `Score ${macroStats.avgFlow.toFixed(0)}/100`,
+                color: macroStats.avgFlow > 10 ? "#4ade80" : macroStats.avgFlow < -10 ? "#f87171" : "#9ca3af",
+              },
+              {
+                label: "Phase dominante",
+                value: PHASE_CONFIG[macroStats.dominantPhase]?.label ?? "—",
+                sub: "Sur l'ensemble du marché",
+                color: PHASE_CONFIG[macroStats.dominantPhase]?.color ?? "#fff",
+              },
+              {
+                label: "Sentiment",
+                value: macroStats.avgSentiment > 20 ? "Optimiste" : macroStats.avgSentiment < -20 ? "Pessimiste" : "Mixte",
+                sub: `Score ${macroStats.avgSentiment.toFixed(0)}`,
+                color: macroStats.avgSentiment > 20 ? "#4ade80" : macroStats.avgSentiment < -20 ? "#f87171" : "#fbbf24",
+              },
+              {
+                label: "Breadth",
+                value: `${macroStats.up}/${macroStats.total}`,
+                sub: `${((macroStats.up / macroStats.total) * 100).toFixed(0)}% en hausse`,
+                color: macroStats.up > macroStats.total / 2 ? "#4ade80" : "#f87171",
+              },
+              {
+                label: "Régime",
+                value: macroStats.avgFlow > 20 ? "Risk-On 🚀" : macroStats.avgFlow < -20 ? "Risk-Off 🛡️" : "Transition ↔️",
+                sub: "Appétit pour le risque",
+                color: macroStats.avgFlow > 20 ? "#4ade80" : macroStats.avgFlow < -20 ? "#60a5fa" : "#fbbf24",
+              },
+            ].map(kpi => (
+              <div key={kpi.label} className="rounded-2xl p-4"
+                style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <p className="text-[9px] text-white/25 uppercase tracking-widest mb-2">{kpi.label}</p>
+                <p className="text-sm font-black" style={{ color: kpi.color }}>{kpi.value}</p>
+                <p className="text-[10px] text-white/25 mt-0.5">{kpi.sub}</p>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* ── Tabs ────────────────────────────────────────────────────────── */}
-        <div className="flex gap-1 mb-5 p-1 rounded-xl overflow-x-auto scrollbar-hide" style={{ background: "#111" }}>
-          {[
-            { key: "screener", label: "🔍 Screener" },
-            { key: "heatmap",  label: "🔥 Heatmap" },
-            { key: "scanner",  label: "🧠 Scanner IA" },
-            { key: "backtest", label: "📊 Backtest" },
-            { key: "market",   label: "📰 Marché" },
-          ].map(t => (
-            <button key={t.key} onClick={() => setTab(t.key as typeof tab)}
-              className="flex-1 flex-shrink-0 whitespace-nowrap py-2 rounded-lg text-xs md:text-sm font-bold transition-all"
-              style={{
-                background: tab === t.key ? "#1a1a1a" : "transparent",
-                color: tab === t.key ? "#fff" : "#555",
-                border: tab === t.key ? "1px solid #2a2a2a" : "1px solid transparent",
-              }}>
-              {t.label}
-            </button>
-          ))}
+        {/* FORCE GAUGE */}
+        {macroStats && (
+          <div className="mb-5">
+            <div className="flex items-center justify-between text-[10px] text-white/30 mb-2">
+              <span>🔴 Capitulation</span>
+              <span className="font-bold text-white text-xs">
+                Force du marché —{" "}
+                {macroStats.avgFlow < -30 ? "Capitulation" :
+                 macroStats.avgFlow < -10 ? "Faible" :
+                 macroStats.avgFlow <  10 ? "Neutre" :
+                 macroStats.avgFlow <  30 ? "Fort" : "Tendance Forte"}
+              </span>
+              <span>🟢 Tendance Forte</span>
+            </div>
+            <div className="relative h-3 rounded-full overflow-hidden"
+              style={{ background: "linear-gradient(90deg, #ef4444, #f97316, #fbbf24, #84cc16, #22c55e)" }}>
+              <div className="absolute top-0 bottom-0 w-1 bg-white rounded-full shadow-lg transition-all duration-500"
+                style={{ left: `${Math.max(2, Math.min(97, ((macroStats.avgFlow + 100) / 200) * 100))}%`, transform: "translateX(-50%)" }} />
+            </div>
+          </div>
+        )}
+
+        {/* FILTERS */}
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="relative">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25" />
+            <input value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Tech, Luxe, IA..."
+              className="h-8 pl-8 pr-3 rounded-lg text-xs text-white placeholder-white/20 outline-none"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", width: 180 }} />
+          </div>
+
+          <div className="flex gap-1 flex-wrap">
+            {REGIONS.map(r => (
+              <button key={r.key} onClick={() => setRegion(r.key)}
+                className={`h-8 px-3 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                  region === r.key ? "bg-white/10 text-white border border-white/15" : "text-white/30 hover:text-white/60 border border-transparent"
+                }`}>
+                {r.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="overflow-x-auto scrollbar-hide">
+            <div className="flex gap-1">
+              {SECTORS.map(s => (
+                <button key={s} onClick={() => setSector(s)}
+                  className={`flex-shrink-0 h-8 px-3 rounded-lg text-[11px] font-bold transition-all ${
+                    sector === s ? "bg-white/10 text-white border border-white/15" : "text-white/25 hover:text-white/50"
+                  }`}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="ml-auto flex rounded-lg overflow-hidden border border-white/8">
+            {[
+              { key: "heatmap",  icon: "⬛", label: "Heatmap" },
+              { key: "table",    icon: "☰",  label: "Tableau" },
+              { key: "flow",     icon: "↔",  label: "Flux" },
+              { key: "backtest", icon: "📊", label: "Backtest" },
+            ].map(v => (
+              <button key={v.key} onClick={() => setView(v.key as typeof view)}
+                className={`px-3 h-8 text-xs font-bold transition-all ${
+                  view === v.key ? "bg-white/10 text-white" : "text-white/25 hover:text-white/50"
+                }`}>
+                {v.icon} <span className="hidden sm:inline">{v.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
-
-        {/* ════════════════════════════════════════════════════════════════════ */}
-        {/* SCREENER TAB                                                         */}
-        {/* ════════════════════════════════════════════════════════════════════ */}
-        {tab === "screener" && plan === "free" && (
-          <div className="relative rounded-2xl overflow-hidden" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
-            <div className="p-6 blur-sm pointer-events-none select-none opacity-40">
-              <div className="space-y-2">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="h-10 rounded-lg animate-pulse" style={{ background: "#151515" }} />
-                ))}
-              </div>
-            </div>
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl" style={{ background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.2)" }}>🔒</div>
-              <div>
-                <p className="text-white font-black text-lg">Terminal Pro réservé aux abonnés</p>
-                <p className="text-gray-500 text-sm mt-1">Screener temps réel, heatmap, scanner IA, backtest avancé</p>
-              </div>
-              <button onClick={() => setShowUpgrade(true)}
-                className="px-6 py-3 rounded-xl font-black text-sm text-black transition hover:opacity-90"
-                style={{ background: "linear-gradient(135deg, #4ade80, #22c55e)" }}>
-                Passer à Pro →
-              </button>
-            </div>
-          </div>
-        )}
-
-        {tab === "screener" && plan !== "free" && (
-          <div className="space-y-4">
-            {/* Controls */}
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Category filter */}
-                <div className="flex rounded-lg overflow-hidden" style={{ border: "1px solid #1a1a1a" }}>
-                  {([["all", "Tout"], ["stock", "Actions"], ["crypto", "Crypto"], ["etf", "ETF"]] as const).map(([key, label]) => (
-                    <button key={key} onClick={() => setFilter(key)}
-                      className="px-3 py-1.5 text-[11px] font-bold transition-all"
-                      style={{
-                        background: filter === key ? "#1f2937" : "#0d0d0d",
-                        color: filter === key ? BLUE : "#555",
-                      }}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* View mode */}
-                <div className="flex gap-1 rounded-lg overflow-hidden" style={{ border: "1px solid #1a1a1a" }}>
-                  {([["table", "☰ Table"], ["cards", "⊞ Cartes"]] as const).map(([key, label]) => (
-                    <button key={key} onClick={() => setViewMode(key)}
-                      className="px-3 py-1.5 text-[11px] font-bold transition-all"
-                      style={{
-                        background: viewMode === key ? "#1f2937" : "#0d0d0d",
-                        color: viewMode === key ? "#fff" : "#555",
-                      }}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {/* Search */}
-                <input
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder="Rechercher…"
-                  className="px-3 py-1.5 rounded-lg text-xs text-white outline-none w-36"
-                  style={{ background: "#111", border: "1px solid #1a1a1a" }} />
-
-                {/* Export CSV */}
-                <button onClick={() => exportCSV(sorted)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition"
-                  style={{ background: "#111", border: "1px solid #1a1a1a", color: "#555" }}>
-                  ↓ CSV
-                </button>
-
-                {/* Refresh */}
-                <button onClick={() => fetchScreener(true)} disabled={loadScreener}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition disabled:opacity-40"
-                  style={{ background: "#111", border: "1px solid #222", color: "#888" }}>
-                  {loadScreener
-                    ? <><span className="w-3 h-3 border border-gray-500 border-t-transparent rounded-full animate-spin" /> Scan...</>
-                    : "↻"}
-                </button>
-              </div>
-            </div>
-
-            {/* Count line */}
-            {!loadScreener && (
-              <p className="text-[10px]" style={{ color: "#444" }}>
-                {sorted.length} actif{sorted.length > 1 ? "s" : ""} · triés par <span style={{ color: BLUE }}>{sortField}</span> {sortAsc ? "↑" : "↓"}
-              </p>
-            )}
-
-            {/* Loading */}
-            {loadScreener && (
-              <div className="space-y-2">
-                {Array.from({ length: 10 }).map((_, i) => (
-                  <div key={i} className="h-10 rounded-lg animate-pulse" style={{ background: "#111" }} />
-                ))}
-              </div>
-            )}
-
-            {/* Table view */}
-            {!loadScreener && viewMode === "table" && (
-              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid #1a1a1a" }}>
-                {/* Table header */}
-                <div className="grid items-center gap-2 px-4 py-2.5"
-                  style={{
-                    gridTemplateColumns: "1.6fr 70px 80px 70px 70px 70px 50px 80px 80px 80px 110px",
-                    background: "rgba(255,255,255,0.02)",
-                    borderBottom: "1px solid #1a1a1a",
-                  }}>
-                  <span className="text-[9px] uppercase tracking-widest font-bold" style={{ color: "#444" }}>Actif</span>
-                  <SortBtn field="price" label="Prix" />
-                  <SortBtn field="change_1d" label="1j %" />
-                  <SortBtn field="change_1w" label="1S %" />
-                  <SortBtn field="change_1m" label="1M %" />
-                  <SortBtn field="rsi" label="RSI" />
-                  <span className="text-[9px] uppercase tracking-widest font-bold" style={{ color: "#444" }}>MACD</span>
-                  <SortBtn field="confluence" label="Conf." />
-                  <SortBtn field="volume_ratio" label="Vol ×" />
-                  <SortBtn field="score" label="Score" />
-                  <span className="text-[9px] uppercase tracking-widest font-bold" style={{ color: "#444" }}>Signal</span>
-                </div>
-
-                {/* Rows */}
-                <div className="overflow-y-auto" style={{ maxHeight: "70vh" }}>
-                  {sorted.map(a => (
-                    <TableRow key={a.symbol} asset={a} onClick={() => router.push(`/dashboard?symbol=${a.symbol}`)} />
-                  ))}
-                  {sorted.length === 0 && (
-                    <div className="text-center py-10" style={{ color: "#555" }}>
-                      Aucun actif ne correspond aux filtres
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Cards view */}
-            {!loadScreener && viewMode === "cards" && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                {sorted.map(a => (
-                  <AssetCard key={a.symbol} asset={a} onClick={() => router.push(`/dashboard?symbol=${a.symbol}`)} />
-                ))}
-                {sorted.length === 0 && (
-                  <div className="col-span-full text-center py-10" style={{ color: "#555" }}>
-                    Aucun actif ne correspond aux filtres
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ════════════════════════════════════════════════════════════════════ */}
-        {/* HEATMAP TAB                                                          */}
-        {/* ════════════════════════════════════════════════════════════════════ */}
-        {tab === "heatmap" && (
-          <div className="space-y-5">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div>
-                <h2 className="text-lg font-black">Heatmap des variations</h2>
-                <p className="text-[10px] mt-0.5" style={{ color: "#555" }}>Variation journalière — vert intensif = forte hausse, rouge intensif = forte baisse</p>
-              </div>
-              <div className="flex rounded-lg overflow-hidden" style={{ border: "1px solid #1a1a1a" }}>
-                {([["all", "Tout"], ["stock", "Actions"], ["crypto", "Crypto"], ["etf", "ETF"]] as const).map(([key, label]) => (
-                  <button key={key} onClick={() => setFilter(key)}
-                    className="px-3 py-1.5 text-[11px] font-bold transition-all"
-                    style={{
-                      background: filter === key ? "#1f2937" : "#0d0d0d",
-                      color: filter === key ? BLUE : "#555",
-                    }}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {loadScreener ? (
-              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-1.5">
-                {Array.from({ length: 40 }).map((_, i) => (
-                  <div key={i} className="h-16 rounded-lg animate-pulse" style={{ background: "#111" }} />
-                ))}
-              </div>
-            ) : (
-              <>
-                {/* Sector groups */}
-                {filter === "all" || filter === "stock" ? (
-                  <div className="space-y-4">
-                    {["Technology", "Finance", "Healthcare", "Consumer", "Energy"].map(sector => {
-                      const sectorAssets = baseFiltered.filter(a => a.sector === sector)
-                      if (sectorAssets.length === 0) return null
-                      return (
-                        <div key={sector}>
-                          <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "#444" }}>{sector}</p>
-                          <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))" }}>
-                            {sectorAssets.map(a => (
-                              <HeatmapCell key={a.symbol} asset={a} onClick={() => router.push(`/dashboard?symbol=${a.symbol}`)} />
-                            ))}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))" }}>
-                    {baseFiltered.map(a => (
-                      <HeatmapCell key={a.symbol} asset={a} onClick={() => router.push(`/dashboard?symbol=${a.symbol}`)} />
-                    ))}
-                  </div>
-                )}
-
-                {/* Legend */}
-                <div className="flex items-center gap-3 justify-end flex-wrap">
-                  <span className="text-[10px]" style={{ color: "#444" }}>Légende variation 1j :</span>
-                  {[
-                    { label: "+5%+", bg: "rgba(74,222,128,0.5)" },
-                    { label: "+2%", bg: "rgba(74,222,128,0.25)" },
-                    { label: "0%", bg: "rgba(255,255,255,0.04)" },
-                    { label: "-2%", bg: "rgba(248,113,113,0.25)" },
-                    { label: "-5%-", bg: "rgba(248,113,113,0.5)" },
-                  ].map(({ label, bg }) => (
-                    <div key={label} className="flex items-center gap-1">
-                      <div className="w-4 h-4 rounded" style={{ background: bg, border: "1px solid rgba(255,255,255,0.05)" }} />
-                      <span className="text-[9px]" style={{ color: "#555" }}>{label}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* ════════════════════════════════════════════════════════════════════ */}
-        {/* SCANNER IA TAB                                                       */}
-        {/* ════════════════════════════════════════════════════════════════════ */}
-        {tab === "scanner" && plan === "free" && (
-          <div className="text-center py-16 rounded-2xl" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.2)" }}>🔒</div>
-            <p className="text-white font-black text-lg mb-1">Scanner IA réservé Pro</p>
-            <p className="text-gray-500 text-sm mb-4">Détection de 12 patterns techniques + analyse IA Groq</p>
-            <button onClick={() => setShowUpgrade(true)}
-              className="px-6 py-3 rounded-xl font-black text-sm text-black transition hover:opacity-90"
-              style={{ background: "linear-gradient(135deg, #a78bfa, #7c3aed)" }}>
-              Passer à Pro →
-            </button>
-          </div>
-        )}
-
-        {tab === "scanner" && plan !== "free" && (
-          loadScreener ? (
-            <div className="text-center py-12" style={{ color: "#555" }}>
-              <span className="w-6 h-6 border border-gray-600 border-t-white rounded-full animate-spin inline-block mb-3" />
-              <p>Chargement des données du scanner…</p>
-            </div>
-          ) : (
-            <ScannerIA assets={allAssets} />
-          )
-        )}
-
-        {/* ════════════════════════════════════════════════════════════════════ */}
-        {/* BACKTEST TAB                                                         */}
-        {/* ════════════════════════════════════════════════════════════════════ */}
-        {tab === "backtest" && <BacktestTab />}
-
-        {/* ════════════════════════════════════════════════════════════════════ */}
-        {/* MARKET SUMMARY TAB                                                   */}
-        {/* ════════════════════════════════════════════════════════════════════ */}
-        {tab === "market" && (
-          <div className="space-y-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-black">Résumé de marché</h2>
-                {summary && (
-                  <p className="text-[10px] text-gray-600 mt-0.5">
-                    Généré le {new Date(summary.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })} à {fmtTime(summary.date)}
-                  </p>
-                )}
-              </div>
-              <button onClick={() => fetchSummary(true)} disabled={loadSummary}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition disabled:opacity-40"
-                style={{ background: "#111", border: "1px solid #222", color: "#888" }}>
-                {loadSummary ? <><span className="w-3 h-3 border border-gray-500 border-t-transparent rounded-full animate-spin" /> Chargement...</> : "↻ Régénérer"}
-              </button>
-            </div>
-
-            <div className="rounded-2xl p-5" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
-              {loadSummary ? (
-                <div className="space-y-3">
-                  {[100, 90, 95, 75, 88, 70].map((w, i) => <Skeleton key={i} w={`w-[${w}%]`} />)}
-                </div>
-              ) : summary ? (
-                <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    {sent && (
-                      <span className="text-xs font-black px-3 py-1 rounded-full"
-                        style={{ background: sent.bg, color: sent.color, border: `1px solid ${sent.border}` }}>
-                        {sent.label}
-                      </span>
-                    )}
-                    <span className="text-[10px] text-gray-600">Groq LLaMA 3.3 · Yahoo Finance</span>
-                  </div>
-                  <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">{summary.summary}</div>
-                </div>
-              ) : (
-                <p className="text-gray-600 text-sm text-center py-4">Impossible de charger le briefing</p>
-              )}
-            </div>
-
-            {summary?.market_data && (
-              <div>
-                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Indices et actifs majeurs</h3>
-                <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-                  {summary.market_data.map(d => {
-                    const up = d.change >= 0
-                    return (
-                      <div key={d.symbol} className="rounded-xl p-3 flex-shrink-0 min-w-[90px]" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
-                        <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-1">{d.symbol.replace("-USD", "")}</p>
-                        <p className="text-white font-black text-sm tabular-nums">{fmtPrice(d.price)}</p>
-                        <p className="text-[11px] font-bold tabular-nums mt-0.5" style={{ color: up ? UP : DOWN }}>
-                          {up ? "+" : ""}{d.change.toFixed(2)}%
-                        </p>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {summary?.top_movers && (
-              <div>
-                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Plus grandes variations</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {summary.top_movers.map(d => {
-                    const up = d.change >= 0
-                    return (
-                      <div key={d.symbol} className="rounded-xl p-4" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-black text-white">{d.symbol.replace("-USD", "")}</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                            style={{ background: up ? "rgba(74,222,128,0.1)" : "rgba(248,113,113,0.1)", color: up ? UP : DOWN }}>
-                            {up ? "+" : ""}{d.change.toFixed(2)}%
-                          </span>
-                        </div>
-                        <p className="text-gray-600 text-[10px]">{d.name}</p>
-                        <p className="text-white font-bold text-base mt-1 tabular-nums">{fmtPrice(d.price)}</p>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
       </div>
+
+      {/* ── BACKTEST ── */}
+      {view === "backtest" && (
+        <div className="px-6 py-4 max-w-4xl">
+          <BacktestTab />
+        </div>
+      )}
+
+      {/* ── HEATMAP ── */}
+      {view === "heatmap" && !loading && (
+        <div className="px-6 py-4">
+          <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-4">
+            Heatmap de flux · Couleur = Phase de cycle · Taille = Capitalisation
+          </p>
+          {Object.entries(
+            filtered.reduce((acc, a) => {
+              const sec = a.sector ?? "Autre"
+              if (!acc[sec]) acc[sec] = []
+              acc[sec].push(a)
+              return acc
+            }, {} as Record<string, AssetFlow[]>)
+          ).map(([sectorName, sectorAssets]) => (
+            <div key={sectorName} className="mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">{sectorName}</p>
+                <div className="flex-1 h-px bg-white/5" />
+                {(() => {
+                  const avgFlow = sectorAssets.reduce((s, a) => s + a.flow_strength, 0) / sectorAssets.length
+                  return (
+                    <span className="text-[10px] font-bold"
+                      style={{ color: avgFlow > 10 ? "#4ade80" : avgFlow < -10 ? "#f87171" : "#9ca3af" }}>
+                      {avgFlow > 10 ? "▲ Inflow" : avgFlow < -10 ? "▼ Outflow" : "→ Neutre"} {Math.abs(avgFlow).toFixed(0)}
+                    </span>
+                  )
+                })()}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {sectorAssets.map(asset => {
+                  const phaseConfig = PHASE_CONFIG[asset.phase]
+                  const size = Math.max(70, Math.min(150, (asset.market_cap ?? asset.volume / 1e6) / 1e9 * 8 + 70))
+                  return (
+                    <button key={asset.symbol}
+                      onClick={() => router.push(`/dashboard?symbol=${asset.symbol}`)}
+                      className="rounded-2xl p-3 transition-all hover:scale-105 text-left relative overflow-hidden"
+                      style={{ background: phaseConfig.bg, border: `1px solid ${phaseConfig.color}30`, width: size, minHeight: size * 0.75 }}>
+                      <p className="text-xs font-black text-white truncate">{asset.symbol.replace("-USD", "")}</p>
+                      <p className={`text-[11px] font-bold ${asset.change_1d >= 0 ? "text-green-400" : "text-red-400"}`}>
+                        {asset.change_1d >= 0 ? "+" : ""}{asset.change_1d.toFixed(1)}%
+                      </p>
+                      <p className="text-[8px] font-bold mt-1 truncate" style={{ color: phaseConfig.color }}>{phaseConfig.label}</p>
+                      <div className="absolute top-2 right-2 text-[10px] text-white/50">
+                        {asset.flow_strength > 15 ? "↑" : asset.flow_strength < -15 ? "↓" : "→"}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+              {[...Array(24)].map((_, i) => (
+                <div key={i} className="h-16 rounded-2xl animate-pulse" style={{ background: "#0a0a0a" }} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── TABLE ── */}
+      {view === "table" && (
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr style={{ background: "rgba(255,255,255,0.02)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                {["Actif", "Phase", "Flux", "1J", "1S", "1M", "YTD", "1 An", "Tendance 30J", ""].map(h => (
+                  <th key={h} className="px-4 py-3 text-left text-[9px] text-white/25 uppercase tracking-widest font-bold">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                [...Array(10)].map((_, i) => (
+                  <tr key={i}>{[...Array(9)].map((_, j) => (
+                    <td key={j} className="px-4 py-3"><div className="h-4 animate-pulse rounded" style={{ background: "#111", width: 60 + j * 5 }} /></td>
+                  ))}</tr>
+                ))
+              ) : filtered.map(asset => {
+                const phaseConfig = PHASE_CONFIG[asset.phase]
+                const flowUp = asset.flow_strength > 0
+                return (
+                  <tr key={asset.symbol}
+                    className="border-b border-white/[0.04] hover:bg-white/[0.02] transition cursor-pointer"
+                    onClick={() => router.push(`/dashboard?symbol=${asset.symbol}`)}>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black text-black flex-shrink-0"
+                          style={{ background: phaseConfig.color }}>
+                          {asset.symbol.replace("-USD", "")[0]}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-white">{asset.symbol.replace("-USD", "")}</p>
+                          <p className="text-[9px] text-white/25 truncate max-w-[100px]">{asset.name?.slice(0, 18)}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="group relative">
+                        <span className="text-[9px] font-black px-2 py-1 rounded-full cursor-help"
+                          style={{ background: phaseConfig.bg, color: phaseConfig.color, border: `1px solid ${phaseConfig.color}25` }}>
+                          {phaseConfig.label}
+                        </span>
+                        <div className="absolute left-0 top-full mt-1 z-20 w-44 p-2 rounded-xl text-[10px] text-white/70 hidden group-hover:block"
+                          style={{ background: "#111", border: "1px solid rgba(255,255,255,0.1)" }}>
+                          {phaseConfig.desc}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-16 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${Math.abs(asset.flow_strength)}%`, background: flowUp ? "#22c55e" : "#ef4444", marginLeft: flowUp ? "50%" : `${50 - Math.abs(asset.flow_strength) / 2}%` }} />
+                        </div>
+                        <span className={`text-[10px] font-bold ${flowUp ? "text-green-400" : "text-red-400"}`}>
+                          {flowUp ? "↑" : "↓"}{Math.abs(asset.flow_strength).toFixed(0)}
+                        </span>
+                      </div>
+                    </td>
+                    {[asset.change_1d, asset.change_1w, asset.change_1m, asset.change_ytd, asset.change_1y].map((chg, i) => (
+                      <td key={i} className="px-4 py-3">
+                        <span className={`text-xs font-bold tabular-nums ${(chg ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                          {(chg ?? 0) >= 0 ? "+" : ""}{(chg ?? 0).toFixed(1)}%
+                        </span>
+                      </td>
+                    ))}
+                    <td className="px-4 py-3">
+                      <div className="w-20 h-8">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={asset.sparkline.map((v, i) => ({ i, v }))} margin={{ top: 2, right: 0, left: 0, bottom: 2 }}>
+                            <defs>
+                              <linearGradient id={`sg-${asset.symbol}`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor={asset.change_1m >= 0 ? "#22c55e" : "#ef4444"} stopOpacity={0.3} />
+                                <stop offset="100%" stopColor={asset.change_1m >= 0 ? "#22c55e" : "#ef4444"} stopOpacity={0} />
+                              </linearGradient>
+                            </defs>
+                            <Area type="monotone" dataKey="v" stroke={asset.change_1m >= 0 ? "#22c55e" : "#ef4444"} strokeWidth={1.5} fill={`url(#sg-${asset.symbol})`} dot={false} />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <button className="text-[10px] font-bold px-2.5 py-1 rounded-lg text-white/30 hover:text-white hover:bg-white/8 transition">
+                        Voir →
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+          {!loading && filtered.length === 0 && (
+            <div className="text-center py-12 text-white/30">Aucun actif ne correspond aux filtres</div>
+          )}
+        </div>
+      )}
+
+      {/* ── FLOW VIEW ── */}
+      {view === "flow" && (
+        <div className="px-6 py-4">
+          <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-4">
+            Flux de capitaux — Inflow vs Outflow par zone
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="rounded-2xl p-5" style={{ background: "#0a0a0a", border: "1px solid rgba(34,197,94,0.15)" }}>
+              <p className="text-[10px] text-green-400/60 uppercase tracking-widest font-bold mb-4">▲ Top Inflow — L&apos;argent entre</p>
+              {filtered.filter(a => a.flow_strength > 0).slice(0, 10).map(asset => (
+                <button key={asset.symbol} onClick={() => router.push(`/dashboard?symbol=${asset.symbol}`)}
+                  className="flex items-center gap-3 w-full py-2.5 border-b border-white/[0.04] last:border-0 hover:bg-white/3 transition">
+                  <span className="text-sm font-bold text-white w-16 text-left">{asset.symbol.replace("-USD", "")}</span>
+                  <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                    <div className="h-full rounded-full bg-green-400" style={{ width: `${asset.flow_strength}%` }} />
+                  </div>
+                  <span className="text-xs font-black text-green-400 tabular-nums w-10 text-right">+{asset.flow_strength.toFixed(0)}</span>
+                  <span className={`text-xs font-bold ${asset.change_1d >= 0 ? "text-green-400" : "text-red-400"}`}>
+                    {asset.change_1d >= 0 ? "+" : ""}{asset.change_1d.toFixed(1)}%
+                  </span>
+                </button>
+              ))}
+              {filtered.filter(a => a.flow_strength > 0).length === 0 && (
+                <p className="text-white/20 text-xs py-4 text-center">Aucun inflow détecté</p>
+              )}
+            </div>
+            <div className="rounded-2xl p-5" style={{ background: "#0a0a0a", border: "1px solid rgba(239,68,68,0.15)" }}>
+              <p className="text-[10px] text-red-400/60 uppercase tracking-widest font-bold mb-4">▼ Top Outflow — L&apos;argent sort</p>
+              {filtered.filter(a => a.flow_strength < 0).sort((a, b) => a.flow_strength - b.flow_strength).slice(0, 10).map(asset => (
+                <button key={asset.symbol} onClick={() => router.push(`/dashboard?symbol=${asset.symbol}`)}
+                  className="flex items-center gap-3 w-full py-2.5 border-b border-white/[0.04] last:border-0 hover:bg-white/3 transition">
+                  <span className="text-sm font-bold text-white w-16 text-left">{asset.symbol.replace("-USD", "")}</span>
+                  <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                    <div className="h-full rounded-full bg-red-400" style={{ width: `${Math.abs(asset.flow_strength)}%` }} />
+                  </div>
+                  <span className="text-xs font-black text-red-400 tabular-nums w-10 text-right">{asset.flow_strength.toFixed(0)}</span>
+                  <span className={`text-xs font-bold ${asset.change_1d >= 0 ? "text-green-400" : "text-red-400"}`}>
+                    {asset.change_1d >= 0 ? "+" : ""}{asset.change_1d.toFixed(1)}%
+                  </span>
+                </button>
+              ))}
+              {filtered.filter(a => a.flow_strength < 0).length === 0 && (
+                <p className="text-white/20 text-xs py-4 text-center">Aucun outflow détecté</p>
+              )}
+            </div>
+          </div>
+
+          {/* Phase légende */}
+          <div className="mt-8">
+            <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-4">Légende — Phases de cycle de marché</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              {(Object.entries(PHASE_CONFIG) as [CyclePhase, typeof PHASE_CONFIG[CyclePhase]][]).map(([phase, cfg]) => (
+                <div key={phase} className="rounded-2xl p-3" style={{ background: cfg.bg, border: `1px solid ${cfg.color}25` }}>
+                  <p className="text-xs font-black mb-1" style={{ color: cfg.color }}>{cfg.label}</p>
+                  <p className="text-[10px] text-white/50 leading-relaxed">{cfg.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
-    <UpgradeModal open={showUpgrade} onClose={() => setShowUpgrade(false)} context="screener" />
-    </>
   )
 }

@@ -107,23 +107,23 @@ async function fetchYahooRSS(symbol: string): Promise<NewsArticle[]> {
   }
 }
 
-// ── Reuters RSS ───────────────────────────────────────────────────────────────
-async function fetchReutersRSS(): Promise<NewsArticle[]> {
+// ── Generic RSS fetcher ───────────────────────────────────────────────────────
+async function fetchRSS(url: string, source: string, limit = 8): Promise<NewsArticle[]> {
   try {
-    const res = await fetch(
-      "https://feeds.reuters.com/reuters/businessNews",
-      { headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(5000) }
-    )
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; TradexBot/1.0)" },
+      signal: AbortSignal.timeout(5000),
+    })
     if (!res.ok) return []
     const xml = await res.text()
     const items = xml.match(/<item>[\s\S]*?<\/item>/g) ?? []
-    return items.slice(0, 5).map(item => {
-      const title = (item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) ?? item.match(/<title>(.*?)<\/title>/))?.[1] ?? ""
-      const link  = (item.match(/<link>(.*?)<\/link>/))?.[1] ?? ""
+    return items.slice(0, limit).map(item => {
+      const title   = (item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) ?? item.match(/<title>(.*?)<\/title>/))?.[1] ?? ""
+      const link    = (item.match(/<link>(.*?)<\/link>/))?.[1] ?? ""
       const pubDate = (item.match(/<pubDate>(.*?)<\/pubDate>/))?.[1] ?? ""
       return {
-        title: title.trim(),
-        source: "Reuters",
+        title: title.trim().replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'"),
+        source,
         url: link.trim(),
         published_at: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
       }
@@ -133,56 +133,38 @@ async function fetchReutersRSS(): Promise<NewsArticle[]> {
   }
 }
 
-// ── MarketWatch RSS ───────────────────────────────────────────────────────────
-async function fetchMarketWatchRSS(): Promise<NewsArticle[]> {
-  try {
-    const res = await fetch(
-      "https://feeds.content.dowjones.io/public/rss/mw_topstories",
-      { headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(5000) }
-    )
-    if (!res.ok) return []
-    const xml = await res.text()
-    const items = xml.match(/<item>[\s\S]*?<\/item>/g) ?? []
-    return items.slice(0, 5).map(item => {
-      const title = (item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) ?? item.match(/<title>(.*?)<\/title>/))?.[1] ?? ""
-      const link  = (item.match(/<link>(.*?)<\/link>/))?.[1] ?? ""
-      const pubDate = (item.match(/<pubDate>(.*?)<\/pubDate>/))?.[1] ?? ""
-      return {
-        title: title.trim(),
-        source: "MarketWatch",
-        url: link.trim(),
-        published_at: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
-      }
-    }).filter(a => a.title.length > 5)
-  } catch {
-    return []
-  }
-}
+async function fetchReutersRSS():    Promise<NewsArticle[]> { return fetchRSS("https://feeds.reuters.com/reuters/businessNews", "Reuters") }
+async function fetchMarketWatchRSS():Promise<NewsArticle[]> { return fetchRSS("https://feeds.content.dowjones.io/public/rss/mw_topstories", "MarketWatch") }
+async function fetchCNBCRSS():       Promise<NewsArticle[]> { return fetchRSS("https://www.cnbc.com/id/10000664/device/rss/rss.html", "CNBC") }
+async function fetchCNBCMarketsRSS():Promise<NewsArticle[]> { return fetchRSS("https://www.cnbc.com/id/19854910/device/rss/rss.html", "CNBC Markets") }
 
-// ── CNBC RSS ──────────────────────────────────────────────────────────────────
-async function fetchCNBCRSS(): Promise<NewsArticle[]> {
-  try {
-    const res = await fetch(
-      "https://www.cnbc.com/id/10000664/device/rss/rss.html",
-      { headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(5000) }
-    )
-    if (!res.ok) return []
-    const xml = await res.text()
-    const items = xml.match(/<item>[\s\S]*?<\/item>/g) ?? []
-    return items.slice(0, 5).map(item => {
-      const title = (item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) ?? item.match(/<title>(.*?)<\/title>/))?.[1] ?? ""
-      const link  = (item.match(/<link>(.*?)<\/link>/))?.[1] ?? ""
-      const pubDate = (item.match(/<pubDate>(.*?)<\/pubDate>/))?.[1] ?? ""
-      return {
-        title: title.trim(),
-        source: "CNBC",
-        url: link.trim(),
-        published_at: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
-      }
-    }).filter(a => a.title.length > 5)
-  } catch {
-    return []
-  }
+// ── Article importance scoring ────────────────────────────────────────────────
+const BREAKING_SCORE_WORDS = [
+  "breaking", "just in", "urgent", "alert", "crash", "surge", "record", "emergency",
+  "fed", "rate cut", "rate hike", "ban", "sec", "fda", "merger", "acquisition",
+  "earnings beat", "earnings miss", "bankruptcy", "collapse", "layoffs",
+]
+const PREMIUM_SOURCES = ["reuters", "bloomberg", "cnbc", "wsj", "ft", "marketwatch", "financial times"]
+
+function scoreArticle(article: NewsArticle): number {
+  let score = 0
+  const title     = (article.title ?? "").toLowerCase()
+  const timeDiff  = Date.now() - new Date(article.published_at).getTime()
+  const hoursOld  = timeDiff / (1000 * 60 * 60)
+
+  // Recency bonus (decays over time)
+  score += Math.max(0, 100 - hoursOld * 5)
+
+  // Breaking / high-impact keywords
+  BREAKING_SCORE_WORDS.forEach(w => { if (title.includes(w)) score += 20 })
+
+  // Premium source bonus
+  if (PREMIUM_SOURCES.some(s => (article.source ?? "").toLowerCase().includes(s))) score += 30
+
+  // Strong sentiment signal
+  if (Math.abs(article.sentiment_score ?? 0) > 50) score += 15
+
+  return score
 }
 
 // ── Finnhub (optional — requires FINNHUB_API_KEY) ─────────────────────────────
@@ -310,11 +292,11 @@ export async function GET(req: NextRequest) {
     if (cachedGeneral && Date.now() - cachedGeneral.ts < CACHE_TTL) {
       return NextResponse.json(cachedGeneral.data)
     }
-    const [reuters, marketwatch, cnbc] = await Promise.all([
-      fetchReutersRSS(), fetchMarketWatchRSS(), fetchCNBCRSS(),
+    const [reuters, marketwatch, cnbc, cnbcMarkets] = await Promise.all([
+      fetchReutersRSS(), fetchMarketWatchRSS(), fetchCNBCRSS(), fetchCNBCMarketsRSS(),
     ])
-    let generalAll = deduplicate([...reuters, ...marketwatch, ...cnbc])
-      .sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime())
+    let generalAll = deduplicate([...reuters, ...marketwatch, ...cnbc, ...cnbcMarkets])
+      .sort((a, b) => scoreArticle(b) - scoreArticle(a))
       .slice(0, limit)
     generalAll = generalAll.map(article => ({
       ...article,
@@ -328,17 +310,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(generalResult)
   }
 
-  const [yahoo, finnhub, reddit, reuters, marketwatch, cnbc] = await Promise.all([
+  const [yahoo, finnhub, reddit, reuters, marketwatch, cnbc, cnbcMarkets] = await Promise.all([
     fetchYahooRSS(symbol),
     fetchFinnhub(symbol),
     fetchReddit(symbol),
     fetchReutersRSS(),
     fetchMarketWatchRSS(),
     fetchCNBCRSS(),
+    fetchCNBCMarketsRSS(),
   ])
 
   // Combine; for non-symbol sources, filter by symbol presence if not "general"
-  const generalNews = [...reuters, ...marketwatch, ...cnbc].filter(a => {
+  const generalNews = [...reuters, ...marketwatch, ...cnbc, ...cnbcMarkets].filter(a => {
     if (symbol === "SPY" || symbol === "QQQ") return true
     const lc = a.title.toLowerCase()
     const symLower = symbol.replace("-USD", "").toLowerCase()
@@ -346,7 +329,7 @@ export async function GET(req: NextRequest) {
   })
 
   let all = deduplicate([...yahoo, ...finnhub, ...reddit, ...generalNews])
-    .sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime())
+    .sort((a, b) => scoreArticle(b) - scoreArticle(a))
     .slice(0, limit)
 
   // Enrich with tickers, breaking, category

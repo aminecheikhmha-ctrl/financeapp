@@ -446,7 +446,7 @@ export default function NewsPage() {
   ]
 
   return (
-    <div className="min-h-screen overflow-x-hidden" style={{ background: D.bg }}>
+    <div className="h-screen flex flex-col overflow-hidden" style={{ background: D.bg }}>
 
       {/* ── TICKER TAPE ───────────────────────────────────────────────────── */}
       {tapePrices.length > 0 && (
@@ -526,11 +526,11 @@ export default function NewsPage() {
       </div>
 
       {/* ── BODY 3-COLUMN ────────────────────────────────────────────────────── */}
-      <div className="flex" style={{ minHeight: "calc(100vh - 108px)" }}>
+      <div className="flex flex-1 overflow-hidden">
 
         {/* ── LEFT SIDEBAR ─────────────────────────────────────────────────── */}
         <aside className="w-[260px] flex-shrink-0 flex-col overflow-y-auto hidden lg:flex"
-          style={{ background: "#070707", borderRight: "1px solid #111", position: "sticky", top: 0, height: "calc(100vh - 108px)" }}>
+          style={{ background: "#070707", borderRight: "1px solid #111" }}>
 
           {/* Mes actifs */}
           <div className="p-4" style={{ borderBottom: "1px solid #111" }}>
@@ -672,7 +672,7 @@ export default function NewsPage() {
         </aside>
 
         {/* ── CENTRAL FEED ─────────────────────────────────────────────────── */}
-        <main className="flex-1 min-w-0 p-5 overflow-y-auto">
+        <main className="flex-1 min-w-0 p-5 overflow-y-auto h-full">
 
           {/* Briefing strip */}
           {briefingText && (
@@ -836,8 +836,8 @@ export default function NewsPage() {
         </main>
 
         {/* ── RIGHT PANEL ──────────────────────────────────────────────────── */}
-        <aside className="w-[280px] flex-shrink-0 flex-col gap-px hidden xl:flex"
-          style={{ background: "#070707", borderLeft: "1px solid #111", position: "sticky", top: 0, height: "calc(100vh - 108px)", overflowY: "auto" }}>
+        <aside className="w-[280px] flex-shrink-0 flex-col gap-px hidden xl:flex overflow-y-auto"
+          style={{ background: "#070707", borderLeft: "1px solid #111" }}>
 
           {/* Fear & Greed */}
           <div className="p-4" style={{ borderBottom: "1px solid #111" }}>

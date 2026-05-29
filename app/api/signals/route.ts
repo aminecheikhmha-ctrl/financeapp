@@ -51,6 +51,9 @@ export type SignalResult = {
   ichimoku_signal: "bullish" | "bearish" | "neutral"
   above_ma200: boolean
   volume_spike: boolean
+  is_market_closed?: boolean
+  low_volume_warning?: boolean
+  trend_warning?: string
 }
 
 // ─── Asset list ───────────────────────────────────────────────────────────────
@@ -569,9 +572,21 @@ async function generateComments(fortSignals: SignalResult[]): Promise<Map<string
   }
 }
 
+// ─── Market hours ─────────────────────────────────────────────────────────────
+
+function isNYSEOpen(): boolean {
+  const now = new Date()
+  const day = now.getUTCDay() // 0=Sun, 6=Sat
+  if (day === 0 || day === 6) return false
+  // Approximate Eastern Time as UTC-4 (EDT); close enough for signal flagging
+  const etHour = (now.getUTCHours() - 4 + 24) % 24
+  const etTime = etHour * 60 + now.getUTCMinutes()
+  return etTime >= 9 * 60 + 30 && etTime < 16 * 60
+}
+
 // ─── Per-asset fetch & compute ─────────────────────────────────────────────────
 
-async function processAsset(asset: Asset): Promise<SignalResult | null> {
+async function processAsset(asset: Asset, sentimentScore?: number): Promise<SignalResult | null> {
   try {
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(asset.symbol)}?interval=1d&range=3mo`
     const res = await fetch(url, {
@@ -691,13 +706,40 @@ async function processAsset(asset: Asset): Promise<SignalResult | null> {
     if (!above_ma200) sell_score += 1
     if (volume_spike) sell_score += 3
 
-    const MAX_POINTS = 29 // 22 original + 7 new max
+    // News sentiment boost (from pre-fetched cache)
+    if (sentimentScore !== undefined) {
+      if (sentimentScore > 30) { buy_score += 3; buy_confirmed.push("News·Bullish") }
+      else if (sentimentScore < -30) { sell_score += 3; sell_confirmed.push("News·Bearish") }
+    }
+
+    const MAX_POINTS = 32 // 29 original + 3 news sentiment max
     const isBuy = buy_score >= sell_score
     const winning_points = isBuy ? buy_score : sell_score
     const confirmed_by = isBuy ? buy_confirmed : sell_confirmed
-    const confluence_score = (winning_points / MAX_POINTS) * 100
+    let confluence_score = Math.min(100, (winning_points / MAX_POINTS) * 100)
 
     if (confluence_score < 50) return null
+
+    // Volume validation: penalise low-liquidity signals
+    let low_volume_warning = false
+    if (volume_ratio < 0.5) {
+      confluence_score *= 0.8
+      low_volume_warning = true
+    }
+
+    // Trend alignment: penalise signals that go against the daily EMA9/EMA21 trend
+    let trend_warning: string | undefined
+    const dailyTrend: "bullish" | "bearish" = ema9 > ema21 ? "bullish" : "bearish"
+    if ((isBuy && dailyTrend === "bearish") || (!isBuy && dailyTrend === "bullish")) {
+      confluence_score *= 0.85
+      trend_warning = "Signal contre la tendance daily"
+    }
+
+    // Re-check threshold after adjustments
+    if (confluence_score < 50) return null
+
+    // Market hours flag (non-crypto only)
+    const is_market_closed = asset.type !== "crypto" && !isNYSEOpen()
 
     let signal: SignalResult["signal"]
     let strength: SignalResult["strength"]
@@ -764,6 +806,9 @@ async function processAsset(asset: Asset): Promise<SignalResult | null> {
       ichimoku_signal,
       above_ma200,
       volume_spike,
+      is_market_closed,
+      low_volume_warning,
+      trend_warning,
     }
   } catch {
     return null
@@ -801,13 +846,31 @@ export async function GET(req: NextRequest) {
     // Cache table may not exist — continue
   }
 
+  // Pre-fetch news sentiment scores (last 24 h) for all assets
+  const sentimentMap = new Map<string, number>()
+  try {
+    const { data: sentimentRows } = await supabase
+      .from("news_sentiment_cache")
+      .select("symbol, sentiment_score")
+      .gt("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+    if (sentimentRows) {
+      for (const row of sentimentRows as { symbol: string; sentiment_score: number }[]) {
+        sentimentMap.set(row.symbol, row.sentiment_score)
+      }
+    }
+  } catch {
+    // Table may not exist yet — proceed without sentiment
+  }
+
   // Process all assets in parallel batches of 15
   const BATCH_SIZE = 15
   const results: SignalResult[] = []
 
   for (let i = 0; i < ASSETS.length; i += BATCH_SIZE) {
     const batch = ASSETS.slice(i, i + BATCH_SIZE)
-    const batchResults = await Promise.allSettled(batch.map(processAsset))
+    const batchResults = await Promise.allSettled(
+      batch.map(a => processAsset(a, sentimentMap.get(a.symbol)))
+    )
     for (const r of batchResults) {
       if (r.status === "fulfilled" && r.value !== null) results.push(r.value)
     }
