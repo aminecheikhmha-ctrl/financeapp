@@ -262,13 +262,7 @@ function Top3Card({ signal, rank }: { signal: SignalResult; rank: number }) {
 
         {/* Button */}
         <button
-          onClick={() => {
-            const params = new URLSearchParams({ symbol: signal.symbol })
-            if (signal.entry_price) params.set("price", String(signal.entry_price))
-            if (signal.tp1) params.set("tp", String(signal.tp1))
-            if (signal.sl) params.set("sl", String(signal.sl))
-            router.push(`/dashboard?${params.toString()}`)
-          }}
+          onClick={() => router.push(`/signaux/${signal.symbol}`)}
           className="w-full text-[11px] font-bold py-2 rounded-xl transition-all hover:opacity-80"
           style={{
             background: isLong ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)",
@@ -317,13 +311,7 @@ function SignalRow({ signal, blurred, onUpgrade }: { signal: SignalResult; blurr
         gridTemplateColumns: "140px 1fr 90px 60px 140px 50px 70px 80px",
         borderTop: `1px solid ${D.border}`,
       }}
-      onClick={() => {
-        const params = new URLSearchParams({ symbol: signal.symbol })
-        if (signal.entry_price) params.set("price", String(signal.entry_price))
-        if (signal.tp1) params.set("tp", String(signal.tp1))
-        if (signal.sl) params.set("sl", String(signal.sl))
-        router.push(`/dashboard?${params.toString()}`)
-      }}
+      onClick={() => router.push(`/signaux/${signal.symbol}`)}
       onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.015)")}
       onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
     >
@@ -390,11 +378,7 @@ function SignalRow({ signal, blurred, onUpgrade }: { signal: SignalResult; blurr
         }}
         onClick={e => {
           e.stopPropagation()
-          const params = new URLSearchParams({ symbol: signal.symbol })
-          if (signal.entry_price) params.set("price", String(signal.entry_price))
-          if (signal.tp1) params.set("tp", String(signal.tp1))
-          if (signal.sl) params.set("sl", String(signal.sl))
-          router.push(`/dashboard?${params.toString()}`)
+          router.push(`/signaux/${signal.symbol}`)
         }}>
         Voir le graphe →
       </button>
@@ -428,13 +412,7 @@ function SignalRowMobile({ signal, blurred, onUpgrade }: { signal: SignalResult;
   return (
     <div className="flex items-center gap-3 px-4 py-3 md:hidden"
       style={{ borderTop: `1px solid ${D.border}` }}
-      onClick={() => {
-        const params = new URLSearchParams({ symbol: signal.symbol })
-        if (signal.entry_price) params.set("price", String(signal.entry_price))
-        if (signal.tp1) params.set("tp", String(signal.tp1))
-        if (signal.sl) params.set("sl", String(signal.sl))
-        router.push(`/dashboard?${params.toString()}`)
-      }}>
+      onClick={() => router.push(`/signaux/${signal.symbol}`)}>
       <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded flex-shrink-0"
         style={{ background: b.bg, border: `1px solid ${b.border}`, color: b.color }}>
         {b.label}
@@ -471,13 +449,7 @@ function GridCard({ signal, blurred, onUpgrade }: { signal: SignalResult; blurre
   return (
     <div className="relative rounded-xl overflow-hidden cursor-pointer transition-all hover:scale-[1.01]"
       style={{ background: D.card, border: `1px solid ${D.border}` }}
-      onClick={() => {
-        const params = new URLSearchParams({ symbol: signal.symbol })
-        if (signal.entry_price) params.set("price", String(signal.entry_price))
-        if (signal.tp1) params.set("tp", String(signal.tp1))
-        if (signal.sl) params.set("sl", String(signal.sl))
-        router.push(`/dashboard?${params.toString()}`)
-      }}>
+      onClick={() => router.push(`/signaux/${signal.symbol}`)}>
       {blurred && (
         <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl"
           style={{ backdropFilter: "blur(6px)", background: "rgba(5,5,5,0.75)" }}>
@@ -675,7 +647,7 @@ function HistoriqueView({ rows }: { rows: HistoriqueRow[] }) {
                 </span>
               )}
               <button
-                onClick={() => router.push(`/dashboard?symbol=${row.ticker}`)}
+                onClick={() => router.push(`/signaux/${row.ticker}?id=${row.id}`)}
                 className="ml-auto text-[10px] transition"
                 style={{ color: "rgba(255,255,255,0.25)" }}
                 onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.7)")}
