@@ -419,9 +419,7 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      {/* Spacer (pushes main content) */}
-      <div className="hidden md:block flex-shrink-0 transition-all duration-300"
-        style={{ width: expanded ? "var(--sidebar-w-open)" : "64px" }} />
+      {/* No spacer needed — sidebar-main margin-left via CSS var handles it */}
     </>
   )
 }

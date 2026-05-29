@@ -115,13 +115,16 @@ export default function Topbar() {
     <header
       className="hidden md:flex items-center gap-4 px-5 border-b flex-shrink-0"
       style={{
+        position: "fixed",
+        top: 0,
+        left: "var(--sidebar-w, 64px)",
+        right: 0,
         height: "var(--topbar-h)",
+        zIndex: 40,
+        transition: "left var(--t-slow)",
         background: "rgba(5,5,5,0.95)",
         backdropFilter: "blur(20px)",
         borderColor: "var(--border-dim)",
-        position: "sticky",
-        top: 0,
-        zIndex: 40,
       }}>
 
       {/* Page title */}
