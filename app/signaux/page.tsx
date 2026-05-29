@@ -605,12 +605,18 @@ export default function Signaux() {
     setLoading(true)
     try {
       const res = await fetch("/api/signals")
-      if (!res.ok) return
+      if (!res.ok) {
+        console.error("[signaux] API error", res.status, await res.text().catch(() => ""))
+        return
+      }
       const data = await res.json()
+      console.log("[signaux] received", data.signals?.length ?? 0, "signals", data.stats)
       setSignals(data.signals ?? [])
       setStats(data.stats ?? null)
       setCountdown(300)
-    } catch {}
+    } catch (e) {
+      console.error("[signaux] fetch failed", e)
+    }
     finally { setLoading(false) }
   }, [])
 

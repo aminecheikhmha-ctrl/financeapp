@@ -606,12 +606,20 @@ async function fetchYahoo(symbol: string): Promise<any | null> {
         `${base}/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=6mo`,
         { headers, cache: "no-store" }
       )
-      if (!res.ok) continue
+      if (!res.ok) {
+        process.stdout.write(`[signals] ${symbol} HTTP ${res.status} on ${base}\n`)
+        continue
+      }
       const json = await res.json()
       const result = json?.chart?.result?.[0]
       if (result) return result
-    } catch { continue }
+      process.stdout.write(`[signals] ${symbol} empty result from ${base}\n`)
+    } catch (e) {
+      process.stdout.write(`[signals] ${symbol} fetch error on ${base}: ${e}\n`)
+      continue
+    }
   }
+  process.stdout.write(`[signals] ${symbol} ALL sources failed\n`)
   return null
 }
 
@@ -744,6 +752,8 @@ async function processAsset(asset: Asset, sentimentScore?: number): Promise<Sign
     const winning_points = isBuy ? buy_score : sell_score
     const confirmed_by = isBuy ? buy_confirmed : sell_confirmed
     let confluence_score = Math.min(100, (winning_points / MAX_POINTS) * 100)
+
+    process.stdout.write(`[signals] ${asset.symbol} score=${confluence_score.toFixed(1)}% isBuy=${isBuy} pts=${winning_points}/${MAX_POINTS} confirmed=[${confirmed_by.slice(0,3).join(",")}]\n`)
 
     if (confluence_score < 35) return null
 
@@ -890,6 +900,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Process assets in small batches to avoid Yahoo Finance rate limiting
+  process.stdout.write(`[signals] START — scanning ${ASSETS.length} assets\n`)
   const BATCH_SIZE = 6
   const results: SignalResult[] = []
 
@@ -908,6 +919,8 @@ export async function GET(req: NextRequest) {
     }
     if (i + BATCH_SIZE < ASSETS.length) await new Promise(r => setTimeout(r, 400))
   }
+
+  process.stdout.write(`[signals] DONE — ${results.length} signals passed threshold\n`)
 
   // Generate AI comments for FORT signals only (one batch Groq call)
   const fortSignals = results.filter(
