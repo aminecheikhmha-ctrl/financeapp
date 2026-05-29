@@ -1,30 +1,33 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { supabase } from "@/lib/supabase"
 import { usePathname, useRouter } from "next/navigation"
-import { LayoutDashboard, TrendingUp, Briefcase, BookOpen, MoreHorizontal, Users, MessageSquare, FileText, Bot, Settings, LogOut, Newspaper, Star, GitCompare } from "lucide-react"
-import { cn } from "@/lib/utils"
+import {
+  LayoutDashboard, TrendingUp, Briefcase, BookOpen,
+  MoreHorizontal, MessageSquare, FileText, Bot, Settings,
+  LogOut, Newspaper, Star, GitCompare, Users,
+} from "lucide-react"
 import { haptic } from "@/lib/capacitor"
+import { supabase } from "@/lib/supabase"
 
 const PUBLIC_ROUTES = ["/", "/login", "/signup", "/onboarding", "/pricing", "/preuves"]
 
 const TABS = [
-  { href: "/dashboard", Icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/signaux",   Icon: TrendingUp,      label: "Signaux"   },
-  { href: "/news",      Icon: Newspaper,       label: "News"      },
-  { href: "/portfolio", Icon: Briefcase,       label: "Portfolio" },
-  { href: "/apprendre", Icon: BookOpen,        label: "Apprendre" },
-]
+  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/signaux",   icon: TrendingUp,      label: "Signaux",   badge: true },
+  { href: "/portfolio", icon: Briefcase,        label: "Portfolio" },
+  { href: "/apprendre", icon: BookOpen,         label: "Académie" },
+] as const
 
 const MENU_ITEMS = [
-  { href: "/watchlist",           Icon: Star,           label: "Watchlist" },
-  { href: "/compare",             Icon: GitCompare,     label: "Comparer"  },
-  { href: "/social",              Icon: Users,          label: "Social"    },
-  { href: "/forum",               Icon: MessageSquare,  label: "Forum"     },
-  { href: "/reports",             Icon: FileText,       label: "Rapports"  },
-  { href: "/coach",               Icon: Bot,            label: "Coach IA"  },
-  { href: "/parametres",          Icon: Settings,       label: "Paramètres"},
+  { href: "/watchlist",    icon: Star,           label: "Watchlist" },
+  { href: "/news",         icon: Newspaper,      label: "Actualités" },
+  { href: "/forum",        icon: MessageSquare,  label: "Forum" },
+  { href: "/compare",      icon: GitCompare,     label: "Comparer" },
+  { href: "/reports",      icon: FileText,       label: "Rapports" },
+  { href: "/coach",        icon: Bot,            label: "Coach IA" },
+  { href: "/social",       icon: Users,          label: "Social" },
+  { href: "/parametres",   icon: Settings,       label: "Paramètres" },
 ]
 
 export default function BottomNav() {
@@ -32,10 +35,10 @@ export default function BottomNav() {
   const router   = useRouter()
 
   const [user,        setUser]        = useState<any>(null)
-  const [strongCount, setStrongCount] = useState(0)
+  const [signalCount, setSignalCount] = useState(0)
   const [menuOpen,    setMenuOpen]    = useState(false)
   const [username,    setUsername]    = useState<string | null>(null)
-  const [avatarColor, setAvatarColor] = useState("#4ade80")
+  const [avatarColor, setAvatarColor] = useState("#22c55e")
   const [avatarUrl,   setAvatarUrl]   = useState<string | null>(null)
 
   useEffect(() => {
@@ -54,9 +57,8 @@ export default function BottomNav() {
 
     fetch("/api/signals")
       .then(r => r.json())
-      .then(d => setStrongCount(
-        (d?.signals ?? []).filter((s: { strength: string }) => s.strength === "strong").length
-      )).catch(() => {})
+      .then(d => setSignalCount(d.stats?.fort ?? 0))
+      .catch(() => {})
 
     const { data: listener } = supabase.auth.onAuthStateChange((_e, s) => setUser(s?.user ?? null))
     return () => listener.subscription.unsubscribe()
@@ -74,83 +76,70 @@ export default function BottomNav() {
     router.push("/")
   }
 
-  const profileSectionActive = ["/profil", "/parametres", "/social", "/forum", "/reports", "/coach", "/analyses", "/preuves", "/pricing"].some(
-    p => pathname.startsWith(p)
+  const moreActive = menuOpen || !["/dashboard", "/signaux", "/portfolio", "/apprendre"].some(
+    p => pathname === p || pathname.startsWith(p + "/"),
   )
   const initial = (username ?? user?.email ?? "?")[0]?.toUpperCase()
 
   return (
     <>
-      {/* Slide-up menu backdrop */}
+      {/* Slide-up backdrop */}
       {menuOpen && (
         <div
-          className="md:hidden fixed inset-0 z-[55] bg-black/60 backdrop-blur-sm"
+          className="md:hidden fixed inset-0 z-[55] bg-black/60"
+          style={{ backdropFilter: "blur(4px)" }}
           onClick={() => setMenuOpen(false)}
         />
       )}
 
-      {/* Slide-up profile menu */}
-      <div className={cn(
-        "md:hidden fixed bottom-16 left-0 right-0 z-[60] rounded-t-2xl transition-transform duration-300 ease-out",
-        menuOpen ? "translate-y-0" : "translate-y-full"
-      )} style={{ background: "#111", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+      {/* Slide-up menu */}
+      <div
+        className="md:hidden fixed bottom-[68px] left-0 right-0 z-[60] rounded-t-3xl transition-transform duration-300 ease-out"
+        style={{
+          background: "#0d0d0d",
+          borderTop: "1px solid var(--border-default)",
+          transform: menuOpen ? "translateY(0)" : "translateY(100%)",
+        }}>
         {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 rounded-full bg-white/20" />
+        <div className="flex justify-center pt-3 pb-2">
+          <div className="w-10 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.15)" }} />
         </div>
 
-        {/* User info row */}
-        <a
-          href="/profil"
-          onClick={() => setMenuOpen(false)}
-          className="flex items-center gap-3 mx-4 mb-3 mt-1 p-3 rounded-2xl bg-white/[0.03] active:bg-white/[0.08] transition"
-        >
-          <div className="w-10 h-10 rounded-full flex-shrink-0 overflow-hidden">
+        {/* User info */}
+        <a href="/profil" onClick={() => setMenuOpen(false)}
+          className="flex items-center gap-3 mx-4 mb-3 p-3 rounded-2xl transition-all active:scale-[0.98]"
+          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid var(--border-dim)" }}>
+          <div className="w-10 h-10 rounded-full flex-shrink-0 overflow-hidden"
+            style={{ background: avatarColor }}>
             {avatarUrl ? (
               <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
             ) : (
-              <div
-                className="w-full h-full flex items-center justify-center text-black font-black text-sm"
-                style={{ backgroundColor: avatarColor }}
-              >
+              <div className="w-full h-full flex items-center justify-center text-black font-black text-sm">
                 {initial}
               </div>
             )}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-white font-bold text-sm truncate">{username ?? user?.email?.split("@")[0]}</p>
-            <p className="text-white/30 text-xs">Voir mon profil →</p>
+            <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>Voir mon profil →</p>
           </div>
         </a>
 
-        {/* Menu items grid */}
+        {/* Menu grid */}
         <div className="px-4 grid grid-cols-2 gap-2 mb-3">
           {MENU_ITEMS.map(item => {
-            const basePath = item.href.split("?")[0]
-            const isActive = pathname === basePath || (basePath !== "/" && pathname.startsWith(basePath + "/"))
+            const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
             return (
-              <a
-                key={item.href}
-                href={item.href}
-                onClick={() => setMenuOpen(false)}
-                className={cn(
-                  "flex items-center gap-2.5 px-3 py-3 rounded-xl transition active:scale-95",
-                  isActive
-                    ? "bg-green-500/15 border border-green-500/20"
-                    : "bg-white/[0.03] active:bg-white/[0.08]"
-                )}
-              >
-                <item.Icon
-                  size={18}
-                  className={cn(
-                    "flex-shrink-0",
-                    isActive ? "text-green-400" : "text-white/50"
-                  )}
-                />
-                <span className={cn(
-                  "text-sm font-semibold",
-                  isActive ? "text-green-400" : "text-white/80"
-                )}>
+              <a key={item.href} href={item.href} onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-2.5 px-3 py-3 rounded-xl transition-all active:scale-95"
+                style={{
+                  background: isActive ? "rgba(34,197,94,0.08)" : "rgba(255,255,255,0.03)",
+                  border: `1px solid ${isActive ? "rgba(34,197,94,0.2)" : "var(--border-dim)"}`,
+                }}>
+                <item.icon size={16}
+                  style={{ color: isActive ? "var(--green-bright)" : "var(--text-muted)", flexShrink: 0 }} />
+                <span className="text-sm font-semibold"
+                  style={{ color: isActive ? "var(--green-bright)" : "rgba(255,255,255,0.75)" }}>
                   {item.label}
                 </span>
               </a>
@@ -159,72 +148,81 @@ export default function BottomNav() {
         </div>
 
         {/* Logout */}
-        <div className="px-4 pb-6 border-t border-white/[0.05] pt-2">
-          <button
-            onClick={handleLogout}
-            aria-label="Se déconnecter"
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-red-400 hover:bg-red-500/5 active:bg-red-500/10 transition"
-          >
-            <LogOut size={18} className="flex-shrink-0" />
+        <div className="px-4 pb-6 pt-1 border-t" style={{ borderColor: "var(--border-dim)" }}>
+          <button onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all active:scale-[0.98] text-red-400/60 hover:text-red-400"
+            style={{ background: "transparent" }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.06)"}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
+            <LogOut size={16} style={{ flexShrink: 0 }} />
             <span className="text-sm font-semibold">Déconnexion</span>
           </button>
         </div>
       </div>
 
       {/* Bottom tab bar */}
-      <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50 h-16"
-        style={{ background: "rgba(5,5,5,0.95)", backdropFilter: "blur(24px)", borderTop: "1px solid rgba(255,255,255,0.07)" }}
-      >
-        <div className="flex items-stretch h-full">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50"
+        style={{
+          height: "var(--bottomnav-h)",
+          background: "rgba(5,5,5,0.97)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          borderTop: "1px solid rgba(255,255,255,0.06)",
+        }}>
+        <div className="flex items-center justify-around px-2 pt-2 pb-safe h-full">
           {TABS.map(tab => {
-            const active = pathname === tab.href || (tab.href !== "/dashboard" && pathname.startsWith(tab.href + "/"))
-            const isSignaux = tab.href === "/signaux"
+            const isActive = pathname === tab.href || pathname.startsWith(tab.href + "/")
+            const Icon = tab.icon
+            const badge = (tab as any).badge ? signalCount : 0
+
             return (
-              <a
-                key={tab.href}
-                href={tab.href}
-                aria-label={tab.label}
-                onClick={() => haptic("light")}
-                className={cn(
-                  "flex-1 flex flex-col items-center justify-center gap-0.5 transition-all active:scale-90",
-                  active ? "text-white" : "text-white/30"
+              <button key={tab.href}
+                onClick={async () => { await haptic("light"); router.push(tab.href) }}
+                className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl relative transition-all active:scale-90"
+                style={{
+                  background: isActive ? "rgba(34,197,94,0.08)" : "transparent",
+                  minWidth: 56,
+                }}>
+                {/* Active top pill */}
+                {isActive && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full"
+                    style={{ background: "var(--green)" }} />
                 )}
-              >
-                <div className="relative flex flex-col items-center gap-0.5">
-                  {active && (
-                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-green-400" />
-                  )}
-                  <tab.Icon size={20} className="flex-shrink-0" />
-                  {isSignaux && strongCount > 0 && (
-                    <span className="absolute -top-1 -right-3 min-w-[16px] h-4 px-0.5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
-                      {strongCount > 9 ? "9+" : strongCount}
-                    </span>
+                <div className="relative">
+                  <Icon size={22}
+                    style={{ color: isActive ? "var(--green)" : "rgba(255,255,255,0.3)" }}
+                    strokeWidth={isActive ? 2.4 : 1.7} />
+                  {badge > 0 && (
+                    <div className="absolute -top-1.5 -right-2 min-w-[15px] h-4 px-0.5 bg-red-500 rounded-full flex items-center justify-center">
+                      <span className="text-[9px] font-black text-white">{badge > 9 ? "9+" : badge}</span>
+                    </div>
                   )}
                 </div>
-                <span className={cn("text-[10px] leading-none", active ? "font-semibold text-white" : "text-white/30")}>
+                <span className="text-[10px] font-semibold"
+                  style={{ color: isActive ? "var(--green)" : "rgba(255,255,255,0.25)" }}>
                   {tab.label}
                 </span>
-              </a>
+              </button>
             )
           })}
 
-          {/* More/Profil tab — opens slide-up */}
+          {/* More tab */}
           <button
-            onClick={() => { haptic("light"); setMenuOpen(!menuOpen) }}
-            aria-label="Menu profil"
-            className={cn(
-              "flex-1 flex flex-col items-center justify-center gap-0.5 transition-all active:scale-90",
-              profileSectionActive || menuOpen ? "text-white" : "text-white/30"
+            onClick={async () => { await haptic("light"); setMenuOpen(m => !m) }}
+            className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl relative transition-all active:scale-90"
+            style={{
+              background: moreActive ? "rgba(34,197,94,0.08)" : "transparent",
+              minWidth: 56,
+            }}>
+            {moreActive && (
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full"
+                style={{ background: "var(--green)" }} />
             )}
-          >
-            <div className="relative flex flex-col items-center gap-0.5">
-              {(profileSectionActive || menuOpen) && (
-                <span className="absolute -top-2 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-green-400" />
-              )}
-              <MoreHorizontal size={20} className="flex-shrink-0" />
-            </div>
-            <span className={cn("text-[10px] leading-none", profileSectionActive || menuOpen ? "font-semibold text-white" : "text-white/30")}>
+            <MoreHorizontal size={22}
+              style={{ color: moreActive ? "var(--green)" : "rgba(255,255,255,0.3)" }}
+              strokeWidth={moreActive ? 2.4 : 1.7} />
+            <span className="text-[10px] font-semibold"
+              style={{ color: moreActive ? "var(--green)" : "rgba(255,255,255,0.25)" }}>
               Plus
             </span>
           </button>

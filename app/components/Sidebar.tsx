@@ -1,140 +1,77 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
+import { usePathname, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
-import { useRouter, usePathname } from "next/navigation"
+import { getLevelInfo } from "@/lib/achievements"
 import { getTotalChapters } from "@/lib/courses"
-import { getLevelFromXP, getXPProgress } from "@/lib/achievements"
-import { cn } from "@/lib/utils"
+import TradexLogo from "@/app/components/TradexLogo"
 import {
-  LayoutDashboard, TrendingUp, BarChart2, Briefcase,
-  BookOpen, Users, MessageSquare, FileText, Bot,
-  Bell, Settings, ChevronRight, ChevronLeft, LogOut, Zap, Newspaper,
-  Star
+  LayoutDashboard, TrendingUp, Briefcase, BookOpen,
+  Newspaper, MessageSquare, BarChart2, Star,
+  GitCompare, Trophy, Settings, LogOut, ChevronLeft,
+  Bot, FileText, Bell, Zap, Users,
 } from "lucide-react"
 
-const PRINCIPAL = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard"  },
-  { href: "/portfolio", icon: Briefcase,        label: "Portfolio"  },
-  { href: "/watchlist", icon: Star,             label: "Watchlist"  },
-  { href: "/signaux",   icon: TrendingUp,       label: "Signaux"    },
-  { href: "/analyses",  icon: BarChart2,        label: "Analyses"   },
-  { href: "/news",      icon: Newspaper,        label: "News"       },
-]
+const NAV_ITEMS = [
+  { href: "/dashboard",    icon: LayoutDashboard, label: "Dashboard",    group: "principal" },
+  { href: "/signaux",      icon: TrendingUp,      label: "Signaux IA",   group: "principal", badge: "LIVE" },
+  { href: "/analyses",     icon: BarChart2,        label: "Analyses",     group: "principal" },
+  { href: "/portfolio",    icon: Briefcase,        label: "Portfolio",    group: "principal" },
+  { href: "/watchlist",    icon: Star,             label: "Watchlist",    group: "principal" },
+  { href: "/news",         icon: Newspaper,        label: "Actualités",   group: "principal" },
+  { href: "/apprendre",    icon: BookOpen,         label: "Académie",     group: "apprendre" },
+  { href: "/forum",        icon: MessageSquare,    label: "Forum",        group: "apprendre" },
+  { href: "/coach",        icon: Bot,              label: "Coach IA",     group: "apprendre" },
+  { href: "/social",       icon: Users,            label: "Social",       group: "apprendre", soon: true },
+  { href: "/reports",      icon: FileText,         label: "Rapports",     group: "outils" },
+  { href: "/compare",      icon: GitCompare,       label: "Comparer",     group: "outils" },
+  { href: "/profil",       icon: Trophy,           label: "Profil",       group: "compte" },
+  { href: "/notifications",icon: Bell,             label: "Notifications",group: "compte" },
+  { href: "/parametres",   icon: Settings,         label: "Paramètres",   group: "compte" },
+] as const
 
-const COMMUNAUTE = [
-  { href: "/social",    icon: Users,           label: "Social"    },
-  { href: "/apprendre", icon: BookOpen,        label: "Apprendre" },
-  { href: "/forum",     icon: MessageSquare,   label: "Forum"     },
-  { href: "/reports",   icon: FileText,        label: "Rapports"  },
-  { href: "/coach",     icon: Bot,             label: "Coach IA"  },
-]
+type NavItem = typeof NAV_ITEMS[number]
 
-function getLabelForLevel(defaultLabel: string, href: string, level: string): string {
-  if (level !== "débutant") return defaultLabel
-  const map: Record<string, string> = {
-    "/dashboard": "Mon tableau de bord",
-    "/portfolio": "Mon portefeuille",
-    "/signaux": "Signaux",
-    "/analyses": "Analyses",
-    "/news": "Actualités",
-    "/social": "Communauté",
-    "/apprendre": "Apprendre",
-    "/forum": "Forum",
-    "/reports": "Mes rapports",
-  }
-  return map[href] ?? defaultLabel
-}
-
-interface NavItemProps {
-  href: string
-  Icon: React.ElementType
-  label: string
-  active: boolean
-  collapsed: boolean
-  badge?: React.ReactNode
-  soon?: boolean
-}
-
-function NavItem({ href, Icon, label, active, collapsed, badge, soon }: NavItemProps) {
-  const Tag = soon ? "div" : "a"
-  return (
-    <Tag
-      {...(!soon ? { href } : {})}
-      onClick={soon ? (e: React.MouseEvent) => e.preventDefault() : undefined}
-      className={cn(
-        "relative flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-150 group",
-        active
-          ? "bg-white/8 text-white"
-          : soon
-          ? "text-white/20 cursor-not-allowed"
-          : "text-white/40 hover:text-white/80 hover:bg-white/4",
-        collapsed && "justify-center px-0"
-      )}
-    >
-      {active && (
-        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-full bg-green-400" />
-      )}
-      <Icon
-        size={16}
-        className={cn(
-          "flex-shrink-0 transition-colors",
-          active ? "text-white" : "text-white/40 group-hover:text-white/70"
-        )}
-      />
-      {!collapsed && (
-        <span className={cn("text-[13px] truncate flex-1 font-medium", active && "font-semibold text-white")}>
-          {label}
-        </span>
-      )}
-      {!collapsed && badge}
-      {/* Tooltip shown only when sidebar is collapsed */}
-      {collapsed && (
-        <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 z-[999] whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[12px] font-semibold text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150 shadow-lg"
-          style={{ background: "#1a1a1a", border: "1px solid rgba(255,255,255,0.1)" }}>
-          {label}
-        </span>
-      )}
-    </Tag>
-  )
-}
+const GROUPS = [
+  { key: "principal", label: "Principal" },
+  { key: "apprendre", label: "Apprendre" },
+  { key: "outils",    label: "Outils" },
+  { key: "compte",    label: "Compte" },
+] as const
 
 export default function Sidebar() {
-  const router   = useRouter()
   const pathname = usePathname()
+  const router   = useRouter()
 
+  const [expanded,      setExpanded]      = useState(false)
   const [user,          setUser]          = useState<any>(null)
   const [plan,          setPlan]          = useState("free")
-  const [collapsed,     setCollapsed]     = useState(true) // always start collapsed (matches server render)
+  const [profile,       setProfile]       = useState<{ username: string; xp: number; streak_days: number } | null>(null)
+  const [avatarUrl,     setAvatarUrl]     = useState<string | null>(null)
+  const [unreadNotifs,  setUnreadNotifs]  = useState(0)
   const [strongCount,   setStrongCount]   = useState(0)
   const [learnProgress, setLearnProgress] = useState(0)
   const [forumCount,    setForumCount]    = useState(0)
-  const [username,      setUsername]      = useState<string | null>(null)
-  const [avatarColor,   setAvatarColor]   = useState("#4ade80")
-  const [avatarUrl,     setAvatarUrl]     = useState<string | null>(null)
-  const [xp,            setXp]            = useState(0)
-  const [levelName,     setLevelName]     = useState("Novice")
-  const [userLevel,     setUserLevel]     = useState<string>("")
-  const [unreadCount,   setUnreadCount]   = useState(0)
 
-  // Restore collapsed state from localStorage after hydration (avoids server/client mismatch)
+  // Restore from localStorage after hydration
   useEffect(() => {
-    const stored = localStorage.getItem("sidebar_collapsed")
-    if (stored !== null) {
-      setCollapsed(stored !== "false")
-    }
+    const stored = localStorage.getItem("sidebar_expanded")
+    if (stored !== null) setExpanded(stored === "true")
   }, [])
 
-  // Sync --sidebar-w CSS variable so Topbar + main content shift together
+  // Keep CSS variable in sync
   useEffect(() => {
-    const w = collapsed ? "64px" : "220px"
-    document.documentElement.style.setProperty("--sidebar-w", w)
-  }, [collapsed])
+    document.documentElement.style.setProperty(
+      "--sidebar-w",
+      expanded ? "var(--sidebar-w-open)" : "64px",
+    )
+  }, [expanded])
 
-  function toggleCollapsed() {
-    setCollapsed(c => {
-      const next = !c
-      localStorage.setItem("sidebar_collapsed", String(next))
+  function toggle() {
+    setExpanded(e => {
+      const next = !e
+      localStorage.setItem("sidebar_expanded", String(next))
       return next
     })
   }
@@ -143,93 +80,92 @@ export default function Sidebar() {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) return
       setUser(data.user)
-      const { data: profile } = await supabase
-        .from("profiles").select("plan").eq("email", data.user.email).single()
-      if (profile) setPlan(profile.plan)
 
-      const { data: up } = await supabase
-        .from("user_profiles")
-        .select("username, avatar_color, avatar_url, xp, level_name, level")
-        .eq("id", data.user.id)
-        .single()
-      if (up) {
-        if (up.username)     setUsername(up.username)
-        if (up.avatar_color) setAvatarColor(up.avatar_color)
-        if (up.avatar_url)   setAvatarUrl(up.avatar_url)
-        if (up.xp != null)   setXp(up.xp)
-        if (up.level_name)   setLevelName(up.level_name)
-        if (up.level)        setUserLevel(up.level)
+      const [profileRes, planRes, notifRes, progressRes] = await Promise.all([
+        supabase
+          .from("user_profiles")
+          .select("username, xp, streak_days, avatar_url, level_name, level")
+          .eq("id", data.user.id)
+          .single(),
+        supabase.from("profiles").select("plan").eq("id", data.user.id).single(),
+        supabase
+          .from("user_notifications")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", data.user.id)
+          .eq("read", false),
+        supabase
+          .from("user_progress")
+          .select("chapter_id")
+          .eq("user_id", data.user.id)
+          .eq("completed", true),
+      ])
+
+      if (profileRes.data) {
+        setProfile({
+          username:    profileRes.data.username ?? "",
+          xp:          profileRes.data.xp ?? 0,
+          streak_days: profileRes.data.streak_days ?? 0,
+        })
+        if (profileRes.data.avatar_url) setAvatarUrl(profileRes.data.avatar_url)
+      }
+      if (planRes.data?.plan) setPlan(planRes.data.plan)
+      setUnreadNotifs(notifRes.count ?? 0)
+
+      const total = getTotalChapters()
+      if (progressRes.data && total > 0) {
+        setLearnProgress(Math.round((progressRes.data.length / total) * 100))
       }
     })
 
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) return
-      const { data: rows } = await supabase
-        .from("user_progress").select("chapter_id")
-        .eq("user_id", data.user.id).eq("completed", true)
-      const total = getTotalChapters()
-      if (rows && total > 0) setLearnProgress(Math.round((rows.length / total) * 100))
-
-      // Unread notifications count
-      Promise.resolve(
-        supabase.from("user_notifications")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", data.user.id)
-          .eq("read", false)
-      ).then(({ count }) => setUnreadCount(count ?? 0)).catch(() => {})
-    })
+    fetch("/api/signals")
+      .then(r => r.json())
+      .then(d => setStrongCount(
+        (d?.signals ?? []).filter((s: { strength: string }) => s.strength === "strong").length,
+      )).catch(() => {})
 
     fetch("/api/forum/posts?sort=recent&category=all")
       .then(r => r.json())
       .then(d => {
         const cutoff = Date.now() - 24 * 60 * 60 * 1000
-        setForumCount((d?.posts ?? []).filter(
-          (p: { created_at: string }) => new Date(p.created_at).getTime() > cutoff
-        ).length)
+        setForumCount(
+          (d?.posts ?? []).filter(
+            (p: { created_at: string }) => new Date(p.created_at).getTime() > cutoff,
+          ).length,
+        )
       }).catch(() => {})
-
-    fetch("/api/signals")
-      .then(r => r.json())
-      .then(d => setStrongCount(
-        (d?.signals ?? []).filter((s: { strength: string }) => s.strength === "strong").length
-      )).catch(() => {})
 
     const { data: listener } = supabase.auth.onAuthStateChange((_e, s) => setUser(s?.user ?? null))
     return () => listener.subscription.unsubscribe()
   }, [])
 
-  // Window event listener for same-tab XP sync
+  // Realtime XP sync
+  useEffect(() => {
+    if (!user) return
+    const channel = supabase
+      .channel("sidebar-xp")
+      .on("postgres_changes", {
+        event: "UPDATE", schema: "public",
+        table: "user_profiles", filter: `id=eq.${user.id}`,
+      }, (payload: any) => {
+        setProfile(prev => prev ? {
+          ...prev,
+          xp: payload.new?.xp ?? prev.xp,
+        } : prev)
+        if (payload.new?.avatar_url != null) setAvatarUrl(payload.new.avatar_url || null)
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [user])
+
+  // Window event for same-tab XP sync
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail
-      if (detail?.xp != null) setXp(detail.xp)
+      if (detail?.xp != null) setProfile(prev => prev ? { ...prev, xp: detail.xp } : prev)
     }
     window.addEventListener("xp-updated", handler)
     return () => window.removeEventListener("xp-updated", handler)
   }, [])
-
-  // Supabase realtime subscription for cross-tab XP sync
-  useEffect(() => {
-    if (!user) return
-    const channel = supabase
-      .channel("xp-updates")
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "user_profiles",
-          filter: `id=eq.${user.id}`,
-        },
-        (payload: any) => {
-          if (payload.new?.xp != null)        setXp(payload.new.xp)
-          if (payload.new?.level_name)         setLevelName(payload.new.level_name)
-          if (payload.new?.avatar_url != null) setAvatarUrl(payload.new.avatar_url || null)
-        }
-      )
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [user])
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -239,36 +175,34 @@ export default function Sidebar() {
 
   if (!user || pathname === "/onboarding") return null
 
-  const xpPct  = getXPProgress(xp)
-  const level  = getLevelFromXP(xp)
-  const initial = (username ?? user?.email ?? "?")[0]?.toUpperCase()
+  const levelInfo = getLevelInfo(profile?.xp ?? 0)
+  const initial   = (profile?.username ?? user?.email ?? "?")[0]?.toUpperCase()
 
-  function badgeFor(href: string) {
+  function badgeFor(item: NavItem): React.ReactNode {
+    const href = item.href
     if (href === "/signaux" && strongCount > 0)
       return (
-        <span className="ml-auto min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+        <span className="ml-auto min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
           {strongCount > 99 ? "99+" : strongCount}
         </span>
       )
     if (href === "/forum" && forumCount > 0)
       return (
-        <span className="ml-auto min-w-[18px] h-[18px] px-1 bg-blue-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+        <span className="ml-auto min-w-[18px] h-[18px] px-1 bg-blue-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
           {forumCount > 99 ? "99+" : forumCount}
         </span>
       )
     if (href === "/apprendre" && learnProgress > 0)
       return (
-        <span className="ml-auto text-[10px] font-semibold text-green-400/70">
-          {learnProgress}%
-        </span>
+        <span className="ml-auto text-[9px] font-semibold text-green-400/70">{learnProgress}%</span>
       )
-    if (href === "/analyses")
+    if (href === "/notifications" && unreadNotifs > 0)
       return (
-        <span className="ml-auto">
-          <span className="live-dot" style={{ width: 6, height: 6 }} />
+        <span className="ml-auto min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+          {unreadNotifs > 9 ? "9+" : unreadNotifs}
         </span>
       )
-    if (href === "/social")
+    if ((item as any).soon)
       return (
         <span className="ml-auto text-[9px] font-black px-1.5 py-0.5 rounded-md"
           style={{ background: "rgba(251,191,36,0.10)", color: "rgba(251,191,36,0.55)", border: "1px solid rgba(251,191,36,0.15)" }}>
@@ -278,209 +212,216 @@ export default function Sidebar() {
     return null
   }
 
-  const w = collapsed ? "w-16" : "w-[220px]"
-
   return (
-    <aside
-      className={cn(
-        "hidden md:flex fixed left-0 top-0 h-screen flex-col z-50 transition-all duration-200",
-        w
-      )}
-      style={{ background: "#080808", borderRight: "1px solid rgba(255,255,255,0.06)", overflow: collapsed ? "visible" : "hidden" }}
-    >
-      {/* Logo */}
-      <div className={cn(
-        "flex items-center h-14 flex-shrink-0 border-b px-3",
-        "border-white/[0.06]",
-        collapsed ? "justify-center" : "gap-2.5"
-      )}>
-        <button
-          onClick={toggleCollapsed}
-          className="flex items-center gap-2.5 group"
-          aria-label={collapsed ? "Agrandir" : "Réduire"}
-        >
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-md shadow-green-500/20">
-            <span className="text-white font-black text-[11px]">T</span>
-          </div>
-          {!collapsed && (
-            <span className="font-bold text-[15px] text-white tracking-tight">Tradex</span>
-          )}
-        </button>
-        {!collapsed && (
-          <button onClick={toggleCollapsed} className="ml-auto text-white/20 hover:text-white/50 transition p-1 rounded" title="Réduire">
-            <ChevronLeft size={14} />
-          </button>
-        )}
-      </div>
+    <>
+      {/* SIDEBAR */}
+      <aside
+        className="fixed top-0 left-0 bottom-0 z-50 hidden md:flex flex-col overflow-hidden transition-all duration-300"
+        style={{
+          width: expanded ? "var(--sidebar-w-open)" : "64px",
+          background: "rgba(5,5,5,0.98)",
+          backdropFilter: "blur(20px)",
+          borderRight: "1px solid var(--border-dim)",
+        }}>
 
-      {/* Nav — overflow-x visible so tooltips can peek out */}
-      <nav className={cn("flex-1 py-3 overflow-y-auto", collapsed ? "px-2 overflow-x-visible" : "px-2 overflow-x-hidden")}>
-        {collapsed && (
-          <button
-            onClick={toggleCollapsed}
-            className="w-full flex justify-center py-1.5 mb-2 text-white/20 hover:text-white/50 transition"
-            aria-label="Agrandir"
-            title="Agrandir"
-          >
-            <ChevronRight size={14} />
-          </button>
-        )}
-
-        {!collapsed && (
-          <p className="text-[10px] font-semibold text-white/20 uppercase tracking-widest px-3 mb-1.5">Principal</p>
-        )}
-        <div className="space-y-0.5 mb-4">
-          {PRINCIPAL.map(item => (
-            <NavItem
-              key={item.href}
-              href={item.href}
-              Icon={item.icon}
-              label={getLabelForLevel(item.label, item.href, userLevel)}
-              active={pathname === item.href || pathname.startsWith(item.href + "/")}
-              collapsed={collapsed}
-              badge={badgeFor(item.href)}
-            />
-          ))}
-        </div>
-
-        {!collapsed && (
-          <p className="text-[10px] font-semibold text-white/20 uppercase tracking-widest px-3 mb-1.5">Communauté</p>
-        )}
-        {!collapsed && <div className="w-full h-px bg-white/[0.05] mb-3" />}
-        <div className="space-y-0.5">
-          {COMMUNAUTE.map(item => (
-            <NavItem
-              key={item.href}
-              href={item.href}
-              Icon={item.icon}
-              label={getLabelForLevel(item.label, item.href, userLevel)}
-              active={pathname === item.href || pathname.startsWith(item.href + "/")}
-              collapsed={collapsed}
-              badge={badgeFor(item.href)}
-              soon={item.href === "/social"}
-            />
-          ))}
-        </div>
-      </nav>
-
-      {/* XP bar */}
-      {!collapsed && (
-        <div className="px-3 py-3 border-t border-white/[0.05]">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] font-medium text-white/30">{level.icon} {levelName}</span>
-            <span className="text-[11px] text-white/20 tabular-nums">{xp} XP</span>
-          </div>
-          <div className="h-1 rounded-full overflow-hidden bg-white/[0.06]">
-            <div
-              className="h-full rounded-full transition-all duration-700"
-              style={{ width: `${xpPct}%`, background: "linear-gradient(90deg, #22c55e, #4ade80)", boxShadow: "0 0 6px rgba(74,222,128,0.4)" }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Bottom actions */}
-      <div className={cn("px-2 py-2 space-y-0.5 border-t border-white/[0.05]", collapsed && "flex flex-col items-center")}>
-        <a
-          href="/notifications"
-          aria-label="Notifications"
-          className={cn(
-            "flex items-center gap-3 px-3 py-2 rounded-lg transition-all w-full",
-            collapsed && "justify-center px-0 w-10",
-            pathname.startsWith("/notifications") ? "text-white bg-white/8" : "text-white/35 hover:text-white/70 hover:bg-white/4"
-          )}
-        >
-          <div className="relative flex-shrink-0">
-            <Bell size={16} />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-3.5 px-0.5 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center leading-none">
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </span>
-            )}
-          </div>
-          {!collapsed && <span className="text-[13px] font-medium flex-1">Notifications</span>}
-          {!collapsed && unreadCount > 0 && (
-            <span className="min-w-[18px] h-4.5 px-1 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )}
-        </a>
-        <a
-          href="/parametres"
-          aria-label="Paramètres"
-          className={cn(
-            "flex items-center gap-3 px-3 py-2 rounded-lg transition-all",
-            collapsed && "justify-center px-0 w-10",
-            pathname.startsWith("/parametres") ? "text-white bg-white/8" : "text-white/35 hover:text-white/70 hover:bg-white/4"
-          )}
-        >
-          <Settings size={16} className="flex-shrink-0" />
-          {!collapsed && <span className="text-[13px] font-medium">Paramètres</span>}
-        </a>
-      </div>
-
-      {/* Upgrade */}
-      {!collapsed && plan === "free" && (
-        <div className="px-3 pb-2">
-          <a
-            href="/pricing"
-            className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 transition-all hover:opacity-90"
-            style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.18)" }}
-          >
-            <Zap size={14} className="text-green-400 flex-shrink-0" />
-            <div>
-              <p className="text-[12px] font-semibold text-green-400">Passer à Pro</p>
-              <p className="text-[11px] text-white/30">Signaux illimités · IA</p>
+        {/* Logo + toggle */}
+        <div className="flex items-center h-[var(--topbar-h)] px-3 border-b flex-shrink-0"
+          style={{ borderColor: "var(--border-dim)" }}>
+          {expanded ? (
+            <div className="flex items-center justify-between w-full">
+              <TradexLogo size={28} showText textSize="sm" />
+              <button
+                onClick={toggle}
+                className="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
+                style={{ color: "var(--text-muted)" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "white"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)" }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; (e.currentTarget as HTMLElement).style.background = "transparent" }}>
+                <ChevronLeft size={14} />
+              </button>
             </div>
-          </a>
+          ) : (
+            <button onClick={toggle} className="w-full flex items-center justify-center">
+              <TradexLogo size={28} />
+            </button>
+          )}
         </div>
-      )}
 
-      {/* User row */}
-      <div className={cn(
-        "px-3 py-3 border-t border-white/[0.05]",
-        collapsed ? "flex justify-center" : "flex items-center gap-2"
-      )}>
-        {!collapsed ? (
-          <>
-            <a href="/profil" className="flex items-center gap-2 flex-1 min-w-0 group">
-              <div
-                className="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden group-hover:ring-2 group-hover:ring-green-400/30 transition-all"
-              >
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
-                ) : (
-                  <div
-                    className="w-full h-full flex items-center justify-center text-[11px] font-bold text-black"
-                    style={{ backgroundColor: avatarColor }}
-                  >
-                    {initial}
-                  </div>
+        {/* Nav */}
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 scrollbar-hide">
+          {GROUPS.map(group => {
+            const items = NAV_ITEMS.filter(item => item.group === group.key)
+            return (
+              <div key={group.key} className="mb-1">
+                {expanded && (
+                  <p className="text-[9px] text-white/20 uppercase tracking-widest font-bold px-4 py-2">
+                    {group.label}
+                  </p>
                 )}
+                {items.map(item => {
+                  const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
+                  const Icon     = item.icon
+                  const isSoon   = !!(item as any).soon
+
+                  return (
+                    <a
+                      key={item.href}
+                      href={isSoon ? undefined : item.href}
+                      onClick={isSoon ? (e: React.MouseEvent) => e.preventDefault() : undefined}
+                      className="flex items-center gap-3 mx-2 px-2.5 py-2 rounded-xl transition-all relative group"
+                      style={{
+                        background: isActive ? "rgba(34,197,94,0.10)" : "transparent",
+                        color: isActive
+                          ? "var(--green-bright)"
+                          : isSoon
+                          ? "rgba(255,255,255,0.15)"
+                          : "var(--text-muted)",
+                        cursor: isSoon ? "not-allowed" : "pointer",
+                      }}
+                      onMouseEnter={e => {
+                        if (!isActive && !isSoon) {
+                          (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)"
+                          ;(e.currentTarget as HTMLElement).style.color = "var(--text-secondary)"
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        if (!isActive && !isSoon) {
+                          (e.currentTarget as HTMLElement).style.background = "transparent"
+                          ;(e.currentTarget as HTMLElement).style.color = "var(--text-muted)"
+                        }
+                      }}>
+
+                      {/* Active indicator bar */}
+                      {isActive && (
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full"
+                          style={{ background: "var(--green)" }} />
+                      )}
+
+                      {/* Icon + live dot */}
+                      <div className="relative flex-shrink-0">
+                        <Icon size={18} strokeWidth={isActive ? 2.2 : 1.7} />
+                        {(item as any).badge === "LIVE" && isActive && expanded && (
+                          <span className="absolute -top-1 -right-1 text-[7px] font-black px-1 rounded-full text-black"
+                            style={{ background: "var(--green)" }}>
+                            LIVE
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Label + badge */}
+                      {expanded && (
+                        <>
+                          <span className="text-[13px] font-semibold truncate flex-1">{item.label}</span>
+                          {badgeFor(item)}
+                        </>
+                      )}
+
+                      {/* Tooltip when collapsed */}
+                      {!expanded && (
+                        <div className="absolute left-full ml-2 px-2.5 py-1 rounded-lg text-xs font-semibold text-white whitespace-nowrap z-50 opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity"
+                          style={{ background: "#111", border: "1px solid var(--border-default)" }}>
+                          {item.label}
+                        </div>
+                      )}
+                    </a>
+                  )
+                })}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-semibold text-white/80 truncate group-hover:text-white transition">{username ?? user?.email}</p>
-                <p className="text-[11px] text-white/25">{levelName}</p>
+            )
+          })}
+        </nav>
+
+        {/* Upgrade to Pro */}
+        {expanded && plan === "free" && (
+          <div className="px-3 pb-2">
+            <a href="/pricing"
+              className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 transition-all hover:opacity-90"
+              style={{ background: "var(--green-dim)", border: "1px solid var(--green-border)" }}>
+              <Zap size={14} style={{ color: "var(--green-bright)", flexShrink: 0 }} />
+              <div>
+                <p className="text-[12px] font-bold" style={{ color: "var(--green-bright)" }}>Passer à Pro</p>
+                <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>Signaux illimités · IA</p>
               </div>
             </a>
-            <button
-              onClick={handleLogout}
-              aria-label="Se déconnecter"
-              className="text-white/20 hover:text-red-400 transition p-1 rounded flex-shrink-0"
-            >
-              <LogOut size={14} />
-            </button>
-          </>
-        ) : (
-          <button
-            onClick={handleLogout}
-            aria-label="Se déconnecter"
-            className="text-white/20 hover:text-red-400 transition p-1 rounded"
-          >
-            <LogOut size={14} />
-          </button>
+          </div>
         )}
-      </div>
-    </aside>
+
+        {/* XP bar + user row */}
+        <div className="flex-shrink-0 border-t p-3 space-y-2"
+          style={{ borderColor: "var(--border-dim)" }}>
+
+          {/* XP bar (expanded only) */}
+          {expanded && levelInfo && (
+            <div className="px-1">
+              <div className="flex items-center justify-between text-[10px] mb-1.5">
+                <span className="font-black" style={{ color: levelInfo.color }}>
+                  {levelInfo.icon} {levelInfo.name}
+                </span>
+                <span style={{ color: "var(--text-muted)" }}>
+                  {(profile?.xp ?? 0).toLocaleString()} XP
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
+                <div className="h-full rounded-full transition-all duration-700"
+                  style={{
+                    width: `${levelInfo.progress}%`,
+                    background: `linear-gradient(90deg, ${levelInfo.color}70, ${levelInfo.color})`,
+                    boxShadow: `0 0 6px ${levelInfo.color}60`,
+                  }} />
+              </div>
+              {levelInfo.nextLevel && levelInfo.nextLevelXP && (
+                <p className="text-[9px] mt-1" style={{ color: "var(--text-muted)" }}>
+                  {(levelInfo.nextLevelXP - (profile?.xp ?? 0)).toLocaleString()} XP → {levelInfo.nextLevel}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Level badge (collapsed) */}
+          {!expanded && levelInfo && (
+            <div className="flex justify-center">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black text-black"
+                style={{ background: levelInfo.color }}>
+                {levelInfo.level}
+              </div>
+            </div>
+          )}
+
+          {/* User row */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black text-black flex-shrink-0 overflow-hidden"
+              style={{ background: levelInfo?.color ?? "var(--green)" }}>
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+              ) : (
+                initial
+              )}
+            </div>
+            {expanded && (
+              <>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12px] font-bold text-white truncate">
+                    {profile?.username ?? "Trader"}
+                  </p>
+                  <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                    {profile?.streak_days ? `🔥 ${profile.streak_days}j streak` : levelInfo?.name ?? ""}
+                  </p>
+                </div>
+                <button onClick={handleLogout}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center transition-all flex-shrink-0"
+                  style={{ color: "rgba(255,255,255,0.25)" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#f87171"; (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.10)" }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.25)"; (e.currentTarget as HTMLElement).style.background = "transparent" }}>
+                  <LogOut size={13} />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </aside>
+
+      {/* Spacer (pushes main content) */}
+      <div className="hidden md:block flex-shrink-0 transition-all duration-300"
+        style={{ width: expanded ? "var(--sidebar-w-open)" : "64px" }} />
+    </>
   )
 }

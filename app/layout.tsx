@@ -84,6 +84,15 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="preconnect" href="https://query1.finance.yahoo.com" />
         <link rel="dns-prefetch" href="https://query1.finance.yahoo.com" />
+        {/* Compact mode — apply before first paint to avoid flash */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            try {
+              var s = JSON.parse(localStorage.getItem('tradex_settings') || '{}');
+              if (s.compact_mode) document.body && document.body.classList.add('compact');
+            } catch(e) {}
+          })();
+        `}} />
       </head>
       <body className={`${inter.variable} font-sans bg-[#050505] text-white`}>
         <a href="#main-content" className="skip-link">Aller au contenu principal</a>

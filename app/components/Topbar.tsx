@@ -1,69 +1,89 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { usePathname, useRouter } from "next/navigation"
+import { Bell } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { Bell, ChevronDown, LogOut, Settings, User } from "lucide-react"
-import { cn } from "@/lib/utils"
 import GlobalSearch from "@/app/components/GlobalSearch"
 
 const PUBLIC_ROUTES = ["/", "/login", "/signup", "/onboarding", "/pricing", "/preuves"]
 
 const PAGE_TITLES: Record<string, string> = {
-  "/dashboard":  "Dashboard",
-  "/portfolio":  "Portfolio",
-  "/signaux":    "Signaux",
-  "/analyses":   "Analyses",
-  "/apprendre":  "Apprendre",
-  "/social":     "Social",
-  "/forum":      "Forum",
-  "/reports":    "Rapports",
-  "/profil":     "Profil",
-  "/parametres": "Paramètres",
-  "/coach":      "Coach IA",
+  "/dashboard":    "Dashboard",
+  "/signaux":      "Signaux IA",
+  "/analyses":     "Analyses Macro",
+  "/portfolio":    "Portfolio",
+  "/watchlist":    "Watchlist",
+  "/news":         "Actualités",
+  "/apprendre":    "Académie",
+  "/forum":        "Forum",
+  "/coach":        "Coach IA",
+  "/reports":      "Rapports",
+  "/compare":      "Comparateur",
+  "/profil":       "Mon Profil",
+  "/notifications":"Notifications",
+  "/parametres":   "Paramètres",
+  "/pricing":      "Tarifs",
+  "/social":       "Social Trading",
+  "/admin":        "Administration",
+  "/status":       "Status",
 }
 
 export default function Topbar() {
-  const pathname  = usePathname()
-  const router    = useRouter()
+  const pathname = usePathname()
+  const router   = useRouter()
+  const dropRef  = useRef<HTMLDivElement>(null)
 
-  const [user,        setUser]        = useState<any>(null)
-  const [username,    setUsername]    = useState<string | null>(null)
-  const [avatarColor, setAvatarColor] = useState("#4ade80")
-  const [avatarUrl,   setAvatarUrl]   = useState<string | null>(null)
-  const [showDrop,    setShowDrop]    = useState(false)
-  const [marketOpen,  setMarketOpen]  = useState(false)
-  const [unreadCount, setUnreadCount] = useState(0)
+  const [user,         setUser]         = useState<any>(null)
+  const [username,     setUsername]     = useState("")
+  const [avatarColor,  setAvatarColor]  = useState("#22c55e")
+  const [avatarUrl,    setAvatarUrl]    = useState<string | null>(null)
+  const [plan,         setPlan]         = useState("free")
+  const [xp,           setXp]           = useState(0)
+  const [levelName,    setLevelName]    = useState("Novice")
+  const [unreadCount,  setUnreadCount]  = useState(0)
+  const [showUserMenu, setShowUserMenu] = useState(false)
+  const [marketOpen,   setMarketOpen]   = useState(false)
 
-  const dropRef = useRef<HTMLDivElement>(null)
+  const pageTitle = Object.entries(PAGE_TITLES).find(
+    ([key]) => pathname === key || pathname.startsWith(key + "/"),
+  )?.[1] ?? "Tradex"
 
   useEffect(() => {
     // US market: Mon-Fri 9:30-16:00 ET
     const now = new Date()
     const et  = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }))
-    const day = et.getDay()
-    const h   = et.getHours()
-    const m   = et.getMinutes()
-    const mins = h * 60 + m
+    const day  = et.getDay()
+    const mins = et.getHours() * 60 + et.getMinutes()
     setMarketOpen(day >= 1 && day <= 5 && mins >= 570 && mins < 960)
 
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) return
       setUser(data.user)
-      const { data: up } = await supabase
-        .from("user_profiles")
-        .select("username, avatar_color, avatar_url")
-        .eq("id", data.user.id)
-        .single()
-      if (up?.username)     setUsername(up.username)
-      // Unread notifications
-      Promise.resolve(
-        supabase.from("user_notifications")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", data.user.id).eq("read", false)
-      ).then(({ count }) => setUnreadCount(count ?? 0)).catch(() => {})
-      if (up?.avatar_color) setAvatarColor(up.avatar_color)
-      if (up?.avatar_url)   setAvatarUrl(up.avatar_url)
+
+      const [profileRes, planRes, notifRes] = await Promise.all([
+        supabase
+          .from("user_profiles")
+          .select("username, xp, level_name, avatar_color, avatar_url")
+          .eq("id", data.user.id)
+          .single(),
+        supabase.from("profiles").select("plan").eq("id", data.user.id).single(),
+        supabase
+          .from("user_notifications")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", data.user.id)
+          .eq("read", false),
+      ])
+
+      if (profileRes.data) {
+        setUsername(profileRes.data.username ?? data.user.email?.split("@")[0] ?? "")
+        setXp(profileRes.data.xp ?? 0)
+        setLevelName(profileRes.data.level_name ?? "Novice")
+        setAvatarColor(profileRes.data.avatar_color ?? "#22c55e")
+        if (profileRes.data.avatar_url) setAvatarUrl(profileRes.data.avatar_url)
+      }
+      if (planRes.data?.plan) setPlan(planRes.data.plan)
+      setUnreadCount(notifRes.count ?? 0)
     })
 
     const { data: listener } = supabase.auth.onAuthStateChange((_e, s) => setUser(s?.user ?? null))
@@ -73,7 +93,9 @@ export default function Topbar() {
   // Close dropdown on outside click
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (dropRef.current && !dropRef.current.contains(e.target as Node)) setShowDrop(false)
+      if (dropRef.current && !dropRef.current.contains(e.target as Node)) {
+        setShowUserMenu(false)
+      }
     }
     document.addEventListener("mousedown", handler)
     return () => document.removeEventListener("mousedown", handler)
@@ -87,90 +109,122 @@ export default function Topbar() {
 
   if (!user || PUBLIC_ROUTES.some(r => pathname === r || pathname.startsWith(r + "/"))) return null
 
-  const pageTitle = PAGE_TITLES[pathname] ?? ""
-  const initial   = (username ?? user?.email ?? "?")[0]?.toUpperCase()
+  const initial = (username || user?.email || "?")[0]?.toUpperCase()
 
   return (
-    <div
-      className="fixed top-0 right-0 z-40 h-14 flex items-center gap-4 px-5"
+    <header
+      className="hidden md:flex items-center gap-4 px-5 border-b flex-shrink-0"
       style={{
-        left: "var(--sidebar-w, 64px)",
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
-        background: "rgba(5,5,5,0.9)",
+        height: "var(--topbar-h)",
+        background: "rgba(5,5,5,0.95)",
         backdropFilter: "blur(20px)",
-        transition: "left 0.2s",
-      }}
-    >
-      {/* Page title */}
-      <h1 className="text-[15px] font-semibold text-white/70 flex-shrink-0">{pageTitle}</h1>
+        borderColor: "var(--border-dim)",
+        position: "sticky",
+        top: 0,
+        zIndex: 40,
+      }}>
 
-      {/* Search — centre */}
-      <div className="flex-1 max-w-md mx-auto">
+      {/* Page title */}
+      <div className="flex items-center gap-2.5 flex-shrink-0 min-w-[140px]">
+        <p className="text-sm font-black text-white">{pageTitle}</p>
+        {/* Market status */}
+        <div className="flex items-center gap-1">
+          <div className="w-1.5 h-1.5 rounded-full"
+            style={{
+              background: marketOpen ? "var(--green)" : "rgba(255,255,255,0.2)",
+              boxShadow: marketOpen ? "0 0 5px rgba(34,197,94,0.8)" : "none",
+            }} />
+          <span className="text-[10px] hidden lg:block" style={{ color: "var(--text-muted)" }}>
+            {marketOpen ? "Ouvert" : "Fermé"}
+          </span>
+        </div>
+      </div>
+
+      {/* Global search */}
+      <div className="flex-1 max-w-md">
         <GlobalSearch />
       </div>
 
-      {/* Right side */}
-      <div className="flex items-center gap-3 flex-shrink-0">
-        {/* Market status */}
-        <div className="hidden sm:flex items-center gap-1.5">
-          <div className={cn("w-1.5 h-1.5 rounded-full", marketOpen ? "bg-green-400 shadow-[0_0_5px_rgba(74,222,128,0.8)]" : "bg-white/20")} />
-          <span className="text-[11px] text-white/35">{marketOpen ? "Marché ouvert" : "Marché fermé"}</span>
-        </div>
+      {/* Right actions */}
+      <div className="flex items-center gap-2 ml-auto">
+
+        {/* Pro upgrade badge */}
+        {plan === "free" && (
+          <a href="/pricing"
+            className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all hover:scale-[1.02] active:scale-95"
+            style={{ background: "var(--green-dim)", color: "var(--green-bright)", border: "1px solid var(--green-border)" }}>
+            ⭐ Passer à Pro
+          </a>
+        )}
 
         {/* Notifications */}
-        <a href="/notifications" className="relative p-2 rounded-lg text-white/35 hover:text-white/70 hover:bg-white/5 transition">
+        <button onClick={() => router.push("/notifications")}
+          className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-all"
+          style={{ color: "var(--text-muted)" }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)"; (e.currentTarget as HTMLElement).style.color = "white" }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--text-muted)" }}>
           <Bell size={16} />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
           )}
-        </a>
+        </button>
 
-        {/* Avatar dropdown */}
+        {/* User avatar + dropdown */}
         <div className="relative" ref={dropRef}>
           <button
-            onClick={() => setShowDrop(d => !d)}
-            className="flex items-center gap-2 p-1 rounded-lg hover:bg-white/5 transition"
-          >
-            <div className="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
-              ) : (
-                <div
-                  className="w-full h-full flex items-center justify-center text-[11px] font-bold text-black"
-                  style={{ backgroundColor: avatarColor }}
-                >
-                  {initial}
-                </div>
-              )}
-            </div>
-            <ChevronDown size={12} className={cn("text-white/25 transition-transform", showDrop && "rotate-180")} />
+            onClick={() => setShowUserMenu(m => !m)}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black text-black transition-all hover:scale-105 overflow-hidden flex-shrink-0"
+            style={{ background: avatarColor }}>
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+            ) : (
+              initial
+            )}
           </button>
-          {showDrop && (
-            <div
-              className="absolute top-full right-0 mt-1.5 w-44 rounded-xl overflow-hidden shadow-2xl z-50"
-              style={{ background: "#141414", border: "1px solid rgba(255,255,255,0.1)" }}
-            >
-              <a href="/profil" className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-white/70 hover:text-white hover:bg-white/[0.04] transition border-b border-white/[0.06]">
-                <User size={14} className="text-white/35" />
-                Profil
-              </a>
-              <a href="/parametres" className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-white/70 hover:text-white hover:bg-white/[0.04] transition border-b border-white/[0.06]">
-                <Settings size={14} className="text-white/35" />
-                Paramètres
-              </a>
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-white/70 hover:text-red-400 hover:bg-white/[0.04] transition"
-              >
-                <LogOut size={14} className="text-white/35" />
-                Déconnexion
-              </button>
+
+          {/* Dropdown */}
+          {showUserMenu && (
+            <div className="absolute top-full right-0 mt-2 w-52 rounded-2xl overflow-hidden shadow-2xl animate-scale-in z-50"
+              style={{ background: "#0d0d0d", border: "1px solid var(--border-default)" }}>
+
+              {/* User info */}
+              <div className="px-4 py-3 border-b" style={{ borderColor: "var(--border-dim)" }}>
+                <p className="text-sm font-black text-white">{username || "Trader"}</p>
+                <p className="text-[11px] mt-0.5" style={{ color: "var(--text-muted)" }}>{user?.email}</p>
+                <p className="text-[10px] font-bold mt-1" style={{ color: avatarColor }}>
+                  {levelName} · {xp.toLocaleString()} XP
+                </p>
+              </div>
+
+              {/* Links */}
+              {[
+                { label: "👤 Mon profil",    href: "/profil" },
+                { label: "⚙️ Paramètres",    href: "/parametres" },
+                { label: "💎 Abonnement",    href: "/pricing" },
+                { label: "🔔 Notifications", href: "/notifications" },
+              ].map(link => (
+                <a key={link.href} href={link.href}
+                  className="flex items-center px-4 py-2.5 text-sm transition-all"
+                  style={{ color: "var(--text-secondary)" }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)"}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
+                  {link.label}
+                </a>
+              ))}
+
+              <div className="border-t" style={{ borderColor: "var(--border-dim)" }}>
+                <button onClick={handleLogout}
+                  className="w-full flex items-center px-4 py-2.5 text-sm transition-all"
+                  style={{ color: "rgba(248,113,113,0.6)" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#f87171"; (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.06)" }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(248,113,113,0.6)"; (e.currentTarget as HTMLElement).style.background = "transparent" }}>
+                  🚪 Se déconnecter
+                </button>
+              </div>
             </div>
           )}
         </div>
       </div>
-    </div>
+    </header>
   )
 }
