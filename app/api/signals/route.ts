@@ -586,16 +586,33 @@ function isNYSEOpen(): boolean {
 
 // ─── Per-asset fetch & compute ─────────────────────────────────────────────────
 
+async function fetchYahoo(symbol: string): Promise<any | null> {
+  const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=6mo`
+  const headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "application/json",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://finance.yahoo.com",
+  }
+  // Try query2 first, fallback to query1
+  for (const base of ["https://query2.finance.yahoo.com", "https://query1.finance.yahoo.com"]) {
+    try {
+      const res = await fetch(
+        `${base}/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=6mo`,
+        { headers, cache: "no-store", signal: AbortSignal.timeout(8000) }
+      )
+      if (!res.ok) continue
+      const json = await res.json()
+      const result = json?.chart?.result?.[0]
+      if (result) return result
+    } catch { continue }
+  }
+  return null
+}
+
 async function processAsset(asset: Asset, sentimentScore?: number): Promise<SignalResult | null> {
   try {
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(asset.symbol)}?interval=1d&range=3mo`
-    const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0" },
-      cache: "no-store",
-    })
-    if (!res.ok) return null
-    const json = await res.json()
-    const result = json?.chart?.result?.[0]
+    const result = await fetchYahoo(asset.symbol)
     if (!result) return null
 
     const q = result.indicators?.quote?.[0] ?? {}
@@ -867,19 +884,24 @@ export async function GET(req: NextRequest) {
     // Table may not exist yet — proceed without sentiment
   }
 
-  // Process all assets in parallel batches of 15
-  const BATCH_SIZE = 15
+  // Process assets in small batches to avoid Yahoo Finance rate limiting
+  const BATCH_SIZE = 6
   const results: SignalResult[] = []
 
   for (let i = 0; i < ASSETS.length; i += BATCH_SIZE) {
     const batch = ASSETS.slice(i, i + BATCH_SIZE)
+    // Stagger requests within batch by 50ms each to avoid burst
     const batchResults = await Promise.allSettled(
-      batch.map(a => processAsset(a, sentimentMap.get(a.symbol)))
+      batch.map((a, idx) =>
+        new Promise<SignalResult | null>(resolve =>
+          setTimeout(() => processAsset(a, sentimentMap.get(a.symbol)).then(resolve), idx * 50)
+        )
+      )
     )
     for (const r of batchResults) {
-      if (r.status === "fulfilled" && r.value !== null) results.push(r.value)
+      if (r.status === "fulfilled" && r.value !== null) results.push(r.value as SignalResult)
     }
-    if (i + BATCH_SIZE < ASSETS.length) await new Promise(r => setTimeout(r, 100))
+    if (i + BATCH_SIZE < ASSETS.length) await new Promise(r => setTimeout(r, 400))
   }
 
   // Generate AI comments for FORT signals only (one batch Groq call)
