@@ -282,14 +282,34 @@ export default function Sidebar() {
                       {/* Icon */}
                       <div className="relative flex-shrink-0">
                         <Icon size={17} strokeWidth={isActive ? 2.2 : 1.7} />
-                        {(item as any).badge === "LIVE" && isActive && expanded && (
+                        {/* LIVE badge — toujours visible sur signaux */}
+                        {(item as any).badge === "LIVE" && (
                           <span className="absolute -top-1 -right-1 text-[7px] font-black px-1 rounded-full text-black bg-green-400">
                             LIVE
                           </span>
                         )}
+                        {/* Dot badges en mode réduit */}
+                        {!expanded && !(item as any).badge && (() => {
+                          const href = item.href
+                          const show =
+                            (href === "/signaux"       && strongCount   > 0) ||
+                            (href === "/forum"         && forumCount    > 0) ||
+                            (href === "/notifications" && unreadNotifs  > 0)
+                          if (!show) return null
+                          const color =
+                            href === "/forum" ? "bg-blue-500" : "bg-red-500"
+                          const count =
+                            href === "/signaux"       ? strongCount  :
+                            href === "/forum"         ? forumCount   : unreadNotifs
+                          return (
+                            <span className={`absolute -top-1 -right-1 min-w-[14px] h-[14px] px-0.5 ${color} text-white text-[8px] font-black rounded-full flex items-center justify-center`}>
+                              {count > 9 ? "9+" : count}
+                            </span>
+                          )
+                        })()}
                       </div>
 
-                      {/* Label + badge */}
+                      {/* Label + badge (expanded only) */}
                       {expanded && (
                         <>
                           <span className="text-[13px] font-medium truncate flex-1">{item.label}</span>
