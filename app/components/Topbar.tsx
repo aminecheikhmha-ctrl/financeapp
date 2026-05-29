@@ -162,10 +162,7 @@ export default function Topbar() {
 
         {/* Notifications */}
         <button onClick={() => router.push("/notifications")}
-          className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-          style={{ color: "var(--text-muted)" }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)"; (e.currentTarget as HTMLElement).style.color = "white" }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--text-muted)" }}>
+          className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-all text-white/35 hover:text-white hover:bg-white/[0.06]">
           <Bell size={16} />
           {unreadCount > 0 && (
             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
@@ -207,20 +204,14 @@ export default function Topbar() {
                 { label: "🔔 Notifications", href: "/notifications" },
               ].map(link => (
                 <a key={link.href} href={link.href}
-                  className="flex items-center px-4 py-2.5 text-sm transition-all"
-                  style={{ color: "var(--text-secondary)" }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)"}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
+                  className="flex items-center px-4 py-2.5 text-sm transition-all text-white/60 hover:text-white hover:bg-white/[0.04]">
                   {link.label}
                 </a>
               ))}
 
               <div className="border-t" style={{ borderColor: "var(--border-dim)" }}>
                 <button onClick={handleLogout}
-                  className="w-full flex items-center px-4 py-2.5 text-sm transition-all"
-                  style={{ color: "rgba(248,113,113,0.6)" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#f87171"; (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.06)" }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(248,113,113,0.6)"; (e.currentTarget as HTMLElement).style.background = "transparent" }}>
+                  className="w-full flex items-center px-4 py-2.5 text-sm transition-all text-red-400/60 hover:text-red-400 hover:bg-red-500/[0.06]">
                   🚪 Se déconnecter
                 </button>
               </div>

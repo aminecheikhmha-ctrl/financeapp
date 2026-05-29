@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase"
 import { getLevelInfo } from "@/lib/achievements"
 import { getTotalChapters } from "@/lib/courses"
 import TradexLogo from "@/app/components/TradexLogo"
+import { cn } from "@/lib/utils"
 import {
   LayoutDashboard, TrendingUp, Briefcase, BookOpen,
   Newspaper, MessageSquare, BarChart2, Star,
@@ -232,10 +233,7 @@ export default function Sidebar() {
               <TradexLogo size={28} showText textSize="sm" />
               <button
                 onClick={toggle}
-                className="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
-                style={{ color: "var(--text-muted)" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "white"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)" }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; (e.currentTarget as HTMLElement).style.background = "transparent" }}>
+                className="w-7 h-7 rounded-lg flex items-center justify-center transition-all text-white/30 hover:text-white hover:bg-white/8">
                 <ChevronLeft size={14} />
               </button>
             </div>
@@ -267,41 +265,26 @@ export default function Sidebar() {
                       key={item.href}
                       href={isSoon ? undefined : item.href}
                       onClick={isSoon ? (e: React.MouseEvent) => e.preventDefault() : undefined}
-                      className="flex items-center gap-3 mx-2 px-2.5 py-2 rounded-xl transition-all relative group"
-                      style={{
-                        background: isActive ? "rgba(34,197,94,0.10)" : "transparent",
-                        color: isActive
-                          ? "var(--green-bright)"
+                      className={cn(
+                        "relative flex items-center gap-3 mx-2 py-2 rounded-xl transition-all duration-150 group",
+                        expanded ? "px-2.5" : "justify-center px-0",
+                        isActive
+                          ? "bg-green-500/10 text-green-400"
                           : isSoon
-                          ? "rgba(255,255,255,0.15)"
-                          : "var(--text-muted)",
-                        cursor: isSoon ? "not-allowed" : "pointer",
-                      }}
-                      onMouseEnter={e => {
-                        if (!isActive && !isSoon) {
-                          (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)"
-                          ;(e.currentTarget as HTMLElement).style.color = "var(--text-secondary)"
-                        }
-                      }}
-                      onMouseLeave={e => {
-                        if (!isActive && !isSoon) {
-                          (e.currentTarget as HTMLElement).style.background = "transparent"
-                          ;(e.currentTarget as HTMLElement).style.color = "var(--text-muted)"
-                        }
-                      }}>
+                          ? "text-white/20 cursor-not-allowed"
+                          : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]",
+                      )}>
 
                       {/* Active indicator bar */}
                       {isActive && (
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full"
-                          style={{ background: "var(--green)" }} />
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-green-400" />
                       )}
 
-                      {/* Icon + live dot */}
+                      {/* Icon */}
                       <div className="relative flex-shrink-0">
-                        <Icon size={18} strokeWidth={isActive ? 2.2 : 1.7} />
+                        <Icon size={17} strokeWidth={isActive ? 2.2 : 1.7} />
                         {(item as any).badge === "LIVE" && isActive && expanded && (
-                          <span className="absolute -top-1 -right-1 text-[7px] font-black px-1 rounded-full text-black"
-                            style={{ background: "var(--green)" }}>
+                          <span className="absolute -top-1 -right-1 text-[7px] font-black px-1 rounded-full text-black bg-green-400">
                             LIVE
                           </span>
                         )}
@@ -310,7 +293,7 @@ export default function Sidebar() {
                       {/* Label + badge */}
                       {expanded && (
                         <>
-                          <span className="text-[13px] font-semibold truncate flex-1">{item.label}</span>
+                          <span className="text-[13px] font-medium truncate flex-1">{item.label}</span>
                           {badgeFor(item)}
                         </>
                       )}
@@ -407,10 +390,7 @@ export default function Sidebar() {
                   </p>
                 </div>
                 <button onClick={handleLogout}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center transition-all flex-shrink-0"
-                  style={{ color: "rgba(255,255,255,0.25)" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#f87171"; (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.10)" }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.25)"; (e.currentTarget as HTMLElement).style.background = "transparent" }}>
+                  className="w-7 h-7 rounded-lg flex items-center justify-center transition-all flex-shrink-0 text-white/25 hover:text-red-400 hover:bg-red-500/10">
                   <LogOut size={13} />
                 </button>
               </>
