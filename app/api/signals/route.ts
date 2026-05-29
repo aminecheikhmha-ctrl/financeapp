@@ -593,7 +593,6 @@ function isNYSEOpen(): boolean {
 // ─── Per-asset fetch & compute ─────────────────────────────────────────────────
 
 async function fetchYahoo(symbol: string): Promise<any | null> {
-  const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=6mo`
   const headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Accept": "application/json",
@@ -605,7 +604,7 @@ async function fetchYahoo(symbol: string): Promise<any | null> {
     try {
       const res = await fetch(
         `${base}/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=6mo`,
-        { headers, cache: "no-store", signal: AbortSignal.timeout(8000) }
+        { headers, cache: "no-store" }
       )
       if (!res.ok) continue
       const json = await res.json()
