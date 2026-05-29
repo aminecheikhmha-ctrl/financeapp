@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils"
 import {
   LayoutDashboard, TrendingUp, Briefcase, BookOpen,
   Newspaper, MessageSquare, BarChart2, Star,
-  GitCompare, Trophy, Settings, LogOut, ChevronLeft,
+  GitCompare, Trophy, Settings, LogOut, ChevronLeft, ChevronRight,
   Bot, FileText, Bell, Zap, Users,
 } from "lucide-react"
 
@@ -230,11 +230,13 @@ export default function Sidebar() {
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-md shadow-green-500/20">
               <span className="text-white font-black text-[11px]">T</span>
             </div>
-            {expanded && (
+            {expanded ? (
               <>
                 <span className="font-bold text-[15px] text-white tracking-tight flex-1 text-left">Tradex</span>
                 <ChevronLeft size={14} className="text-white/20 group-hover:text-white/50 transition-colors flex-shrink-0" />
               </>
+            ) : (
+              <ChevronRight size={11} className="text-white/25 group-hover:text-white/60 transition-colors flex-shrink-0" />
             )}
           </div>
         </button>
