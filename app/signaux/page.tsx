@@ -885,28 +885,18 @@ export default function Signaux() {
         ════════════════════════════════════════════════ */}
         {tab === "live" && (
           <>
-            {/* ── HERO CARD ── */}
-            {!loading && topSignals[0] && (
-              <div className="px-6 py-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-4">
-                  ⭐ Meilleure opportunité
-                </p>
-                <HeroSignalCard
-                  signal={topSignals[0]}
-                  onUpgrade={() => setShowUpgrade(true)}
-                />
-              </div>
-            )}
-
-            {/* ── COMPACT CARDS #2 & #3 ── */}
-            {!loading && topSignals.slice(1, 3).length > 0 && (
+            {/* ── TOP 3 en ligne ── */}
+            {!loading && topSignals.length > 0 && (
               <div className="px-6 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {topSignals.slice(1, 3).map((signal, i) => (
+                <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-3">
+                  ⭐ Meilleures opportunités
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {topSignals.slice(0, 3).map((signal, i) => (
                     <CompactSignalCard
                       key={signal.symbol}
                       signal={signal}
-                      rank={i + 2}
+                      rank={i + 1}
                       onUpgrade={() => setShowUpgrade(true)}
                     />
                   ))}
