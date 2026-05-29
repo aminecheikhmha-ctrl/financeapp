@@ -73,7 +73,7 @@ export default function BottomNav() {
     setMenuOpen(false)
     await supabase.auth.signOut()
     document.cookie = "onboarding_done=; path=/; max-age=0"
-    router.push("/")
+    window.location.href = "/"
   }
 
   const moreActive = menuOpen || !["/dashboard", "/signaux", "/portfolio", "/apprendre"].some(

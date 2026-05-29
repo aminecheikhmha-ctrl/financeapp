@@ -167,7 +167,7 @@ export default function Sidebar() {
   async function handleLogout() {
     await supabase.auth.signOut()
     document.cookie = "onboarding_done=; path=/; max-age=0"
-    router.push("/login")
+    window.location.href = "/"
   }
 
   if (!user || pathname === "/onboarding") return null

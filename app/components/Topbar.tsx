@@ -104,7 +104,7 @@ export default function Topbar() {
   async function handleLogout() {
     await supabase.auth.signOut()
     document.cookie = "onboarding_done=; path=/; max-age=0"
-    router.push("/")
+    window.location.href = "/"
   }
 
   if (!user || PUBLIC_ROUTES.some(r => pathname === r || pathname.startsWith(r + "/"))) return null
