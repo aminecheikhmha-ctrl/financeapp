@@ -358,6 +358,163 @@ function detectCandlePattern(bars: { open: number; high: number; low: number; cl
   return null
 }
 
+// ─── ADX (Average Directional Index) ─────────────────────────────────────────
+// Returns ADX value (0-100). >25 = trending, <20 = ranging/choppy.
+
+function calcADX(highs: number[], lows: number[], closes: number[], period = 14): number {
+  const n = closes.length
+  if (n < period * 2 + 1) return 20 // default neutral
+
+  const dmPlus: number[] = []
+  const dmMinus: number[] = []
+  const trs: number[] = []
+
+  for (let i = 1; i < n; i++) {
+    const upMove   = highs[i]  - highs[i - 1]
+    const downMove = lows[i - 1] - lows[i]
+    dmPlus.push(upMove > downMove && upMove > 0 ? upMove : 0)
+    dmMinus.push(downMove > upMove && downMove > 0 ? downMove : 0)
+    trs.push(Math.max(
+      highs[i] - lows[i],
+      Math.abs(highs[i]  - closes[i - 1]),
+      Math.abs(lows[i]   - closes[i - 1]),
+    ))
+  }
+
+  // Wilder smoothing over last `period` bars
+  const smTR  = trs.slice(-period).reduce((a, b) => a + b, 0)
+  const smDMP = dmPlus.slice(-period).reduce((a, b) => a + b, 0)
+  const smDMM = dmMinus.slice(-period).reduce((a, b) => a + b, 0)
+
+  const diPlus  = smTR > 0 ? (smDMP / smTR) * 100 : 0
+  const diMinus = smTR > 0 ? (smDMM / smTR) * 100 : 0
+  const dx      = diPlus + diMinus > 0
+    ? (Math.abs(diPlus - diMinus) / (diPlus + diMinus)) * 100
+    : 0
+
+  return dx
+}
+
+// ─── RSI Divergence ───────────────────────────────────────────────────────────
+// Compares price direction vs RSI direction over last ~lookback bars.
+// Bullish: price lower low but RSI higher low  → hidden strength
+// Bearish: price higher high but RSI lower high → hidden weakness
+
+function calcRSIDivergence(
+  closes: number[],
+  lookback = 14,
+): "bullish" | "bearish" | "none" {
+  const n = closes.length
+  if (n < lookback + 15) return "none" // not enough history
+
+  // Build RSI series for the last (lookback + 14) bars
+  const window = closes.slice(-(lookback + 14))
+  const rsiSeries: number[] = []
+  for (let i = 14; i <= window.length; i++) {
+    rsiSeries.push(calcRSI(window.slice(0, i), 14))
+  }
+  if (rsiSeries.length < lookback) return "none"
+
+  const priceWindow = closes.slice(-lookback)
+  const rsiWindow   = rsiSeries.slice(-lookback)
+
+  const firstHalf  = { price: priceWindow.slice(0, lookback >> 1),  rsi: rsiWindow.slice(0, lookback >> 1)  }
+  const secondHalf = { price: priceWindow.slice(lookback >> 1),      rsi: rsiWindow.slice(lookback >> 1)      }
+
+  const priceMin1 = Math.min(...firstHalf.price)
+  const priceMin2 = Math.min(...secondHalf.price)
+  const rsiMin1   = Math.min(...firstHalf.rsi)
+  const rsiMin2   = Math.min(...secondHalf.rsi)
+
+  // Bullish: price making lower low but RSI making higher low
+  if (priceMin2 < priceMin1 * 0.999 && rsiMin2 > rsiMin1 + 1) return "bullish"
+
+  const priceMax1 = Math.max(...firstHalf.price)
+  const priceMax2 = Math.max(...secondHalf.price)
+  const rsiMax1   = Math.max(...firstHalf.rsi)
+  const rsiMax2   = Math.max(...secondHalf.rsi)
+
+  // Bearish: price making higher high but RSI making lower high
+  if (priceMax2 > priceMax1 * 1.001 && rsiMax2 < rsiMax1 - 1) return "bearish"
+
+  return "none"
+}
+
+// ─── Weekly trend (from daily data) ──────────────────────────────────────────
+// Approximate weekly candles by grouping every 5 trading days.
+// Returns "bullish" | "bearish" | "neutral"
+
+function calcWeeklyTrend(closes: number[]): "bullish" | "bearish" | "neutral" {
+  if (closes.length < 25) return "neutral"
+  // Build weekly closes: last close of each 5-day group
+  const weekly: number[] = []
+  for (let i = 4; i < closes.length; i += 5) weekly.push(closes[i])
+  if (weekly.length < 5) return "neutral"
+
+  const wEMA9  = calcEMA(weekly, Math.min(9,  weekly.length))
+  const wEMA21 = calcEMA(weekly, Math.min(21, weekly.length))
+  const wRSI   = calcRSI(weekly, Math.min(14, weekly.length - 1))
+
+  if (wEMA9 > wEMA21 && wRSI > 50) return "bullish"
+  if (wEMA9 < wEMA21 && wRSI < 50) return "bearish"
+  return "neutral"
+}
+
+// ─── Volume+Price direction confirmation ─────────────────────────────────────
+// Returns true when volume has been confirming the dominant price direction
+// over the last `lookback` sessions (≥ half of sessions agree).
+
+function calcVolumeConfirmation(
+  closes: number[],
+  volumes: number[],
+  direction: "up" | "down",
+  lookback = 5,
+): boolean {
+  const n = closes.length
+  if (n < lookback + 2 || volumes.length < lookback + 2) return false
+
+  let confirmed = 0
+  for (let i = n - lookback; i < n; i++) {
+    const priceUp  = closes[i] > closes[i - 1]
+    const volAbove = volumes[i] > (volumes.slice(Math.max(0, i - 5), i).reduce((a, b) => a + b, 0) / 5 || 1)
+    if (direction === "up"   && priceUp  && volAbove) confirmed++
+    if (direction === "down" && !priceUp && volAbove) confirmed++
+  }
+  return confirmed >= Math.ceil(lookback / 2)
+}
+
+// ─── Pivot-based key levels (for TP / SL) ────────────────────────────────────
+// Scans for swing highs/lows (simple 3-bar pivots) and returns the nearest
+// resistance above and support below the current price.
+
+function calcPivotLevels(
+  highs: number[],
+  lows: number[],
+  price: number,
+): { pivotSupport: number; pivotResistance: number } {
+  const pivotHighs: number[] = []
+  const pivotLows:  number[] = []
+
+  for (let i = 2; i < highs.length - 2; i++) {
+    if (highs[i] > highs[i - 1] && highs[i] > highs[i - 2] &&
+        highs[i] > highs[i + 1] && highs[i] > highs[i + 2]) {
+      pivotHighs.push(highs[i])
+    }
+    if (lows[i] < lows[i - 1] && lows[i] < lows[i - 2] &&
+        lows[i] < lows[i + 1] && lows[i] < lows[i + 2]) {
+      pivotLows.push(lows[i])
+    }
+  }
+
+  const abovePrice = pivotHighs.filter(h => h > price * 1.001).sort((a, b) => a - b)
+  const belowPrice = pivotLows.filter(l => l < price * 0.999).sort((a, b) => b - a)
+
+  return {
+    pivotResistance: abovePrice[0] ?? price * 1.05,
+    pivotSupport:    belowPrice[0] ?? price * 0.95,
+  }
+}
+
 // ─── Scoring checks ───────────────────────────────────────────────────────────
 
 type IndicatorData = {
@@ -384,6 +541,12 @@ type IndicatorData = {
   atr: number
   atr_avg: number
   price_position: number
+  // New fields
+  adx: number
+  weekly_trend: "bullish" | "bearish" | "neutral"
+  rsi_divergence: "bullish" | "bearish" | "none"
+  vol_confirms_buy: boolean
+  vol_confirms_sell: boolean
 }
 
 type Check = {
@@ -393,49 +556,59 @@ type Check = {
 }
 
 const BUY_CHECKS: Check[] = [
-  // Momentum oscillators — relaxed thresholds for normal markets
-  { name: "RSI·14",       points: 3, pass: (d) => d.rsi14 < 45 },
-  { name: "RSI·7",        points: 2, pass: (d) => d.rsi7 < 40 },
-  { name: "Stoch·%K",     points: 2, pass: (d) => d.stoch_k < 40 },
-  { name: "Stoch·%D",     points: 1, pass: (d) => d.stoch_d < 40 },
-  { name: "Williams·%R",  points: 1, pass: (d) => d.williams_r < -55 },
-  { name: "CCI",          points: 1, pass: (d) => d.cci < -50 },
+  // Momentum oscillators
+  { name: "RSI·14",         points: 3, pass: (d) => d.rsi14 < 45 },
+  { name: "RSI·7",          points: 2, pass: (d) => d.rsi7 < 40 },
+  { name: "Stoch·%K",       points: 2, pass: (d) => d.stoch_k < 40 },
+  { name: "Stoch·%D",       points: 1, pass: (d) => d.stoch_d < 40 },
+  { name: "Williams·%R",    points: 1, pass: (d) => d.williams_r < -55 },
+  { name: "CCI",            points: 1, pass: (d) => d.cci < -50 },
   // Bollinger
-  { name: "BB·Lower",     points: 3, pass: (d) => d.bb_position < 25 },
-  { name: "BB·Squeeze",   points: 1, pass: (d) => d.bb_width < d.bb_width_avg },
+  { name: "BB·Lower",       points: 3, pass: (d) => d.bb_position < 25 },
+  { name: "BB·Squeeze",     points: 1, pass: (d) => d.bb_width < d.bb_width_avg },
   // Trend
-  { name: "MACD·Hist↑",  points: 3, pass: (d) => d.macd_hist > 0 && d.macd_hist > d.macd_prev_hist },
-  { name: "EMA·Cross",    points: 2, pass: (d) => d.ema9 > d.ema21 },
-  { name: "Prix·MA20",    points: 1, pass: (d) => d.price > d.ma20 },
-  // Support / structure
-  { name: "Support",      points: 1, pass: (d) => d.price_position < 35 },
-  { name: "OBV↑",        points: 2, pass: (d) => d.obv_rising },
-  { name: "Volume·élevé", points: 2, pass: (d) => d.volume_ratio > 1.2 },
-  { name: "VWAP",         points: 1, pass: (d) => d.price < d.vwap },
-  { name: "ATR·élevé",   points: 1, pass: (d) => d.atr > d.atr_avg },
+  { name: "MACD·Hist↑",    points: 3, pass: (d) => d.macd_hist > 0 && d.macd_hist > d.macd_prev_hist },
+  { name: "EMA·Cross",      points: 2, pass: (d) => d.ema9 > d.ema21 },
+  { name: "Prix·MA20",      points: 1, pass: (d) => d.price > d.ma20 },
+  // Structure
+  { name: "Support",        points: 1, pass: (d) => d.price_position < 35 },
+  { name: "OBV↑",          points: 2, pass: (d) => d.obv_rising },
+  { name: "Volume·élevé",   points: 2, pass: (d) => d.volume_ratio > 1.2 },
+  { name: "VWAP",           points: 1, pass: (d) => d.price < d.vwap },
+  { name: "ATR·élevé",     points: 1, pass: (d) => d.atr > d.atr_avg },
+  // ── New ──────────────────────────────────────────────────────────────────
+  { name: "ADX·Trend",      points: 2, pass: (d) => d.adx > 20 },
+  { name: "Weekly·Haussier",points: 3, pass: (d) => d.weekly_trend === "bullish" },
+  { name: "Divergence·RSI", points: 4, pass: (d) => d.rsi_divergence === "bullish" },
+  { name: "Vol·Confirme",   points: 2, pass: (d) => d.vol_confirms_buy },
 ]
 
 const SELL_CHECKS: Check[] = [
   // Momentum oscillators
-  { name: "RSI·14",       points: 3, pass: (d) => d.rsi14 > 55 },
-  { name: "RSI·7",        points: 2, pass: (d) => d.rsi7 > 60 },
-  { name: "Stoch·%K",     points: 2, pass: (d) => d.stoch_k > 60 },
-  { name: "Stoch·%D",     points: 1, pass: (d) => d.stoch_d > 60 },
-  { name: "Williams·%R",  points: 1, pass: (d) => d.williams_r > -45 },
-  { name: "CCI",          points: 1, pass: (d) => d.cci > 50 },
+  { name: "RSI·14",         points: 3, pass: (d) => d.rsi14 > 55 },
+  { name: "RSI·7",          points: 2, pass: (d) => d.rsi7 > 60 },
+  { name: "Stoch·%K",       points: 2, pass: (d) => d.stoch_k > 60 },
+  { name: "Stoch·%D",       points: 1, pass: (d) => d.stoch_d > 60 },
+  { name: "Williams·%R",    points: 1, pass: (d) => d.williams_r > -45 },
+  { name: "CCI",            points: 1, pass: (d) => d.cci > 50 },
   // Bollinger
-  { name: "BB·Upper",     points: 3, pass: (d) => d.bb_position > 75 },
-  { name: "BB·Squeeze",   points: 1, pass: (d) => d.bb_width < d.bb_width_avg },
+  { name: "BB·Upper",       points: 3, pass: (d) => d.bb_position > 75 },
+  { name: "BB·Squeeze",     points: 1, pass: (d) => d.bb_width < d.bb_width_avg },
   // Trend
-  { name: "MACD·Hist↓",  points: 3, pass: (d) => d.macd_hist < 0 && d.macd_hist < d.macd_prev_hist },
-  { name: "EMA·Cross↓",  points: 2, pass: (d) => d.ema9 < d.ema21 },
-  { name: "Prix·MA20↓",  points: 1, pass: (d) => d.price < d.ma20 },
-  // Resistance / structure
-  { name: "Résistance",   points: 1, pass: (d) => d.price_position > 65 },
-  { name: "OBV↓",        points: 2, pass: (d) => !d.obv_rising },
-  { name: "Volume·élevé", points: 2, pass: (d) => d.volume_ratio > 1.2 },
-  { name: "VWAP↓",       points: 1, pass: (d) => d.price > d.vwap },
-  { name: "ATR·élevé",   points: 1, pass: (d) => d.atr > d.atr_avg },
+  { name: "MACD·Hist↓",    points: 3, pass: (d) => d.macd_hist < 0 && d.macd_hist < d.macd_prev_hist },
+  { name: "EMA·Cross↓",    points: 2, pass: (d) => d.ema9 < d.ema21 },
+  { name: "Prix·MA20↓",    points: 1, pass: (d) => d.price < d.ma20 },
+  // Structure
+  { name: "Résistance",     points: 1, pass: (d) => d.price_position > 65 },
+  { name: "OBV↓",          points: 2, pass: (d) => !d.obv_rising },
+  { name: "Volume·élevé",   points: 2, pass: (d) => d.volume_ratio > 1.2 },
+  { name: "VWAP↓",         points: 1, pass: (d) => d.price > d.vwap },
+  { name: "ATR·élevé",     points: 1, pass: (d) => d.atr > d.atr_avg },
+  // ── New ──────────────────────────────────────────────────────────────────
+  { name: "ADX·Trend",      points: 2, pass: (d) => d.adx > 20 },
+  { name: "Weekly·Baissier",points: 3, pass: (d) => d.weekly_trend === "bearish" },
+  { name: "Divergence·RSI", points: 4, pass: (d) => d.rsi_divergence === "bearish" },
+  { name: "Vol·Confirme",   points: 2, pass: (d) => d.vol_confirms_sell },
 ]
 
 // ─── Groq batch comment generator ─────────────────────────────────────────────
@@ -596,6 +769,13 @@ async function processAsset(asset: Asset, sentimentScore?: number): Promise<Sign
     const { atr, atrAvg: atr_avg } = calcATR(highs, lows, closes)
     const price_position = calcPricePosition(price, support, resistance)
 
+    // ── New indicators ────────────────────────────────────────────────────────
+    const adx             = calcADX(highs, lows, closes)
+    const weekly_trend    = calcWeeklyTrend(closes)
+    const rsi_divergence  = calcRSIDivergence(closes)
+    const vol_confirms_buy  = calcVolumeConfirmation(closes, volumes, "up")
+    const vol_confirms_sell = calcVolumeConfirmation(closes, volumes, "down")
+
     const data: IndicatorData = {
       rsi14,
       rsi7,
@@ -620,6 +800,11 @@ async function processAsset(asset: Asset, sentimentScore?: number): Promise<Sign
       atr,
       atr_avg,
       price_position,
+      adx,
+      weekly_trend,
+      rsi_divergence,
+      vol_confirms_buy,
+      vol_confirms_sell,
     }
 
     // New indicators
@@ -667,7 +852,7 @@ async function processAsset(asset: Asset, sentimentScore?: number): Promise<Sign
       else if (sentimentScore < -30) { sell_score += 3; sell_confirmed.push("News·Bearish") }
     }
 
-    const MAX_POINTS = 28 // sum of base checks (extras can push above → clamped to 100)
+    const MAX_POINTS = 39 // 28 base + 11 new (ADX 2 + Weekly 3 + Divergence 4 + VolConfirm 2)
     const isBuy = buy_score >= sell_score
     const winning_points = isBuy ? buy_score : sell_score
     const confirmed_by = isBuy ? buy_confirmed : sell_confirmed
@@ -711,18 +896,24 @@ async function processAsset(asset: Asset, sentimentScore?: number): Promise<Sign
     else if (confluence_score >= 50) strength = "moderate"
     else strength = "weak"
 
-    // TP/SL
+    // TP/SL — use nearest pivot level as primary, ATR as fallback / secondary
+    const { pivotSupport, pivotResistance } = calcPivotLevels(highs, lows, price)
+
     let tp1: number, tp2: number, tp3: number, sl: number
     if (isBuy) {
-      tp1 = price + 1.5 * atr
+      // TP1 = nearest resistance pivot (or ATR if too close)
+      tp1 = pivotResistance > price + atr * 0.5 ? pivotResistance : price + 1.5 * atr
       tp2 = price + 3 * atr
       tp3 = price + 5 * atr
-      sl = price - 1 * atr
+      // SL = just below nearest support pivot (or ATR if too close)
+      sl  = pivotSupport < price - atr * 0.3 ? pivotSupport - atr * 0.2 : price - atr
     } else {
-      tp1 = price - 1.5 * atr
+      // TP1 = nearest support pivot (or ATR if too close)
+      tp1 = pivotSupport < price - atr * 0.5 ? pivotSupport : price - 1.5 * atr
       tp2 = price - 3 * atr
       tp3 = price - 5 * atr
-      sl = price + 1 * atr
+      // SL = just above nearest resistance pivot (or ATR if too close)
+      sl  = pivotResistance > price + atr * 0.3 ? pivotResistance + atr * 0.2 : price + atr
     }
 
     const slDist = Math.abs(sl - price)
