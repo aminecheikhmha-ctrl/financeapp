@@ -8,7 +8,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY!
 )
 
-export const maxDuration = 60
+export const maxDuration = 60 // Pro plan; Hobby is capped at 10s by Vercel
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -57,113 +57,33 @@ export type SignalResult = {
 }
 
 // ─── Asset list ───────────────────────────────────────────────────────────────
+// Vercel Hobby = 10s max → keep to ~20 assets fetched in full parallel
 
 const ASSETS: Asset[] = [
-  // === STOCKS (65) ===
-  { symbol: "AAPL", name: "Apple", type: "stock" },
-  { symbol: "MSFT", name: "Microsoft", type: "stock" },
-  { symbol: "GOOGL", name: "Alphabet", type: "stock" },
-  { symbol: "AMZN", name: "Amazon", type: "stock" },
-  { symbol: "NVDA", name: "NVIDIA", type: "stock" },
-  { symbol: "META", name: "Meta", type: "stock" },
-  { symbol: "TSLA", name: "Tesla", type: "stock" },
-  { symbol: "BRK-B", name: "Berkshire B", type: "stock" },
-  { symbol: "JPM", name: "JPMorgan", type: "stock" },
-  { symbol: "V", name: "Visa", type: "stock" },
-  { symbol: "MA", name: "Mastercard", type: "stock" },
-  { symbol: "UNH", name: "UnitedHealth", type: "stock" },
-  { symbol: "JNJ", name: "Johnson & Johnson", type: "stock" },
-  { symbol: "XOM", name: "ExxonMobil", type: "stock" },
-  { symbol: "PG", name: "Procter & Gamble", type: "stock" },
-  { symbol: "HD", name: "Home Depot", type: "stock" },
-  { symbol: "CVX", name: "Chevron", type: "stock" },
-  { symbol: "ABBV", name: "AbbVie", type: "stock" },
-  { symbol: "MRK", name: "Merck", type: "stock" },
-  { symbol: "LLY", name: "Eli Lilly", type: "stock" },
-  { symbol: "AVGO", name: "Broadcom", type: "stock" },
-  { symbol: "COST", name: "Costco", type: "stock" },
-  { symbol: "PEP", name: "PepsiCo", type: "stock" },
-  { symbol: "KO", name: "Coca-Cola", type: "stock" },
-  { symbol: "WMT", name: "Walmart", type: "stock" },
-  { symbol: "BAC", name: "Bank of America", type: "stock" },
-  { symbol: "TMO", name: "Thermo Fisher", type: "stock" },
-  { symbol: "ACN", name: "Accenture", type: "stock" },
-  { symbol: "MCD", name: "McDonald's", type: "stock" },
-  { symbol: "NFLX", name: "Netflix", type: "stock" },
-  { symbol: "AMD", name: "AMD", type: "stock" },
-  { symbol: "INTC", name: "Intel", type: "stock" },
-  { symbol: "QCOM", name: "Qualcomm", type: "stock" },
-  { symbol: "TXN", name: "Texas Instruments", type: "stock" },
-  { symbol: "CRM", name: "Salesforce", type: "stock" },
-  { symbol: "ADBE", name: "Adobe", type: "stock" },
-  { symbol: "NOW", name: "ServiceNow", type: "stock" },
-  { symbol: "SNOW", name: "Snowflake", type: "stock" },
-  { symbol: "PLTR", name: "Palantir", type: "stock" },
-  { symbol: "UBER", name: "Uber", type: "stock" },
-  { symbol: "ABNB", name: "Airbnb", type: "stock" },
-  { symbol: "COIN", name: "Coinbase", type: "stock" },
-  { symbol: "NET", name: "Cloudflare", type: "stock" },
-  { symbol: "CRWD", name: "CrowdStrike", type: "stock" },
-  { symbol: "PANW", name: "Palo Alto Networks", type: "stock" },
-  { symbol: "ZS", name: "Zscaler", type: "stock" },
-  { symbol: "DDOG", name: "Datadog", type: "stock" },
-  { symbol: "MDB", name: "MongoDB", type: "stock" },
-  { symbol: "SHOP", name: "Shopify", type: "stock" },
-  { symbol: "SQ", name: "Block", type: "stock" },
-  { symbol: "PYPL", name: "PayPal", type: "stock" },
-  { symbol: "GS", name: "Goldman Sachs", type: "stock" },
-  { symbol: "MS", name: "Morgan Stanley", type: "stock" },
-  { symbol: "WFC", name: "Wells Fargo", type: "stock" },
-  { symbol: "C", name: "Citigroup", type: "stock" },
-  { symbol: "BLK", name: "BlackRock", type: "stock" },
-  { symbol: "PFE", name: "Pfizer", type: "stock" },
-  { symbol: "AMGN", name: "Amgen", type: "stock" },
-  { symbol: "GILD", name: "Gilead", type: "stock" },
-  { symbol: "VRTX", name: "Vertex Pharma", type: "stock" },
-  { symbol: "BA", name: "Boeing", type: "stock" },
-  { symbol: "CAT", name: "Caterpillar", type: "stock" },
-  { symbol: "DE", name: "John Deere", type: "stock" },
-  { symbol: "HON", name: "Honeywell", type: "stock" },
-  { symbol: "LMT", name: "Lockheed Martin", type: "stock" },
-  { symbol: "NKE", name: "Nike", type: "stock" },
-  // === CRYPTO (15) ===
-  { symbol: "BTC-USD", name: "Bitcoin", type: "crypto" },
-  { symbol: "ETH-USD", name: "Ethereum", type: "crypto" },
-  { symbol: "SOL-USD", name: "Solana", type: "crypto" },
-  { symbol: "BNB-USD", name: "BNB", type: "crypto" },
-  { symbol: "XRP-USD", name: "Ripple", type: "crypto" },
-  { symbol: "ADA-USD", name: "Cardano", type: "crypto" },
-  { symbol: "DOGE-USD", name: "Dogecoin", type: "crypto" },
+  // === STOCKS (8) ===
+  { symbol: "AAPL",  name: "Apple",       type: "stock" },
+  { symbol: "MSFT",  name: "Microsoft",   type: "stock" },
+  { symbol: "NVDA",  name: "NVIDIA",      type: "stock" },
+  { symbol: "TSLA",  name: "Tesla",       type: "stock" },
+  { symbol: "META",  name: "Meta",        type: "stock" },
+  { symbol: "AMZN",  name: "Amazon",      type: "stock" },
+  { symbol: "GOOGL", name: "Alphabet",    type: "stock" },
+  { symbol: "NFLX",  name: "Netflix",     type: "stock" },
+  // === CRYPTO (7) ===
+  { symbol: "BTC-USD",  name: "Bitcoin",   type: "crypto" },
+  { symbol: "ETH-USD",  name: "Ethereum",  type: "crypto" },
+  { symbol: "SOL-USD",  name: "Solana",    type: "crypto" },
+  { symbol: "BNB-USD",  name: "BNB",       type: "crypto" },
+  { symbol: "XRP-USD",  name: "Ripple",    type: "crypto" },
+  { symbol: "DOGE-USD", name: "Dogecoin",  type: "crypto" },
   { symbol: "AVAX-USD", name: "Avalanche", type: "crypto" },
-  { symbol: "DOT-USD", name: "Polkadot", type: "crypto" },
-  { symbol: "LINK-USD", name: "Chainlink", type: "crypto" },
-  { symbol: "LTC-USD", name: "Litecoin", type: "crypto" },
-  { symbol: "BCH-USD", name: "Bitcoin Cash", type: "crypto" },
-  { symbol: "UNI-USD", name: "Uniswap", type: "crypto" },
-  { symbol: "ATOM-USD", name: "Cosmos", type: "crypto" },
-  { symbol: "NEAR-USD", name: "NEAR Protocol", type: "crypto" },
-  // === ETF (15) ===
-  { symbol: "SPY", name: "S&P 500 ETF", type: "etf" },
-  { symbol: "QQQ", name: "Nasdaq 100 ETF", type: "etf" },
-  { symbol: "IWM", name: "Russell 2000 ETF", type: "etf" },
-  { symbol: "DIA", name: "Dow Jones ETF", type: "etf" },
-  { symbol: "VTI", name: "Total Market ETF", type: "etf" },
-  { symbol: "TLT", name: "Bonds 20Y ETF", type: "etf" },
-  { symbol: "HYG", name: "High Yield Bonds", type: "etf" },
-  { symbol: "EEM", name: "Emerging Markets", type: "etf" },
-  { symbol: "XLK", name: "Tech Sector ETF", type: "etf" },
-  { symbol: "XLF", name: "Finance Sector ETF", type: "etf" },
-  { symbol: "XLE", name: "Energy Sector ETF", type: "etf" },
-  { symbol: "XLV", name: "Health Sector ETF", type: "etf" },
-  { symbol: "ARKK", name: "ARK Innovation ETF", type: "etf" },
-  { symbol: "SOXX", name: "Semiconductor ETF", type: "etf" },
-  { symbol: "TQQQ", name: "Nasdaq 3x Leveraged", type: "etf" },
-  // === COMMODITIES (5) ===
-  { symbol: "GLD", name: "Or (Gold ETF)", type: "commodity" },
-  { symbol: "SLV", name: "Argent (Silver ETF)", type: "commodity" },
+  // === ETF (3) ===
+  { symbol: "SPY",  name: "S&P 500 ETF",      type: "etf" },
+  { symbol: "QQQ",  name: "Nasdaq 100 ETF",   type: "etf" },
+  { symbol: "ARKK", name: "ARK Innovation",   type: "etf" },
+  // === COMMODITIES (2) ===
+  { symbol: "GLD", name: "Or (Gold ETF)",     type: "commodity" },
   { symbol: "USO", name: "Pétrole (Oil ETF)", type: "commodity" },
-  { symbol: "WEAT", name: "Blé (Wheat ETF)", type: "commodity" },
-  { symbol: "PDBC", name: "Commodités diversifiées", type: "commodity" },
 ]
 
 // ─── Indicator calculations ────────────────────────────────────────────────────
@@ -603,7 +523,7 @@ async function fetchYahoo(symbol: string): Promise<any | null> {
   for (const base of ["https://query2.finance.yahoo.com", "https://query1.finance.yahoo.com"]) {
     try {
       const res = await fetch(
-        `${base}/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=6mo`,
+        `${base}/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=3mo`,
         { headers, cache: "no-store" }
       )
       if (!res.ok) {
@@ -643,7 +563,7 @@ async function processAsset(asset: Asset, sentimentScore?: number): Promise<Sign
     const opens = rawOpens.filter((v): v is number => v != null)
     const volumes = rawVolumes.map((v) => (v != null ? v : 0))
 
-    if (closes.length < 30) return null
+    if (closes.length < 20) return null
 
     const price = closes[closes.length - 1]
     const prevClose = closes[closes.length - 2] ?? price
@@ -899,25 +819,15 @@ export async function GET(req: NextRequest) {
     // Table may not exist yet — proceed without sentiment
   }
 
-  // Process assets in small batches to avoid Yahoo Finance rate limiting
-  process.stdout.write(`[signals] START — scanning ${ASSETS.length} assets\n`)
-  const BATCH_SIZE = 6
+  // Process all assets in parallel — Vercel Hobby = 10s limit, keep list short
+  process.stdout.write(`[signals] START — scanning ${ASSETS.length} assets in parallel\n`)
   const results: SignalResult[] = []
 
-  for (let i = 0; i < ASSETS.length; i += BATCH_SIZE) {
-    const batch = ASSETS.slice(i, i + BATCH_SIZE)
-    // Stagger requests within batch by 50ms each to avoid burst
-    const batchResults = await Promise.allSettled(
-      batch.map((a, idx) =>
-        new Promise<SignalResult | null>(resolve =>
-          setTimeout(() => processAsset(a, sentimentMap.get(a.symbol)).then(resolve), idx * 50)
-        )
-      )
-    )
-    for (const r of batchResults) {
-      if (r.status === "fulfilled" && r.value !== null) results.push(r.value as SignalResult)
-    }
-    if (i + BATCH_SIZE < ASSETS.length) await new Promise(r => setTimeout(r, 400))
+  const allResults = await Promise.allSettled(
+    ASSETS.map(a => processAsset(a, sentimentMap.get(a.symbol)))
+  )
+  for (const r of allResults) {
+    if (r.status === "fulfilled" && r.value !== null) results.push(r.value as SignalResult)
   }
 
   process.stdout.write(`[signals] DONE — ${results.length} signals passed threshold\n`)
