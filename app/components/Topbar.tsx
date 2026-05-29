@@ -34,16 +34,17 @@ export default function Topbar() {
   const router   = useRouter()
   const dropRef  = useRef<HTMLDivElement>(null)
 
-  const [user,         setUser]         = useState<any>(null)
-  const [username,     setUsername]     = useState("")
-  const [avatarColor,  setAvatarColor]  = useState("#22c55e")
-  const [avatarUrl,    setAvatarUrl]    = useState<string | null>(null)
-  const [plan,         setPlan]         = useState("free")
-  const [xp,           setXp]           = useState(0)
-  const [levelName,    setLevelName]    = useState("Novice")
-  const [unreadCount,  setUnreadCount]  = useState(0)
-  const [showUserMenu, setShowUserMenu] = useState(false)
-  const [marketOpen,   setMarketOpen]   = useState(false)
+  const [user,          setUser]          = useState<any>(null)
+  const [username,      setUsername]      = useState("")
+  const [avatarColor,   setAvatarColor]   = useState("#22c55e")
+  const [avatarUrl,     setAvatarUrl]     = useState<string | null>(null)
+  const [plan,          setPlan]          = useState("free")
+  const [xp,            setXp]            = useState(0)
+  const [levelName,     setLevelName]     = useState("")
+  const [unreadCount,   setUnreadCount]   = useState(0)
+  const [showUserMenu,  setShowUserMenu]  = useState(false)
+  const [marketOpen,    setMarketOpen]    = useState(false)
+  const [profileLoaded, setProfileLoaded] = useState(false)
 
   const pageTitle = Object.entries(PAGE_TITLES).find(
     ([key]) => pathname === key || pathname.startsWith(key + "/"),
@@ -84,6 +85,7 @@ export default function Topbar() {
       }
       if (planRes.data?.plan) setPlan(planRes.data.plan)
       setUnreadCount(notifRes.count ?? 0)
+      setProfileLoaded(true)
     })
 
     const { data: listener } = supabase.auth.onAuthStateChange((_e, s) => setUser(s?.user ?? null))
@@ -171,6 +173,9 @@ export default function Topbar() {
 
         {/* User avatar + dropdown */}
         <div className="relative" ref={dropRef}>
+          {!profileLoaded ? (
+            <div className="w-8 h-8 rounded-full skeleton flex-shrink-0" />
+          ) : (
           <button
             onClick={() => setShowUserMenu(m => !m)}
             className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black text-black transition-all hover:scale-105 overflow-hidden flex-shrink-0"
@@ -181,6 +186,7 @@ export default function Topbar() {
               initial
             )}
           </button>
+          )}
 
           {/* Dropdown */}
           {showUserMenu && (
@@ -189,7 +195,7 @@ export default function Topbar() {
 
               {/* User info */}
               <div className="px-4 py-3 border-b" style={{ borderColor: "var(--border-dim)" }}>
-                <p className="text-sm font-black text-white">{username || "Trader"}</p>
+                <p className="text-sm font-black text-white">{username || user?.email?.split("@")[0] || ""}</p>
                 <p className="text-[11px] mt-0.5" style={{ color: "var(--text-muted)" }}>{user?.email}</p>
                 <p className="text-[10px] font-bold mt-1" style={{ color: avatarColor }}>
                   {levelName} · {xp.toLocaleString()} XP

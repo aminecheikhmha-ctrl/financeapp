@@ -44,15 +44,16 @@ export default function Sidebar() {
   const pathname = usePathname()
   const router   = useRouter()
 
-  const [expanded,      setExpanded]      = useState(true)
-  const [user,          setUser]          = useState<any>(null)
-  const [plan,          setPlan]          = useState("free")
-  const [profile,       setProfile]       = useState<{ username: string; xp: number; streak_days: number } | null>(null)
-  const [avatarUrl,     setAvatarUrl]     = useState<string | null>(null)
-  const [unreadNotifs,  setUnreadNotifs]  = useState(0)
-  const [strongCount,   setStrongCount]   = useState(0)
-  const [learnProgress, setLearnProgress] = useState(0)
-  const [forumCount,    setForumCount]    = useState(0)
+  const [expanded,       setExpanded]      = useState(true)
+  const [user,           setUser]          = useState<any>(null)
+  const [plan,           setPlan]          = useState("free")
+  const [profile,        setProfile]       = useState<{ username: string; xp: number; streak_days: number } | null>(null)
+  const [profileLoaded,  setProfileLoaded] = useState(false)
+  const [avatarUrl,      setAvatarUrl]     = useState<string | null>(null)
+  const [unreadNotifs,   setUnreadNotifs]  = useState(0)
+  const [strongCount,    setStrongCount]   = useState(0)
+  const [learnProgress,  setLearnProgress] = useState(0)
+  const [forumCount,     setForumCount]    = useState(0)
 
   // Restore from localStorage after hydration
   useEffect(() => {
@@ -105,6 +106,7 @@ export default function Sidebar() {
         })
         if (profileRes.data.avatar_url) setAvatarUrl(profileRes.data.avatar_url)
       }
+      setProfileLoaded(true)
       if (planRes.data?.plan) setPlan(planRes.data.plan)
       setUnreadNotifs(notifRes.count ?? 0)
 
@@ -330,7 +332,7 @@ export default function Sidebar() {
           style={{ borderColor: "var(--border-dim)" }}>
 
           {/* XP bar (expanded only) */}
-          {expanded && levelInfo && (
+          {expanded && profileLoaded && levelInfo && (
             <div className="px-1">
               <div className="flex items-center justify-between text-[10px] mb-1.5">
                 <span className="font-black" style={{ color: levelInfo.color }}>
@@ -356,34 +358,46 @@ export default function Sidebar() {
             </div>
           )}
 
-
           {/* User row */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black text-black flex-shrink-0 overflow-hidden"
-              style={{ background: levelInfo?.color ?? "var(--green)" }}>
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
-              ) : (
-                initial
+          {!profileLoaded ? (
+            /* Skeleton while profile loads */
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full flex-shrink-0 skeleton" />
+              {expanded && (
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-2.5 w-24 rounded skeleton" />
+                  <div className="h-2 w-16 rounded skeleton" />
+                </div>
               )}
             </div>
-            {expanded && (
-              <>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-bold text-white truncate">
-                    {profile?.username ?? "Trader"}
-                  </p>
-                  <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>
-                    {profile?.streak_days ? `🔥 ${profile.streak_days}j streak` : levelInfo?.name ?? ""}
-                  </p>
-                </div>
-                <button onClick={handleLogout}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center transition-all flex-shrink-0 text-white/25 hover:text-red-400 hover:bg-red-500/10">
-                  <LogOut size={13} />
-                </button>
-              </>
-            )}
-          </div>
+          ) : (
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black text-black flex-shrink-0 overflow-hidden"
+                style={{ background: levelInfo?.color ?? "var(--green)" }}>
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                ) : (
+                  initial
+                )}
+              </div>
+              {expanded && (
+                <>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-bold text-white truncate">
+                      {profile?.username ?? user?.email?.split("@")[0] ?? ""}
+                    </p>
+                    <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                      {profile?.streak_days ? `🔥 ${profile.streak_days}j streak` : levelInfo?.name ?? ""}
+                    </p>
+                  </div>
+                  <button onClick={handleLogout}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center transition-all flex-shrink-0 text-white/25 hover:text-red-400 hover:bg-red-500/10">
+                    <LogOut size={13} />
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </aside>
 
