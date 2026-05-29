@@ -619,10 +619,15 @@ async function processAsset(asset: Asset, sentimentScore?: number): Promise<Sign
     const prevClose = closes[closes.length - 2] ?? price
     const change_24h = ((price - prevClose) / prevClose) * 100
 
-    // Volume ratio (today vs 20-day avg)
-    const recentVol = volumes[volumes.length - 1] ?? 0
-    const avgVol = volumes.slice(-21, -1).reduce((a, b) => a + b, 0) / 20 || 1
-    const volume_ratio = recentVol / avgVol
+    // Volume ratio — use last COMPLETED session (second-to-last candle) to avoid
+    // partial-day bias: today's stock candle has 0 vol before NYSE opens, and
+    // crypto intraday volume is a fraction of a full day. Using yesterday's
+    // completed volume gives a reliable baseline for all asset types.
+    const n = volumes.length
+    const recentVol = n >= 2 ? (volumes[n - 2] ?? volumes[n - 1] ?? 0) : (volumes[n - 1] ?? 0)
+    const avgSlice = n >= 22 ? volumes.slice(n - 22, n - 2) : volumes.slice(0, Math.max(1, n - 2))
+    const avgVol = avgSlice.length > 0 ? avgSlice.reduce((a, b) => a + b, 0) / avgSlice.length : 1
+    const volume_ratio = avgVol > 0 ? recentVol / avgVol : 1
 
     // Indicators
     const rsi14 = calcRSI(closes, 14)
