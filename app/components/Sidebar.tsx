@@ -44,7 +44,7 @@ export default function Sidebar() {
   const pathname = usePathname()
   const router   = useRouter()
 
-  const [expanded,      setExpanded]      = useState(false)
+  const [expanded,      setExpanded]      = useState(true)
   const [user,          setUser]          = useState<any>(null)
   const [plan,          setPlan]          = useState("free")
   const [profile,       setProfile]       = useState<{ username: string; xp: number; streak_days: number } | null>(null)
