@@ -71,12 +71,18 @@ export default function Signup() {
 
       {/* LEFT — Form */}
       <div className="flex-1 flex flex-col justify-center px-8 py-12 max-w-md mx-auto lg:mx-0 lg:px-16 w-full">
-        <a href="/" className="flex items-center gap-2 mb-12">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center" style={{ boxShadow: "0 0 16px rgba(34,197,94,0.3)" }}>
-            <span className="text-black font-black text-sm">T</span>
-          </div>
-          <span className="text-white font-black text-lg">Tradex</span>
-        </a>
+        <div className="flex items-center justify-between mb-12">
+          <a href="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center" style={{ boxShadow: "0 0 16px rgba(34,197,94,0.3)" }}>
+              <span className="text-black font-black text-sm">T</span>
+            </div>
+            <span className="text-white font-black text-lg">Tradex</span>
+          </a>
+          <a href="/" className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition font-semibold">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Retour
+          </a>
+        </div>
 
         <div className="mb-2">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-bold mb-4">

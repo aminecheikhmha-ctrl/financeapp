@@ -567,6 +567,10 @@ function DashboardContent() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <a href="/" className="px-3 py-2 rounded-xl text-sm font-semibold text-white/40 hover:text-white/70 transition flex items-center gap-1.5">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                Accueil
+              </a>
               <a href="/login" className="px-4 py-2 rounded-xl text-sm font-semibold text-white/60 hover:text-white transition border border-white/10">Se connecter</a>
               <a href="/signup" className="px-4 py-2 rounded-xl text-sm font-black text-black" style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}>Créer un compte gratuit →</a>
             </div>
@@ -909,13 +913,19 @@ function DashboardContent() {
                     { key: "ia", label: "Que dit l'IA ? 🤖" },
                     { key: "news", label: "📰 News & Sentiment" },
                   ]
-              ).map(tab => (
-                <button key={tab.key} onClick={() => setActiveTab(tab.key as any)}
-                  data-tour={tab.key === "ia" ? "ia-tab" : undefined}
-                  className={`flex-shrink-0 whitespace-nowrap px-4 py-2.5 text-xs font-semibold transition border-b-2 ${
-                    activeTab === tab.key ? "text-white border-white" : "text-gray-600 border-transparent hover:text-gray-400"
-                  }`}>{tab.label}</button>
-              ))}
+              ).map(tab => {
+                const isBlocked = isDemo && tab.key !== "chart"
+                return (
+                  <button key={tab.key}
+                    onClick={() => isBlocked ? setShowSignupModal(true) : setActiveTab(tab.key as any)}
+                    data-tour={tab.key === "ia" ? "ia-tab" : undefined}
+                    className={`flex-shrink-0 whitespace-nowrap px-4 py-2.5 text-xs font-semibold transition border-b-2 ${
+                      activeTab === tab.key ? "text-white border-white" : "text-gray-600 border-transparent hover:text-gray-400"
+                    }`}>
+                    {isBlocked ? "🔒 " : ""}{tab.label}
+                  </button>
+                )
+              })}
               {(userProfile?.xp ?? 0) < 1500 && (
                 <div className="flex items-center gap-1 px-3 py-2.5 text-[10px] text-gray-700 border-b-2 border-transparent">
                   🔒 Indicateurs <span className="text-[9px] ml-1 px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500/60 border border-yellow-500/15">Niveau Trader requis</span>
