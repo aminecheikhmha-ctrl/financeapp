@@ -728,60 +728,6 @@ export default function Apprendre() {
           </motion.div>
         </div>
 
-        {/* ── LES PLUS POPULAIRES ──────────────────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.52 }}
-          className="mb-7">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <span className="text-base">🔥</span>
-              <p className="font-black text-white text-sm">Les plus populaires</p>
-            </div>
-            <button onClick={() => { setLevel("all"); setType("all"); setStatus("all") }}
-              className="text-[10px] font-bold transition-colors" style={{ color: "#333" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "#666")}
-              onMouseLeave={e => (e.currentTarget.style.color = "#333")}>
-              Tous les cours →
-            </button>
-          </div>
-          <div className="flex flex-col gap-2">
-            {popularCourses.map((course, index) => {
-              const lc = LEVEL_COLORS[course.level]
-              const { done, total, pct } = getCourseProgress(course, progress)
-              return (
-                <motion.div key={course.id}
-                  initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.55 + index * 0.06 }}
-                  whileHover={{ x: 4 }} whileTap={{ scale: 0.99 }}
-                  onClick={() => router.push(`/apprendre/${course.id}`)}
-                  className="cursor-pointer rounded-2xl px-5 py-4 flex items-center gap-4"
-                  style={{ background: "#0d0d0d", border: "1px solid #181818" }}>
-                  <span className="text-lg w-6 text-center font-black" style={{ color: index === 0 ? "#facc15" : index === 1 ? "#9ca3af" : "#cd7c2f" }}>
-                    {index === 0 ? "🔥" : index === 1 ? "⚡" : "✨"}
-                  </span>
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-                    style={{ background: `${lc.text}10`, border: `1px solid ${lc.border}` }}>
-                    {course.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white font-black text-sm truncate">{course.title}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md"
-                        style={{ background: lc.bg, color: lc.text }}>{getLevelLabel(course.level)}</span>
-                      <span className="text-[10px]" style={{ color: "#444" }}>{course.chapters.length} chapitres · {course.duration}</span>
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-black" style={{ color: lc.text }}>{pct}%</p>
-                    <p className="text-[9px]" style={{ color: "#333" }}>{done}/{total}</p>
-                  </div>
-                </motion.div>
-              )
-            })}
-          </div>
-        </motion.div>
-
         {/* ── FILTERS ──────────────────────────────────────────────────────── */}
         <div className="flex gap-2 mb-6 overflow-x-auto pb-1 flex-nowrap md:flex-wrap items-center">
           {/* Level */}

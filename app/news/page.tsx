@@ -133,6 +133,99 @@ function FearGreedGaugeMini({ data }: { data: FearGreed | null }) {
   )
 }
 
+// ─── Source color map ──────────────────────────────────────────────────────────
+function sourceStyle(source: string): { bg: string; color: string } {
+  const s = source.toLowerCase()
+  if (s.includes("cnbc"))       return { bg: "rgba(0,98,204,0.18)",   color: "#4da6ff" }
+  if (s.includes("reuters"))    return { bg: "rgba(255,140,0,0.15)",  color: "#ffaa44" }
+  if (s.includes("marketwatch"))return { bg: "rgba(124,58,237,0.15)", color: "#a78bfa" }
+  if (s.includes("bloomberg"))  return { bg: "rgba(20,184,166,0.15)", color: "#2dd4bf" }
+  if (s.includes("ft") || s.includes("financial times")) return { bg: "rgba(244,63,94,0.15)", color: "#fb7185" }
+  if (s.includes("wsj"))        return { bg: "rgba(234,179,8,0.15)",  color: "#facc15" }
+  if (s.includes("reddit"))     return { bg: "rgba(249,115,22,0.12)", color: "#fb923c" }
+  return { bg: "rgba(59,130,246,0.1)", color: "#60a5fa" }
+}
+
+// ─── HeroCard — top article displayed large ────────────────────────────────────
+function HeroCard({ article, onTickerClick }: {
+  article: Article
+  onTickerClick: (sym: string) => void
+}) {
+  const score   = article.sentiment_score ?? 0
+  const sentColor = score > 20 ? "#22c55e" : score < -20 ? "#ef4444" : "#f59e0b"
+  const { bg: srcBg, color: srcColor } = sourceStyle(article.source)
+
+  return (
+    <a href={article.url} target="_blank" rel="noopener noreferrer"
+      className="group block rounded-3xl overflow-hidden transition-all duration-200 mb-6"
+      style={{ background: "#0d0d0d", border: "1px solid rgba(255,255,255,0.08)" }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.16)"; (e.currentTarget as HTMLElement).style.background = "#111" }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)"; (e.currentTarget as HTMLElement).style.background = "#0d0d0d" }}>
+
+      {/* Top accent bar */}
+      <div className="h-[3px]" style={{ background: "linear-gradient(90deg, #22c55e, #3b82f6, transparent)" }} />
+
+      <div className="p-5 md:p-6">
+        {/* Label row */}
+        <div className="flex items-center gap-2.5 mb-3">
+          <span className="text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest"
+            style={{ background: "rgba(34,197,94,0.12)", color: "#4ade80", border: "1px solid rgba(34,197,94,0.25)" }}>
+            ⭐ À la une
+          </span>
+          <span className="text-[9px] font-bold px-2 py-0.5 rounded-md"
+            style={{ background: srcBg, color: srcColor }}>
+            {article.source}
+          </span>
+          <span className="text-[9px] text-white/25">{timeAgo(article.published_at)}</span>
+          {article.breaking && (
+            <span className="ml-auto text-[9px] font-black px-2 py-0.5 rounded-full animate-pulse"
+              style={{ background: "rgba(239,68,68,0.2)", color: "#f87171", border: "1px solid rgba(239,68,68,0.3)" }}>
+              🔴 BREAKING
+            </span>
+          )}
+        </div>
+
+        {/* Big title */}
+        <p className="text-base md:text-lg font-black text-white/90 group-hover:text-white transition-colors leading-snug mb-3">
+          {article.title}
+        </p>
+
+        {/* AI summary — show fully for hero */}
+        {article.ai_summary && (
+          <p className="text-xs leading-relaxed mb-4" style={{ color: "rgba(255,255,255,0.4)" }}>
+            🤖 {article.ai_summary}
+          </p>
+        )}
+
+        {/* Footer row */}
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          {(article.tickers?.length ?? 0) > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {article.tickers!.slice(0, 5).map(t => (
+                <button key={t} onClick={e => { e.preventDefault(); onTickerClick(t) }}
+                  className="text-[9px] font-bold px-2 py-0.5 rounded-lg transition-all"
+                  style={{ background: "rgba(34,197,94,0.08)", color: "#4ade80", border: "1px solid rgba(34,197,94,0.15)" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "rgba(34,197,94,0.18)")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "rgba(34,197,94,0.08)")}>
+                  ${t.replace("-USD","")}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center gap-3 ml-auto">
+            {score !== 0 && (
+              <span className="text-[9px] font-semibold" style={{ color: sentColor }}>
+                {score > 20 ? "🟢 Positif" : score < -20 ? "🔴 Négatif" : "🟡 Neutre"}
+              </span>
+            )}
+            <span className="text-[9px] text-white/30 group-hover:text-white/50 transition">Lire l&apos;article ↗</span>
+          </div>
+        </div>
+      </div>
+    </a>
+  )
+}
+
 // ─── NewsCard ──────────────────────────────────────────────────────────────────
 function NewsCard({ article, onTickerClick }: {
   article: Article
@@ -140,9 +233,7 @@ function NewsCard({ article, onTickerClick }: {
 }) {
   const score = article.sentiment_score ?? 0
   const sentColor = score > 20 ? D.green : score < -20 ? D.red : D.yellow
-  const isReddit = article.source?.toLowerCase().includes("reddit")
-  const sourceBg = isReddit ? "rgba(249,115,22,0.12)" : "rgba(59,130,246,0.1)"
-  const sourceColor = isReddit ? "#fb923c" : "#60a5fa"
+  const { bg: sourceBg, color: sourceColor } = sourceStyle(article.source)
 
   return (
     <a href={article.url} target="_blank" rel="noopener noreferrer"
@@ -772,6 +863,8 @@ export default function NewsPage() {
             <div>
               {loadingGeneral && generalArticles.length === 0 ? (
                 <div className="space-y-6">
+                  {/* Hero skeleton */}
+                  <div className="h-44 rounded-3xl animate-pulse mb-6" style={{ background: D.card }} />
                   {[...Array(3)].map((_, g) => (
                     <div key={g}>
                       <div className="h-5 w-48 rounded-lg animate-pulse mb-4" style={{ background: D.card }} />
@@ -803,32 +896,40 @@ export default function NewsPage() {
                   )}
                 </div>
               ) : (
-                // All categories — sections thématiques
-                <div className="space-y-8">
-                  {CAT_SECTIONS.map(sect => {
-                    const sects = sectionArticles(sect.key)
-                    if (sects.length === 0) return null
-                    return (
-                      <div key={sect.key}>
-                        <div className="flex items-center justify-between mb-3">
-                          <h2 className="text-sm font-black text-white">{sect.title}</h2>
-                          <button
-                            onClick={() => setSelectedCategory(sect.key)}
-                            className="text-[10px] transition"
-                            style={{ color: "rgba(255,255,255,0.25)" }}
-                            onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.6)")}
-                            onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.25)")}>
-                            Voir plus →
-                          </button>
+                // All categories — hero + sections thématiques
+                <div>
+                  {/* Hero — top article */}
+                  {generalArticles[0] && (
+                    <HeroCard article={generalArticles[0]} onTickerClick={selectTicker} />
+                  )}
+
+                  {/* Thematic sections */}
+                  <div className="space-y-8">
+                    {CAT_SECTIONS.map(sect => {
+                      const sects = sectionArticles(sect.key)
+                      if (sects.length === 0) return null
+                      return (
+                        <div key={sect.key}>
+                          <div className="flex items-center justify-between mb-3">
+                            <h2 className="text-sm font-black text-white">{sect.title}</h2>
+                            <button
+                              onClick={() => setSelectedCategory(sect.key)}
+                              className="text-[10px] transition"
+                              style={{ color: "rgba(255,255,255,0.25)" }}
+                              onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.6)")}
+                              onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.25)")}>
+                              Voir plus →
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                            {sects.slice(0, 4).map((article, i) => (
+                              <NewsCard key={i} article={article} onTickerClick={selectTicker} />
+                            ))}
+                          </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                          {sects.slice(0, 4).map((article, i) => (
-                            <NewsCard key={i} article={article} onTickerClick={selectTicker} />
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  })}
+                      )
+                    })}
+                  </div>
                 </div>
               )}
             </div>
