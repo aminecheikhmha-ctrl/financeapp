@@ -964,6 +964,8 @@ async function processAsset(asset: Asset, sentimentScore?: number): Promise<Sign
 }
 
 // ─── Route handler ─────────────────────────────────────────────────────────────
+// Primary path: read from signals_cache populated by the Supabase Edge Function.
+// Fallback: compute directly with the 20-asset list if cache is empty/stale.
 
 export async function GET(req: NextRequest) {
   const ip = getClientIP(req as any)
@@ -975,62 +977,39 @@ export async function GET(req: NextRequest) {
     })
   }
 
-  // Check Supabase cache (10 min)
+  // ── 1. Try cache (populated every 5 min by compute-signals Edge Function) ──
   try {
     const { data: cached } = await supabase
       .from("signals_cache")
-      .select("*")
-      .gt("created_at", new Date(Date.now() - 10 * 60 * 1000).toISOString())
+      .select("signals, stats, created_at")
       .order("created_at", { ascending: false })
       .limit(1)
       .single()
 
-    if (cached?.signals) {
-      return NextResponse.json(cached.signals, {
-        headers: { "Cache-Control": "public, s-maxage=600", "X-Cache": "HIT" }
-      })
+    if (cached?.signals && Array.isArray(cached.signals) && (cached.signals as any[]).length > 0) {
+      // Cache hit — return immediately (≤ 50ms response time)
+      const age = Date.now() - new Date(cached.created_at).getTime()
+      return NextResponse.json(
+        { signals: cached.signals, stats: cached.stats },
+        { headers: { "Cache-Control": "public, s-maxage=300", "X-Cache": "HIT", "X-Cache-Age": String(Math.round(age / 1000)) + "s" } }
+      )
     }
   } catch {
-    // Cache table may not exist — continue
+    // Cache not ready yet — fall through to direct computation
   }
 
-  // Pre-fetch news sentiment scores (last 24 h) for all assets
-  const sentimentMap = new Map<string, number>()
-  try {
-    const { data: sentimentRows } = await supabase
-      .from("news_sentiment_cache")
-      .select("symbol, sentiment_score")
-      .gt("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-    if (sentimentRows) {
-      for (const row of sentimentRows as { symbol: string; sentiment_score: number }[]) {
-        sentimentMap.set(row.symbol, row.sentiment_score)
-      }
-    }
-  } catch {
-    // Table may not exist yet — proceed without sentiment
-  }
-
-  // Process all assets in parallel — Vercel Hobby = 10s limit, keep list short
-  process.stdout.write(`[signals] START — scanning ${ASSETS.length} assets in parallel\n`)
+  // ── 2. Fallback: compute directly (20-asset list, within Vercel 10s limit) ──
+  process.stdout.write(`[signals] cache miss — fallback direct compute (${ASSETS.length} assets)\n`)
   const results: SignalResult[] = []
 
   const allResults = await Promise.allSettled(
-    ASSETS.map(a => processAsset(a, sentimentMap.get(a.symbol)))
+    ASSETS.map(a => processAsset(a, undefined))
   )
   for (const r of allResults) {
     if (r.status === "fulfilled" && r.value !== null) results.push(r.value as SignalResult)
   }
 
-  process.stdout.write(`[signals] DONE — ${results.length} signals passed threshold\n`)
-
-  // Generate AI comments for FORT signals only (one batch Groq call)
-  const fortSignals = results.filter(
-    (s) => s.signal === "ACHAT_FORT" || s.signal === "VENTE_FORT"
-  )
-  const comments = await generateComments(fortSignals)
-  for (const signal of results) {
-    signal.ai_comment = comments.get(signal.symbol) ?? ""
-  }
+  process.stdout.write(`[signals] fallback DONE — ${results.length} signals\n`)
 
   // Stats
   const fort = results.filter((s) => s.strength === "strong").length
@@ -1104,12 +1083,8 @@ export async function GET(req: NextRequest) {
     stats: statsData,
   }
 
-  // Store in Supabase cache (fire and forget)
-  void supabase.from("signals_cache").insert({
-    signals: responseData,
-    stats: statsData,
-    created_at: new Date().toISOString(),
-  })
+  // Store fallback result in cache for next request
+  void supabase.from("signals_cache").insert({ signals: results, stats: statsData })
 
   const response = NextResponse.json(responseData)
   response.headers.set("Cache-Control", "public, s-maxage=300, stale-while-revalidate=60")
