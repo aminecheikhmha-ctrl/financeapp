@@ -723,7 +723,7 @@ async function processAsset(asset: Asset, sentimentScore?: number): Promise<Sign
     const confirmed_by = isBuy ? buy_confirmed : sell_confirmed
     let confluence_score = Math.min(100, (winning_points / MAX_POINTS) * 100)
 
-    if (confluence_score < 50) return null
+    if (confluence_score < 35) return null
 
     // Volume validation: penalise low-liquidity signals
     let low_volume_warning = false
