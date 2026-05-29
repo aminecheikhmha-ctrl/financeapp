@@ -741,7 +741,7 @@ async function processAsset(asset: Asset, sentimentScore?: number): Promise<Sign
     }
 
     // Re-check threshold after adjustments
-    if (confluence_score < 50) return null
+    if (confluence_score < 35) return null
 
     // Market hours flag (non-crypto only)
     const is_market_closed = asset.type !== "crypto" && !isNYSEOpen()
