@@ -134,21 +134,21 @@ function HeroSignalCard({ signal, onUpgrade, blurred }: {
   const reasons = signal.confirmed_by.slice(0, 4).map(humanReason)
 
   return (
-    <div className="relative rounded-3xl overflow-hidden"
+    <div className="relative rounded-2xl overflow-hidden"
       style={{
         background: bullish
-          ? "linear-gradient(135deg, rgba(34,197,94,0.07), rgba(34,197,94,0.02))"
-          : "linear-gradient(135deg, rgba(239,68,68,0.07), rgba(239,68,68,0.02))",
-        border: `1px solid ${bullish ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`,
+          ? "linear-gradient(135deg, rgba(34,197,94,0.06), rgba(34,197,94,0.02))"
+          : "linear-gradient(135deg, rgba(239,68,68,0.06), rgba(239,68,68,0.02))",
+        border: `1px solid ${bullish ? "rgba(34,197,94,0.18)" : "rgba(239,68,68,0.18)"}`,
       }}>
 
       {blurred && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-3xl"
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-2xl"
           style={{ backdropFilter: "blur(8px)", background: "rgba(5,5,5,0.8)" }}>
-          <p className="text-3xl">🔒</p>
+          <p className="text-2xl">🔒</p>
           <p className="text-white font-black text-sm">Signal Premium</p>
           <button onClick={onUpgrade}
-            className="px-6 py-2.5 rounded-xl text-sm font-black text-black transition hover:opacity-90"
+            className="px-5 py-2 rounded-xl text-sm font-black text-black transition hover:opacity-90"
             style={{ background: D.green }}>
             Débloquer →
           </button>
@@ -157,14 +157,14 @@ function HeroSignalCard({ signal, onUpgrade, blurred }: {
 
       <div className="h-0.5 w-full" style={{ background: `linear-gradient(90deg, ${color}, ${color}00)` }} />
 
-      <div className="p-6">
-        <div className="flex flex-col lg:flex-row lg:items-start gap-6">
+      <div className="p-4">
+        <div className="flex flex-col lg:flex-row lg:items-start gap-4">
 
           {/* ── LEFT ── */}
           <div className="flex-1 min-w-0">
             {/* Badges */}
-            <div className="flex items-center gap-2.5 flex-wrap mb-4">
-              <span className="text-[11px] font-black px-3 py-1.5 rounded-full"
+            <div className="flex items-center gap-2 flex-wrap mb-3">
+              <span className="text-[10px] font-black px-2.5 py-1 rounded-full"
                 style={{ background: `${color}18`, color, border: `1px solid ${color}35` }}>
                 {sigLabel(signal.signal)}
               </span>
@@ -180,34 +180,34 @@ function HeroSignalCard({ signal, onUpgrade, blurred }: {
             </div>
 
             {/* Symbol + Price */}
-            <div className="flex items-baseline gap-4 mb-1 flex-wrap">
-              <h2 className="text-4xl font-black text-white leading-none">
+            <div className="flex items-baseline gap-3 mb-1 flex-wrap">
+              <h2 className="text-2xl font-black text-white leading-none">
                 {signal.symbol.replace("-USD", "")}
               </h2>
               <div>
-                <p className="text-2xl font-black text-white tabular-nums">{formatPrice(signal.price)}</p>
-                <p className={`text-sm font-bold ${signal.change_24h >= 0 ? "text-green-400" : "text-red-400"}`}>
+                <p className="text-lg font-black text-white tabular-nums">{formatPrice(signal.price)}</p>
+                <p className={`text-xs font-bold ${signal.change_24h >= 0 ? "text-green-400" : "text-red-400"}`}>
                   {formatChange(signal.change_24h)} aujourd'hui
                 </p>
               </div>
             </div>
-            <p className="text-sm text-white/35 mb-5">{signal.name}</p>
+            <p className="text-xs text-white/35 mb-3">{signal.name}</p>
 
             {/* AI comment OR human reasons */}
             {signal.ai_comment ? (
-              <div className="mb-5 p-4 rounded-2xl"
+              <div className="mb-3 p-3 rounded-xl"
                 style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.15)" }}>
-                <p className="text-[10px] text-purple-400/60 uppercase tracking-widest font-bold mb-2">
+                <p className="text-[10px] text-purple-400/60 uppercase tracking-widest font-bold mb-1">
                   🤖 Pourquoi ce signal ?
                 </p>
-                <p className="text-sm text-white/70 leading-relaxed">{signal.ai_comment}</p>
+                <p className="text-xs text-white/70 leading-relaxed">{signal.ai_comment}</p>
               </div>
             ) : reasons.length > 0 ? (
-              <div className="mb-5">
-                <p className="text-[10px] text-white/30 uppercase tracking-widest mb-2">Pourquoi ce signal ?</p>
-                <div className="flex flex-wrap gap-2">
+              <div className="mb-3">
+                <p className="text-[10px] text-white/30 uppercase tracking-widest mb-1.5">Pourquoi ce signal ?</p>
+                <div className="flex flex-wrap gap-1.5">
                   {reasons.map((r, i) => (
-                    <span key={i} className="text-[11px] font-semibold px-3 py-1.5 rounded-xl"
+                    <span key={i} className="text-[10px] font-semibold px-2.5 py-1 rounded-lg"
                       style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.08)" }}>
                       {r}
                     </span>
@@ -218,16 +218,14 @@ function HeroSignalCard({ signal, onUpgrade, blurred }: {
 
             {/* Confluence bar */}
             <div>
-              <div className="flex justify-between text-xs mb-1.5">
+              <div className="flex justify-between text-[10px] mb-1">
                 <span className="text-white/40">Score de confiance</span>
                 <span className="font-black" style={{ color }}>
                   {signal.confluence_score.toFixed(0)}%
-                  {signal.confluence_score >= 70 ? " 🔥 Très fort"
-                    : signal.confluence_score >= 55 ? " ✅ Bon"
-                    : " ⚠️ Modéré"}
+                  {signal.confluence_score >= 70 ? " 🔥" : signal.confluence_score >= 55 ? " ✅" : " ⚠️"}
                 </span>
               </div>
-              <div className="h-2.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
                 <div className="h-full rounded-full transition-all duration-700"
                   style={{
                     width: `${signal.confluence_score}%`,
@@ -242,40 +240,40 @@ function HeroSignalCard({ signal, onUpgrade, blurred }: {
           </div>
 
           {/* ── RIGHT ── */}
-          <div className="lg:w-[260px] flex-shrink-0 space-y-3">
+          <div className="lg:w-[200px] flex-shrink-0 space-y-2">
             {/* TP */}
-            <div className="rounded-2xl p-4"
+            <div className="rounded-xl p-3"
               style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.18)" }}>
-              <p className="text-[10px] text-green-400/60 uppercase tracking-widest mb-1">🎯 Objectif (TP)</p>
-              <p className="text-xl font-black text-green-400 tabular-nums">{formatPrice(signal.tp1)}</p>
-              <p className="text-sm font-bold text-green-400/60">
-                {pctTp >= 0 ? "+" : ""}{pctTp.toFixed(1)}% · Prends tes bénéfices ici
+              <p className="text-[9px] text-green-400/60 uppercase tracking-widest mb-0.5">🎯 Objectif (TP)</p>
+              <p className="text-base font-black text-green-400 tabular-nums">{formatPrice(signal.tp1)}</p>
+              <p className="text-[10px] font-bold text-green-400/60">
+                {pctTp >= 0 ? "+" : ""}{pctTp.toFixed(1)}%
               </p>
             </div>
             {/* SL */}
-            <div className="rounded-2xl p-4"
+            <div className="rounded-xl p-3"
               style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.18)" }}>
-              <p className="text-[10px] text-red-400/60 uppercase tracking-widest mb-1">🛡️ Stop Loss (SL)</p>
-              <p className="text-xl font-black text-red-400 tabular-nums">{formatPrice(signal.sl)}</p>
-              <p className="text-sm font-bold text-red-400/60">
-                {pctSl >= 0 ? "+" : ""}{pctSl.toFixed(1)}% · Limite ta perte ici
+              <p className="text-[9px] text-red-400/60 uppercase tracking-widest mb-0.5">🛡️ Stop Loss</p>
+              <p className="text-base font-black text-red-400 tabular-nums">{formatPrice(signal.sl)}</p>
+              <p className="text-[10px] font-bold text-red-400/60">
+                {pctSl >= 0 ? "+" : ""}{pctSl.toFixed(1)}%
               </p>
             </div>
             {/* R/R */}
-            <div className="rounded-2xl p-4"
+            <div className="rounded-xl p-3"
               style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-              <p className="text-[10px] text-white/30 uppercase tracking-widest mb-1">⚖️ Risque / Rendement</p>
-              <p className="text-xl font-black text-white">1:{rr.toFixed(1)}</p>
-              <p className="text-sm text-white/40">
-                {rr >= 2 ? "🏆 Excellent ratio" : rr >= 1.5 ? "✅ Bon ratio" : "⚠️ Ratio correct"}
+              <p className="text-[9px] text-white/30 uppercase tracking-widest mb-0.5">⚖️ R/R</p>
+              <p className="text-base font-black text-white">1:{rr.toFixed(1)}</p>
+              <p className="text-[10px] text-white/40">
+                {rr >= 2 ? "🏆 Excellent" : rr >= 1.5 ? "✅ Bon" : "⚠️ Correct"}
               </p>
             </div>
             {/* CTAs */}
             <button
               onClick={() => router.push(`/signaux/${signal.symbol}`)}
-              className="w-full py-3 rounded-2xl text-sm font-black transition-all hover:scale-[1.01] active:scale-95"
+              className="w-full py-2.5 rounded-xl text-xs font-black transition-all hover:scale-[1.01] active:scale-95"
               style={{ background: color, color: "black" }}>
-              🔍 Voir l'analyse complète →
+              🔍 Analyse complète →
             </button>
             <button
               onClick={() => router.push(`/dashboard?symbol=${signal.symbol}&action=${bullish ? "buy" : "sell"}&price=${signal.entry_price}&tp=${signal.tp1}&sl=${signal.sl}`)}
@@ -327,18 +325,18 @@ function CompactSignalCard({ signal, rank, onUpgrade, blurred }: {
         </div>
       )}
 
-      <div className="p-5">
+      <div className="p-4">
         {/* Header */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-2.5">
-            <span className="w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black text-black flex-shrink-0"
+        <div className="flex items-start justify-between mb-2.5">
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black text-black flex-shrink-0"
               style={{ background: color }}>
               #{rank}
             </span>
             <div>
-              <div className="flex items-center gap-2">
-                <p className="text-lg font-black text-white">{signal.symbol.replace("-USD", "")}</p>
-                <span className="text-[10px] font-black px-2 py-0.5 rounded-full"
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-black text-white">{signal.symbol.replace("-USD", "")}</p>
+                <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full"
                   style={{ background: `${color}18`, color, border: `1px solid ${color}30` }}>
                   {sigLabelShort(signal.signal)}
                 </span>
@@ -347,8 +345,8 @@ function CompactSignalCard({ signal, rank, onUpgrade, blurred }: {
             </div>
           </div>
           <div className="text-right">
-            <p className="text-base font-black text-white tabular-nums">{formatPrice(signal.price)}</p>
-            <p className={`text-xs font-bold ${signal.change_24h >= 0 ? "text-green-400" : "text-red-400"}`}>
+            <p className="text-sm font-black text-white tabular-nums">{formatPrice(signal.price)}</p>
+            <p className={`text-[10px] font-bold ${signal.change_24h >= 0 ? "text-green-400" : "text-red-400"}`}>
               {formatChange(signal.change_24h)}
             </p>
           </div>
