@@ -121,7 +121,7 @@ export default function Topbar() {
         right: 0,
         height: "var(--topbar-h)",
         zIndex: 40,
-        transition: "left var(--t-slow)",
+        transition: "left 0.2s ease",
         background: "rgba(5,5,5,0.95)",
         backdropFilter: "blur(20px)",
         borderColor: "var(--border-dim)",

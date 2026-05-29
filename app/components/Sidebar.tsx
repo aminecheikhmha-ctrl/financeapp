@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { getLevelInfo } from "@/lib/achievements"
 import { getTotalChapters } from "@/lib/courses"
-import TradexLogo from "@/app/components/TradexLogo"
 import { cn } from "@/lib/utils"
 import {
   LayoutDashboard, TrendingUp, Briefcase, BookOpen,
@@ -61,12 +60,9 @@ export default function Sidebar() {
     if (stored !== null) setExpanded(stored === "true")
   }, [])
 
-  // Keep CSS variable in sync
+  // Keep CSS variable in sync — valeurs hardcodées, pas de var() dans var()
   useEffect(() => {
-    document.documentElement.style.setProperty(
-      "--sidebar-w",
-      expanded ? "var(--sidebar-w-open)" : "64px",
-    )
+    document.documentElement.style.setProperty("--sidebar-w", expanded ? "220px" : "64px")
   }, [expanded])
 
   function toggle() {
@@ -217,32 +213,31 @@ export default function Sidebar() {
     <>
       {/* SIDEBAR */}
       <aside
-        className="fixed top-0 left-0 bottom-0 z-50 hidden md:flex flex-col overflow-hidden transition-all duration-300"
+        className="fixed top-0 left-0 bottom-0 z-50 hidden md:flex flex-col overflow-hidden transition-all duration-200"
         style={{
-          width: expanded ? "var(--sidebar-w-open)" : "64px",
-          background: "rgba(5,5,5,0.98)",
-          backdropFilter: "blur(20px)",
-          borderRight: "1px solid var(--border-dim)",
+          width: expanded ? "220px" : "64px",
+          background: "#080808",
+          borderRight: "1px solid rgba(255,255,255,0.06)",
         }}>
 
-        {/* Logo + toggle */}
-        <div className="flex items-center h-[var(--topbar-h)] px-3 border-b flex-shrink-0"
-          style={{ borderColor: "var(--border-dim)" }}>
-          {expanded ? (
-            <div className="flex items-center justify-between w-full">
-              <TradexLogo size={28} showText textSize="sm" />
-              <button
-                onClick={toggle}
-                className="w-7 h-7 rounded-lg flex items-center justify-center transition-all text-white/30 hover:text-white hover:bg-white/8">
-                <ChevronLeft size={14} />
-              </button>
+        {/* Logo — toute la zone cliquable pour toggle */}
+        <button
+          onClick={toggle}
+          aria-label={expanded ? "Réduire la sidebar" : "Agrandir la sidebar"}
+          className="flex items-center h-14 px-3 border-b flex-shrink-0 w-full transition-colors hover:bg-white/[0.03] group"
+          style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+          <div className="flex items-center gap-2.5 w-full">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-md shadow-green-500/20">
+              <span className="text-white font-black text-[11px]">T</span>
             </div>
-          ) : (
-            <button onClick={toggle} className="w-full flex items-center justify-center">
-              <TradexLogo size={28} />
-            </button>
-          )}
-        </div>
+            {expanded && (
+              <>
+                <span className="font-bold text-[15px] text-white tracking-tight flex-1 text-left">Tradex</span>
+                <ChevronLeft size={14} className="text-white/20 group-hover:text-white/50 transition-colors flex-shrink-0" />
+              </>
+            )}
+          </div>
+        </button>
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 scrollbar-hide">
