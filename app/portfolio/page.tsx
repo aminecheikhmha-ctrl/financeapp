@@ -196,7 +196,8 @@ export default function PortfolioPage() {
 
       // ── Stats ──
       const cash      = accountData?.cash ?? 100000
-      const invested  = enrichedPositions.reduce((s, p) => s + p.avg_price * p.qty, 0)
+      // Total capital deployed = sum of ALL buy orders (historical volume)
+      const invested  = filled.filter(o => o.side === "buy").reduce((s, o) => s + o.total, 0)
       const posValue  = enrichedPositions.reduce((s, p) => s + p.value, 0)
       const totalValue = cash + posValue
       const totalPnl  = totalValue - 100000
@@ -360,7 +361,7 @@ export default function PortfolioPage() {
             {
               label: "Investi",
               value: `$${(stats?.totalInvested ?? 0).toFixed(2)}`,
-              sub: `${stats?.totalTrades ?? 0} ordre${(stats?.totalTrades ?? 0) !== 1 ? "s" : ""} total`,
+              sub: `${orders.filter(o => o.side === "buy").length} achat${orders.filter(o => o.side === "buy").length !== 1 ? "s" : ""} au total`,
               color: "#a78bfa",
               icon: "💼",
             },
