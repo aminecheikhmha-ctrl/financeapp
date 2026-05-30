@@ -14,25 +14,24 @@ export async function POST(req: Request) {
       messages: [
         {
           role: "system",
-          content: `Tu es un professeur de finance qui explique l'économie à des adolescents de 17 ans.
-Règles strictes :
-- Maximum 3 phrases courtes et percutantes
-- Zéro jargon sans explication immédiate entre parenthèses
-- Utilise des comparaisons du quotidien (Netflix, voiture, pizza, TikTok, iPhone...)
+          content: `Tu es un analyste macro senior rédigeant le briefing de début de séance pour un terminal institutionnel.
+Règles :
+- 2-3 phrases denses, directes, sans fioriture
+- Nomme les données précises (ex: "S&P +0.8%, VIX à 16, spread 10Y-3M à -0.4%")
+- Identifie le régime actuel et le trade/risque principal du moment
 - Toujours en français
-- Explique ce qui se passe ET pourquoi c'est important pour quelqu'un qui commence à investir
-- Sois direct et concret, pas académique`,
+- Pas de pédagogie, pas de définitions — juste le verdict opérationnel`,
         },
         {
           role: "user",
-          content: `Voici la situation actuelle des marchés :
-- Marché actions (S&P 500) : ${spyChange >= 0 ? "+" : ""}${Number(spyChange).toFixed(1)}% aujourd'hui
-- Peur des investisseurs (VIX) : ${Number(vix).toFixed(1)} (${Number(vix) > 25 ? "très élevé — panique" : Number(vix) > 18 ? "modéré — nerveux" : "faible — calme"})
-- Taux d'intérêt de la banque centrale (Fed) : ${fedRate}%
-- Or (variation 1 jour) : ${goldChange >= 0 ? "+" : ""}${Number(goldChange).toFixed(1)}%
-- Régime macro actuel : ${regime}
+          content: `Données du jour :
+- S&P 500 : ${spyChange >= 0 ? "+" : ""}${Number(spyChange).toFixed(1)}% séance
+- VIX : ${Number(vix).toFixed(1)} (${Number(vix) > 25 ? "stress élevé" : Number(vix) > 18 ? "tension modérée" : "risk-on"})
+- Fed Funds : ${fedRate}%
+- Or : ${goldChange >= 0 ? "+" : ""}${Number(goldChange).toFixed(1)}% 1J
+- Régime : ${regime}
 
-Explique ça en exactement 3 phrases courtes, comme si tu parlais à un ado de 17 ans qui commence à s'intéresser à l'investissement. Sois concret et utilise des exemples du quotidien.`,
+Rédige le briefing macro du jour en 2-3 phrases. Verdict direct, données chiffrées, sans introduction.`,
         },
       ],
       max_tokens: 220,
