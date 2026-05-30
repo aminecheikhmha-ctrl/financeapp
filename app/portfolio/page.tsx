@@ -265,13 +265,13 @@ export default function PortfolioPage() {
   }
 
   function filterHistory(data: { date: string; value: number }[]) {
-    if (data.length === 0) return data
-    const now = Date.now()
-    const cutoffs: Record<string, number> = {
-      "1W": 7, "1M": 30, "3M": 90, "ALL": Infinity,
-    }
-    const days = cutoffs[timeframe]
-    return data.filter(d => (now - new Date(d.date).getTime()) / 86400000 <= days)
+    if (data.length === 0 || timeframe === "ALL") return data
+    // Compare calendar dates as strings (YYYY-MM-DD) to avoid float rounding issues
+    const cutoff = new Date()
+    const dayMap: Record<string, number> = { "1W": 7, "1M": 30, "3M": 90 }
+    cutoff.setDate(cutoff.getDate() - dayMap[timeframe])
+    const cutoffStr = cutoff.toISOString().slice(0, 10)
+    return data.filter(d => d.date >= cutoffStr)
   }
 
   const donutData = useMemo(() => {
@@ -709,10 +709,22 @@ export default function PortfolioPage() {
             {/* Courbe de performance */}
             <div className="rounded-2xl p-5"
               style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
-              <p className="text-sm font-bold text-white mb-4">Courbe de performance</p>
-              {perfHistory.length > 1 ? (
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm font-bold text-white">Courbe de performance</p>
+                <div className="flex gap-1">
+                  {(["1W","1M","3M","ALL"] as const).map(tf => (
+                    <button key={tf} onClick={() => setTimeframe(tf)}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                        timeframe === tf ? "bg-white/10 text-white" : "text-white/25 hover:text-white/50"
+                      }`}>
+                      {tf}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {filteredHistory.length > 1 ? (
                 <ResponsiveContainer width="100%" height={240}>
-                  <AreaChart data={perfHistory} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
+                  <AreaChart data={filteredHistory} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
                     <defs>
                       <linearGradient id="histGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#22c55e" stopOpacity={0.3} />
@@ -732,7 +744,9 @@ export default function PortfolioPage() {
                 </ResponsiveContainer>
               ) : (
                 <div className="h-40 flex items-center justify-center">
-                  <p className="text-white/25 text-sm">Place des trades pour voir ton historique</p>
+                  <p className="text-white/25 text-sm">
+                    {perfHistory.length <= 1 ? "Place des trades pour voir ton historique" : "Aucun trade sur cette période"}
+                  </p>
                 </div>
               )}
             </div>
