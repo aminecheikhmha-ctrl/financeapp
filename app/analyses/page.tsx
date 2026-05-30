@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import type { AssetData, SnapshotResponse } from "@/app/api/macro/snapshot/route"
+import Tour, { ANALYSES_TOUR_STEPS } from "@/app/components/Tour"
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -222,6 +223,7 @@ export default function AnalysesPage() {
   const [activeSection, setActiveSection] = useState("snapshot")
   const [loading,       setLoading]       = useState(true)
   const [lastUpdate,    setLastUpdate]    = useState<Date | null>(null)
+  const [showTour,      setShowTour]      = useState(false)
   const observerRef = useRef<IntersectionObserver | null>(null)
 
   // ── Derived from snapshot ──
@@ -300,7 +302,13 @@ export default function AnalysesPage() {
     setLoading(false)
   }, [loadSnapshot, loadCorrelations, loadNews])
 
-  useEffect(() => { loadAllData() }, [loadAllData])
+  useEffect(() => {
+    loadAllData().then(() => {
+      if (localStorage.getItem("tour_analyses_v1") !== "1") {
+        setTimeout(() => setShowTour(true), 800)
+      }
+    })
+  }, [loadAllData])
 
   // Auto-generate briefing once snapshot is loaded
   useEffect(() => {
@@ -377,7 +385,7 @@ export default function AnalysesPage() {
       {/* ═══════════════════════════════════════════════════════
           TAB BAR — sections nav, full width, flex-shrink-0
       ═══════════════════════════════════════════════════════ */}
-      <div className="flex-shrink-0 overflow-x-auto scrollbar-hide"
+      <div data-tour="analyses-tabs" className="flex-shrink-0 overflow-x-auto scrollbar-hide"
         style={{
           background:  "rgba(8,8,8,0.98)",
           borderBottom:"1px solid rgba(255,255,255,0.06)",
@@ -425,7 +433,7 @@ export default function AnalysesPage() {
           {/* ─────────────────────────────────────────
               SECTION 1 — Snapshot Macro
           ───────────────────────────────────────── */}
-          <section id="section-snapshot" className="scroll-mt-12">
+          <section id="section-snapshot" data-tour="snapshot-section" className="scroll-mt-12">
             <SectionHeader icon="🌡️" title="Snapshot Macro" />
 
             <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-4 mb-5">
@@ -458,7 +466,7 @@ export default function AnalysesPage() {
               </div>
 
               {/* Briefing IA */}
-              <div className="rounded-2xl p-5"
+              <div data-tour="briefing-ia" className="rounded-2xl p-5"
                 style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.15)" }}>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-sm">🤖</span>
@@ -547,10 +555,12 @@ export default function AnalysesPage() {
             <SectionHeader icon="📈" title="Marchés"
               badge={lastUpdate?.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })} />
 
+            <div data-tour="market-table">
             <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-2 px-0.5">
               Indices — US & Monde
             </p>
             {loading ? <SkeletonTable /> : <MarketTable rows={toRows(snapshot?.indices)} />}
+            </div>
 
             <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-2 mt-5 px-0.5">
               Secteurs US (ETF)
@@ -1013,6 +1023,15 @@ export default function AnalysesPage() {
 
         </div>
       </main>
+
+      {/* ── Guided tour ── */}
+      {showTour && (
+        <Tour
+          steps={ANALYSES_TOUR_STEPS}
+          storageKey="tour_analyses_v1"
+          onComplete={() => setShowTour(false)}
+        />
+      )}
     </div>
   )
 }

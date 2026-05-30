@@ -12,7 +12,7 @@ import PositionCalculator from "@/app/components/PositionCalculator"
 import MarketStatusBar from "@/app/components/MarketStatusBar"
 import { getMarketStatus } from "@/lib/market-hours"
 import OnboardingChecklist from "@/app/components/OnboardingChecklist"
-import Tour from "@/app/components/Tour"
+import Tour, { DASHBOARD_TOUR_STEPS } from "@/app/components/Tour"
 import TooltipHint from "@/app/components/Tooltip"
 import { cn } from "@/lib/utils"
 import { Search, Plus, TrendingUp, TrendingDown, ChevronRight, Settings, ArrowUpRight, Star } from "lucide-react"
@@ -2010,7 +2010,13 @@ function DashboardContent() {
         </div>
       )}
 
-      {showTour && <Tour onComplete={() => setShowTour(false)} />}
+      {showTour && (
+        <Tour
+          steps={DASHBOARD_TOUR_STEPS}
+          storageKey="tour_dashboard_v2"
+          onComplete={() => setShowTour(false)}
+        />
+      )}
 
       {/* ── Mobile buy/sell floating buttons ─────────────────────────────── */}
       <div className="md:hidden fixed bottom-20 inset-x-0 px-4 flex gap-2 z-30">

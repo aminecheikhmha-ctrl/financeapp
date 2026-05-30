@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import type { SignalResult } from "@/app/api/signals/route"
 import UpgradeModal from "@/app/components/UpgradeModal"
+import Tour, { SIGNAUX_TOUR_STEPS } from "@/app/components/Tour"
 import { getPlan } from "@/lib/plans"
 import { formatPrice, formatChange } from "@/lib/format"
 
@@ -580,6 +581,7 @@ export default function Signaux() {
   const [user,         setUser]         = useState<any>(null)
   const [plan,         setPlan]         = useState("free")
   const [showUpgrade,  setShowUpgrade]  = useState(false)
+  const [showTour,     setShowTour]     = useState(false)
   const [signals,      setSignals]      = useState<SignalResult[]>([])
   const [stats,        setStats]        = useState<Stats | null>(null)
   const [loading,      setLoading]      = useState(true)
@@ -636,6 +638,15 @@ export default function Signaux() {
     const interval = setInterval(fetchSignals, 300_000)
     return () => clearInterval(interval)
   }, [user, fetchSignals])
+
+  // Tour — trigger once after first load
+  useEffect(() => {
+    if (loading) return
+    if (localStorage.getItem("tour_signaux_v1") !== "1") {
+      const t = setTimeout(() => setShowTour(true), 800)
+      return () => clearTimeout(t)
+    }
+  }, [loading])
 
   // Countdown
   useEffect(() => {
@@ -815,7 +826,7 @@ export default function Signaux() {
           </div>
 
           {/* Filters */}
-          <div className="flex gap-1.5 flex-wrap items-center">
+          <div data-tour="signal-filters" className="flex gap-1.5 flex-wrap items-center">
             {/* Signal type */}
             {[
               { key: "all",        label: "🌐 Tous" },
@@ -887,7 +898,7 @@ export default function Signaux() {
           <>
             {/* ── TOP 3 en ligne ── */}
             {!loading && topSignals.length > 0 && (
-              <div className="px-6 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+              <div data-tour="top-signals" className="px-6 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
                 <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-3">
                   ⭐ Meilleures opportunités
                 </p>
@@ -954,7 +965,7 @@ export default function Signaux() {
 
               {/* ── LIST VIEW ── */}
               {!loading && filtered.length > 0 && view === "list" && (
-                <div className="relative">
+                <div data-tour="signal-list" className="relative">
                   <div className="space-y-2">
                     {filtered.map((signal, idx) => {
                       const blurred  = isBlurring && idx >= 3
@@ -1222,6 +1233,14 @@ export default function Signaux() {
       </div>
 
       <UpgradeModal open={showUpgrade} onClose={() => setShowUpgrade(false)} context="signals" />
+
+      {showTour && (
+        <Tour
+          steps={SIGNAUX_TOUR_STEPS}
+          storageKey="tour_signaux_v1"
+          onComplete={() => setShowTour(false)}
+        />
+      )}
     </>
   )
 }
