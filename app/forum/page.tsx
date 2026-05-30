@@ -155,11 +155,13 @@ function NewPostModal({
   const [avatarColor, setAvatarColor] = useState(AVATAR_COLORS[0])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [moderated, setModerated] = useState(false)
 
   async function handleSubmit() {
     if (!title.trim() || !content.trim()) { setError("Titre et contenu requis"); return }
     setLoading(true)
     setError("")
+    setModerated(false)
     const { data: { session } } = await supabase.auth.getSession()
     const res = await fetch("/api/forum/posts", {
       method: "POST",
@@ -171,7 +173,11 @@ function NewPostModal({
     })
     const json = await res.json()
     setLoading(false)
-    if (json.error) { setError(json.error); return }
+    if (json.error) {
+      setError(json.error)
+      setModerated(json.moderated === true || json.banned === true)
+      return
+    }
     onCreated()
     onClose()
   }
@@ -240,7 +246,20 @@ function NewPostModal({
           </div>
         </div>
 
-        {error && <p className="text-red-400 text-xs mt-3">{error}</p>}
+        {error && (
+          moderated ? (
+            <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl mt-3"
+              style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
+              <span className="text-base flex-shrink-0">🚫</span>
+              <div>
+                <p className="text-sm font-bold text-red-400">Post refusé par la modération</p>
+                <p className="text-xs text-red-400/70 mt-0.5">{error}</p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-red-400 text-xs mt-3">{error}</p>
+          )
+        )}
 
         <div className="flex justify-end gap-3 mt-5">
           <button

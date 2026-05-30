@@ -139,6 +139,8 @@ export default function PostDetail() {
   const [username, setUsername] = useState("")
   const [avatarColor, setAvatarColor] = useState("#4ade80")
   const [replyLoading, setReplyLoading] = useState(false)
+  const [replyError, setReplyError]   = useState("")
+  const [replyModerated, setReplyModerated] = useState(false)
   const [likedPost, setLikedPost] = useState(false)
   const [likedReplies, setLikedReplies] = useState<Set<string>>(new Set())
   const [aiAnalysis, setAiAnalysis] = useState("")
@@ -196,6 +198,8 @@ export default function PostDetail() {
   async function handleReply() {
     if (!session || !replyText.trim()) return
     setReplyLoading(true)
+    setReplyError("")
+    setReplyModerated(false)
     const res = await fetch("/api/forum/replies", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
@@ -206,6 +210,9 @@ export default function PostDetail() {
       setReplies(prev => [...prev, json.reply])
       setReplyText("")
       setPost(p => p ? { ...p, replies_count: p.replies_count + 1 } : p)
+    } else if (json.error) {
+      setReplyError(json.error)
+      setReplyModerated(json.moderated === true || json.banned === true)
     }
     setReplyLoading(false)
   }
@@ -416,6 +423,20 @@ export default function PostDetail() {
               rows={4}
               className="w-full bg-white/5 border border-white/8 text-white px-4 py-3 rounded-xl text-sm placeholder-gray-600 outline-none focus:border-green-500/40 transition resize-none mb-4"
             />
+            {replyError && (
+              replyModerated ? (
+                <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl mb-3"
+                  style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                  <span className="text-base flex-shrink-0">🚫</span>
+                  <div>
+                    <p className="text-sm font-bold text-red-400">Commentaire refusé</p>
+                    <p className="text-xs text-red-400/70 mt-0.5">{replyError}</p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-red-400 text-xs mb-3">{replyError}</p>
+              )
+            )}
             <div className="flex justify-end">
               <button
                 onClick={handleReply}

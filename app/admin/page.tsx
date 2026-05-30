@@ -63,7 +63,8 @@ export default function AdminPage() {
   const [tk, setTk] = useState("")
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<"overview"|"users"|"forum"|"broadcast"|"signaux"|"alertes"|"events">("overview")
+  const [activeTab, setActiveTab] = useState<"overview"|"users"|"forum"|"broadcast"|"signaux"|"alertes"|"events"|"moderation">("overview")
+  const [moderationLogs, setModerationLogs] = useState<any[]>([])
 
   // Tab-specific data
   const [forumPosts, setForumPosts] = useState<any[]>([])
@@ -125,6 +126,12 @@ export default function AdminPage() {
     if (tab === "alertes") {
       const r = await fetch("/api/admin/alerts", { headers: { Authorization: `Bearer ${token}` } })
       setAdminAlerts((await r.json()).alerts ?? [])
+    }
+    if (tab === "moderation") {
+      const { createClient } = await import("@supabase/supabase-js")
+      const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+      const { data } = await sb.from("moderation_logs").select("*").order("created_at", { ascending: false }).limit(100)
+      setModerationLogs(data ?? [])
     }
   }, [tabLoaded])
 
@@ -253,7 +260,8 @@ export default function AdminPage() {
     { id: "broadcast",  icon: "📢", label: "Broadcast" },
     { id: "signaux",    icon: "📡", label: "Signaux" },
     { id: "alertes",    icon: "🔔", label: "Alertes" },
-    { id: "events",     icon: "⚡", label: "Événements" },
+    { id: "events",      icon: "⚡", label: "Événements" },
+    { id: "moderation",  icon: "🛡️", label: "Modération" },
   ] as const
 
   return (
@@ -754,6 +762,57 @@ export default function AdminPage() {
                   </span>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ══════════════════════ MODÉRATION ══════════════════════ */}
+        {activeTab === "moderation" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-white font-bold text-lg">🛡️ Logs de modération</h2>
+              <span className="text-xs text-gray-500">{moderationLogs.length} entrées</span>
+            </div>
+            <div className="bg-[#111] border border-white/8 rounded-2xl overflow-hidden">
+              {!tabLoaded["moderation"] ? <Spinner /> : moderationLogs.length === 0 ? (
+                <p className="text-gray-600 text-sm text-center py-10">Aucune violation détectée</p>
+              ) : (
+                <div className="divide-y divide-white/5 max-h-[600px] overflow-y-auto">
+                  {moderationLogs.map((log: any) => (
+                    <div key={log.id} className="flex items-start gap-4 px-5 py-4 hover:bg-white/2 transition">
+                      <span className={`text-[9px] font-black px-2 py-1 rounded-full flex-shrink-0 mt-0.5 ${
+                        log.severity === "high"   ? "bg-red-500/20 text-red-400" :
+                        log.severity === "medium" ? "bg-orange-500/20 text-orange-400" :
+                                                    "bg-yellow-500/20 text-yellow-400"
+                      }`}>
+                        {(log.severity ?? "low").toUpperCase()}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-[10px] font-bold text-white/60">{log.content_type}</span>
+                          <span className="text-[10px] text-white/25">{timeAgo(log.created_at)}</span>
+                        </div>
+                        <p className="text-xs font-bold text-white/80">{log.reason}</p>
+                        <p className="text-[10px] text-white/35 mt-0.5 truncate italic">"{log.content_preview}"</p>
+                        <p className="text-[9px] text-white/20 mt-1 font-mono">{log.user_id}</p>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          await fetch("/api/admin/users", {
+                            method: "PATCH",
+                            headers: { Authorization: `Bearer ${tk}`, "Content-Type": "application/json" },
+                            body: JSON.stringify({ userId: log.user_id, action: "ban" }),
+                          })
+                          showToast("Utilisateur banni")
+                        }}
+                        className="text-[10px] font-bold px-2.5 py-1 rounded-lg text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition flex-shrink-0"
+                      >
+                        Bannir
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
