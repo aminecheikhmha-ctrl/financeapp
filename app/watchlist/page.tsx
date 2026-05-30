@@ -2,68 +2,157 @@
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
-import { TrendingUp, TrendingDown, Plus, X, ArrowUpRight } from "lucide-react"
-import { AreaChart, Area, ResponsiveContainer } from "recharts"
-import { motion } from "framer-motion"
+import { Plus, Search, GitCompare, Trash2, TrendingUp, TrendingDown, X } from "lucide-react"
+import { formatPrice } from "@/lib/format"
+
+// ── Types ────────────────────────────────────────────────────────────────────
 
 type WatchlistItem = {
-  symbol: string
-  name:   string
-  price:  number
-  change: number
-  volume: number
-  history: { value: number }[]
-  group:  string
+  symbol:    string
+  name:      string
+  group:     "Actions" | "Crypto" | "ETF"
+  price:     number
+  change_1d: number
+  change_1w: number
+  change_1m: number
+  volume:    number
+  rsi:       number | null
+  signal:    string | null
+  sparkline: number[]   // 30 dernières closes
 }
 
-const DEFAULT_SYMBOLS = ["AAPL","NVDA","TSLA","MSFT","META","BTC-USD","ETH-USD","SOL-USD","SPY","QQQ"]
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
-function getGroup(sym: string) {
-  if (sym.includes("USD")) return "Crypto"
-  if (["SPY","QQQ","IWM","DIA"].includes(sym)) return "ETF"
+function getGroup(sym: string): WatchlistItem["group"] {
+  if (sym.includes("-USD") || sym.includes("BTC") || sym.includes("ETH")) return "Crypto"
+  if (["SPY","QQQ","IWM","DIA","GLD","TLT","XLF","XLK"].includes(sym)) return "ETF"
   return "Actions"
 }
 
-const GROUPS = ["Tous", "Actions", "Crypto", "ETF"]
-const SORTS  = [{ key: "change", label: "Variation" }, { key: "alpha", label: "A-Z" }] as const
+const DEFAULT_SYMBOLS = ["AAPL","NVDA","TSLA","MSFT","META","BTC-USD","ETH-USD","SPY","QQQ"]
+
+// ── Mini sparkline SVG (inline, no Recharts overhead) ─────────────────────────
+
+function Spark({ data, up }: { data: number[]; up: boolean }) {
+  if (data.length < 2) return <div className="w-20 h-8 rounded bg-white/4" />
+  const mn = Math.min(...data), mx = Math.max(...data), rng = mx - mn || 1
+  const pts = data.map((v, i) => [
+    (i / (data.length - 1)) * 80,
+    30 - ((v - mn) / rng) * 26 - 1,
+  ])
+  const path = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ")
+  const fill = `${path} L80,30 L0,30 Z`
+  const c = up ? "#22c55e" : "#ef4444"
+  return (
+    <svg width="80" height="30" viewBox="0 0 80 30" className="overflow-visible">
+      <path d={fill} fill={`${c}18`} />
+      <path d={path} fill="none" stroke={c} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+// ── Signal badge ──────────────────────────────────────────────────────────────
+
+function SignalBadge({ signal }: { signal: string | null }) {
+  if (!signal || signal === "NEUTRE") return <span className="text-[9px] text-white/20">—</span>
+  const map: Record<string, { label: string; color: string }> = {
+    ACHAT_FORT: { label: "⚡ Fort",  color: "#22c55e" },
+    ACHAT:      { label: "↗ Achat", color: "#4ade80" },
+    VENTE_FORT: { label: "⚡ Vente", color: "#ef4444" },
+    VENTE:      { label: "↘ Vente", color: "#f87171" },
+  }
+  const s = map[signal] ?? { label: signal, color: "#9ca3af" }
+  return (
+    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full whitespace-nowrap"
+      style={{ background: `${s.color}15`, color: s.color, border: `1px solid ${s.color}25` }}>
+      {s.label}
+    </span>
+  )
+}
+
+// ── Main page ──────────────────────────────────────────────────────────────────
 
 export default function WatchlistPage() {
   const router = useRouter()
-
-  const [items,   setItems]   = useState<WatchlistItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [symbols, setSymbols] = useState<string[]>(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("watchlist_symbols")
-      if (stored) try { return JSON.parse(stored) } catch {}
-    }
-    return DEFAULT_SYMBOLS
+  const [items,    setItems]    = useState<WatchlistItem[]>([])
+  const [loading,  setLoading]  = useState(true)
+  const [symbols,  setSymbols]  = useState<string[]>(() => {
+    if (typeof window === "undefined") return DEFAULT_SYMBOLS
+    try { return JSON.parse(localStorage.getItem("watchlist_symbols") ?? "null") ?? DEFAULT_SYMBOLS } catch { return DEFAULT_SYMBOLS }
   })
-  const [activeGroup, setActiveGroup] = useState("Tous")
-  const [sortBy,      setSortBy]      = useState<"change" | "alpha">("change")
-  const [search,      setSearch]      = useState("")
-  const [results,     setResults]     = useState<any[]>([])
+  const [filter,   setFilter]   = useState("Tous")
+  const [sortBy,   setSortBy]   = useState<"change_1d" | "change_1w" | "change_1m" | "rsi">("change_1d")
+  const [selected, setSelected] = useState<string[]>([])
+  const [search,   setSearch]   = useState("")
+  const [results,  setResults]  = useState<any[]>([])
+  const [addInput, setAddInput] = useState("")
+  const [adding,   setAdding]   = useState(false)
 
   // Persist symbols
   useEffect(() => { localStorage.setItem("watchlist_symbols", JSON.stringify(symbols)) }, [symbols])
 
   const loadData = useCallback(async () => {
+    if (symbols.length === 0) { setItems([]); setLoading(false); return }
     setLoading(true)
     try {
-      const data = await Promise.all(symbols.map(async sym => {
-        const res  = await fetch(`/api/quote?symbol=${sym}`)
-        const d    = await res.json()
-        return {
-          symbol:  sym,
-          name:    d.name ?? sym,
-          price:   d.price ?? 0,
-          change:  d.change ?? 0,
-          volume:  d.volume ?? 0,
-          history: (d.history ?? []).map((v: any) => ({ value: typeof v === "number" ? v : v?.value ?? 0 })),
-          group:   getGroup(sym),
-        } as WatchlistItem
+      const all = await Promise.all(symbols.map(async (sym) => {
+        try {
+          const [quoteRes, chartRes] = await Promise.all([
+            fetch(`/api/quote?symbol=${sym}`),
+            fetch(`/api/alpaca/chart?symbol=${sym.replace("-USD","")}&interval=1d&range=30d`),
+          ])
+          const quote = await quoteRes.json()
+          const bars: any[] = await chartRes.json().then(d => Array.isArray(d) ? d : []).catch(() => [])
+          const n = bars.length
+          const closes = bars.map(b => b.close ?? 0).filter(Boolean)
+
+          const getChange = (days: number) => {
+            if (n < days) return 0
+            const old = bars[Math.max(0, n - days)]?.close ?? 1
+            const cur = bars[n - 1]?.close ?? 1
+            return ((cur - old) / old) * 100
+          }
+
+          // RSI (14) from bars
+          let rsi: number | null = null
+          if (closes.length >= 15) {
+            const last14 = closes.slice(-15)
+            let gains = 0, losses = 0
+            for (let i = 1; i < last14.length; i++) {
+              const d = last14[i] - last14[i - 1]
+              if (d > 0) gains += d; else losses -= d
+            }
+            const rs = losses === 0 ? 100 : gains / losses
+            rsi = parseFloat((100 - 100 / (1 + rs)).toFixed(1))
+          }
+
+          // Signal IA simple basé sur RSI + tendance
+          let signal: string | null = null
+          if (rsi !== null) {
+            const trend1m = getChange(21)
+            if (rsi < 30 && trend1m > 0)       signal = "ACHAT_FORT"
+            else if (rsi < 40)                  signal = "ACHAT"
+            else if (rsi > 70 && trend1m < 0)   signal = "VENTE_FORT"
+            else if (rsi > 60)                  signal = "VENTE"
+            else                                signal = "NEUTRE"
+          }
+
+          return {
+            symbol:    sym,
+            name:      quote.name ?? sym,
+            group:     getGroup(sym),
+            price:     quote.price ?? 0,
+            change_1d: quote.change ?? getChange(1),
+            change_1w: getChange(5),
+            change_1m: getChange(21),
+            volume:    quote.volume ?? 0,
+            rsi,
+            signal,
+            sparkline: closes.slice(-30),
+          } as WatchlistItem
+        } catch { return null }
       }))
-      setItems(data)
+      setItems(all.filter(Boolean) as WatchlistItem[])
     } catch {}
     setLoading(false)
   }, [symbols])
@@ -73,7 +162,7 @@ export default function WatchlistPage() {
       if (!session) { router.push("/login"); return }
     })
     loadData()
-    const id = setInterval(loadData, 30000)
+    const id = setInterval(loadData, 60_000)
     return () => clearInterval(id)
   }, [loadData])
 
@@ -87,193 +176,338 @@ export default function WatchlistPage() {
     } catch {}
   }
 
-  function addSymbol(sym: string) {
-    if (symbols.includes(sym)) return
-    setSymbols(prev => [...prev, sym])
+  function addFromSearch(sym: string) {
+    if (!symbols.includes(sym)) setSymbols(prev => [...prev, sym])
     setSearch(""); setResults([])
   }
 
-  function removeSymbol(sym: string) {
+  async function addManual() {
+    if (!addInput.trim()) return
+    setAdding(true)
+    const sym = addInput.toUpperCase().trim()
+    if (!symbols.includes(sym)) setSymbols(prev => [...prev, sym])
+    setAddInput("")
+    setAdding(false)
+  }
+
+  function removeItem(sym: string) {
     setSymbols(prev => prev.filter(s => s !== sym))
     setItems(prev => prev.filter(i => i.symbol !== sym))
+    setSelected(prev => prev.filter(s => s !== sym))
+  }
+
+  function toggleSelect(sym: string) {
+    setSelected(prev => prev.includes(sym) ? prev.filter(s => s !== sym) : [...prev, sym])
   }
 
   const filtered = items
-    .filter(item => activeGroup === "Tous" || item.group === activeGroup)
+    .filter(i => {
+      if (filter !== "Tous" && i.group !== filter) return false
+      return true
+    })
     .sort((a, b) => {
-      if (sortBy === "change") return b.change - a.change
-      return a.symbol.localeCompare(b.symbol)
+      if (sortBy === "rsi") return (a.rsi ?? 50) - (b.rsi ?? 50)
+      return (b[sortBy] ?? 0) - (a[sortBy] ?? 0)
     })
 
-  const gainers = items.filter(i => i.change > 0).length
-  const losers  = items.filter(i => i.change < 0).length
+  const up    = items.filter(i => i.change_1d > 0).length
+  const down  = items.filter(i => i.change_1d < 0).length
+  const avgCh = items.length > 0 ? items.reduce((s, i) => s + i.change_1d, 0) / items.length : 0
+  const best  = items.length > 0 ? items.reduce((b, i) => i.change_1d > b.change_1d ? i : b, items[0]) : null
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg-canvas)" }}>
-      <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 space-y-5">
+    <div className="min-h-screen page-enter" style={{ background: "var(--bg-canvas)" }}>
 
-        {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-4">
+      {/* ── HEADER ─────────────────────────────────────────────────────────── */}
+      <div className="px-6 py-5 border-b border-white/5">
+        <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
           <div>
             <h1 className="text-2xl font-black text-white">Ma Watchlist</h1>
-            <div className="flex items-center gap-3 mt-0.5 text-xs" style={{ color: "#555" }}>
-              <span>{items.length} actifs</span>
-              {!loading && <><span className="text-green-400">▲ {gainers}</span><span className="text-red-400">▼ {losers}</span></>}
-            </div>
+            <p className="text-white/30 text-sm mt-0.5">
+              {items.length} actifs · <span className="text-green-400">▲ {up}</span> · <span className="text-red-400">▼ {down}</span>
+            </p>
           </div>
 
-          {/* Add asset */}
-          <div className="relative">
-            <div className="flex items-center gap-2 h-10 px-3 rounded-xl"
-              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <Plus size={14} className="text-white/30" />
-              <input value={search} onChange={e => handleSearch(e.target.value)}
-                placeholder="Ajouter un actif…"
-                className="text-sm text-white placeholder-white/20 outline-none bg-transparent w-36" />
-            </div>
+          {/* Comparer bouton */}
+          <div className="flex gap-2">
+            {selected.length >= 2 ? (
+              <button
+                onClick={() => router.push(`/compare?symbols=${selected.join(",")}`)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black text-black transition-all hover:scale-[1.02]"
+                style={{ background: "#22c55e" }}>
+                <GitCompare size={14} />
+                Comparer ({selected.length})
+              </button>
+            ) : items.length >= 2 ? (
+              <button
+                onClick={() => router.push(`/compare?symbols=${items.slice(0, 4).map(i => i.symbol).join(",")}`)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border transition-all hover:bg-white/4"
+                style={{ borderColor: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }}>
+                <GitCompare size={14} />
+                Comparer tout
+              </button>
+            ) : null}
+          </div>
+        </div>
+
+        {/* KPIs */}
+        {items.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            {[
+              { label: "Perf. moy. 1J", value: `${avgCh >= 0 ? "+" : ""}${avgCh.toFixed(2)}%`, color: avgCh >= 0 ? "#4ade80" : "#f87171" },
+              { label: "En hausse",     value: `${up} / ${items.length}`,                       color: "#4ade80" },
+              { label: "Meilleur",      value: best ? `${best.symbol.replace("-USD","")} +${best.change_1d.toFixed(1)}%` : "—", color: "#fbbf24" },
+              { label: "Actifs suivis", value: `${items.length}`,                               color: "rgba(255,255,255,0.6)" },
+            ].map(k => (
+              <div key={k.label} className="rounded-xl p-3" style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <p className="text-[10px] text-white/25 mb-1">{k.label}</p>
+                <p className="text-sm font-black tabular-nums truncate" style={{ color: k.color }}>{k.value}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Search + add */}
+        <div className="flex gap-3 flex-wrap mb-3">
+          {/* Search existing */}
+          <div className="relative flex-1 max-w-xs">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
+            <input value={search} onChange={e => handleSearch(e.target.value)}
+              placeholder="Rechercher un actif à ajouter…"
+              className="w-full h-9 pl-8 pr-3 rounded-xl text-xs text-white placeholder-white/20 outline-none"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }} />
             {results.length > 0 && (
-              <div className="absolute top-full mt-1 right-0 w-56 rounded-xl overflow-hidden z-20 shadow-2xl"
+              <div className="absolute top-full mt-1 left-0 w-64 rounded-xl overflow-hidden z-30 shadow-2xl"
                 style={{ background: "#111", border: "1px solid rgba(255,255,255,0.1)" }}>
                 {results.map(r => (
-                  <button key={r.symbol} onClick={() => addSymbol(r.symbol)}
+                  <button key={r.symbol} onClick={() => addFromSearch(r.symbol)}
                     className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/5 transition">
                     <div className="text-left">
                       <p className="text-sm font-bold text-white">{r.symbol}</p>
-                      <p className="text-[10px] truncate max-w-[140px]" style={{ color: "#555" }}>{r.name ?? r.shortname}</p>
+                      <p className="text-[10px] text-white/30 truncate max-w-[160px]">{r.name ?? r.shortname}</p>
                     </div>
-                    <Plus size={14} className="text-green-400 flex-shrink-0" />
+                    <Plus size={13} className="text-green-400 flex-shrink-0" />
                   </button>
                 ))}
               </div>
             )}
           </div>
-        </div>
 
-        {/* Filters */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 flex-nowrap" style={{ scrollbarWidth: "none" }}>
-          {GROUPS.map(group => (
-            <button key={group} onClick={() => setActiveGroup(group)}
-              className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-              style={activeGroup === group
-                ? { background: "rgba(255,255,255,0.1)", color: "#fff", border: "1px solid rgba(255,255,255,0.15)" }
-                : { color: "rgba(255,255,255,0.3)", border: "1px solid transparent" }}>
-              {group}
+          {/* Quick add */}
+          <div className="flex gap-2">
+            <input value={addInput} onChange={e => setAddInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && addManual()}
+              placeholder="AAPL, BTC-USD…"
+              className="h-9 px-3 rounded-xl text-xs text-white placeholder-white/20 outline-none w-32"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }} />
+            <button onClick={addManual} disabled={!addInput.trim() || adding}
+              className="flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs font-black text-black disabled:opacity-40 transition-all hover:scale-[1.02]"
+              style={{ background: "#22c55e" }}>
+              <Plus size={13} />
+              {adding ? "…" : "Ajouter"}
             </button>
-          ))}
-          <div className="w-px h-5 flex-shrink-0 mx-1" style={{ background: "rgba(255,255,255,0.08)" }} />
-          {SORTS.map(s => (
-            <button key={s.key} onClick={() => setSortBy(s.key)}
-              className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-              style={sortBy === s.key
-                ? { background: "rgba(255,255,255,0.08)", color: "#fff" }
-                : { color: "rgba(255,255,255,0.25)" }}>
-              {s.label}
-            </button>
-          ))}
-          <button onClick={() => router.push(`/compare?symbols=${symbols.slice(0, 4).join(",")}`)}
-            className="ml-auto flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-            style={{ color: "#60a5fa", border: "1px solid rgba(96,165,250,0.2)", background: "rgba(96,165,250,0.06)" }}>
-            ⚡ Comparer
-          </button>
-        </div>
-
-        {/* Table */}
-        <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
-          {/* Head */}
-          <div className="grid px-5 py-3 border-b border-white/5"
-            style={{ gridTemplateColumns: "1fr auto auto auto auto", gap: "1rem", background: "rgba(255,255,255,0.02)" }}>
-            {["Actif", "Prix", "Variation", "7 jours", ""].map(h => (
-              <p key={h} className="text-[9px] uppercase tracking-widest font-bold" style={{ color: "rgba(255,255,255,0.2)" }}>{h}</p>
-            ))}
           </div>
+        </div>
 
-          {loading ? (
-            <div className="p-6 space-y-3">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="h-12 rounded-xl animate-pulse" style={{ background: "#111" }} />
+        {/* Filtres + tri */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {["Tous","Actions","Crypto","ETF"].map(f => (
+            <button key={f} onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                filter === f ? "bg-white/10 text-white border border-white/15" : "text-white/30 hover:text-white/60"
+              }`}>
+              {f}
+            </button>
+          ))}
+          <div className="h-4 w-px bg-white/10 mx-1" />
+          <span className="text-[10px] text-white/25">Trier :</span>
+          {([
+            { key: "change_1d", label: "1J" },
+            { key: "change_1w", label: "1S" },
+            { key: "change_1m", label: "1M" },
+            { key: "rsi",       label: "RSI" },
+          ] as const).map(s => (
+            <button key={s.key} onClick={() => setSortBy(s.key)}
+              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                sortBy === s.key ? "bg-white/10 text-white" : "text-white/25 hover:text-white/60"
+              }`}>
+              {s.label} {sortBy === s.key ? "↓" : ""}
+            </button>
+          ))}
+          {selected.length > 0 && (
+            <span className="ml-auto text-[10px] text-green-400 font-bold">
+              {selected.length} sélectionné{selected.length > 1 ? "s" : ""} — clique sur Comparer
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* ── TABLE ──────────────────────────────────────────────────────────── */}
+      <div className="px-6 py-4">
+        {loading ? (
+          <div className="space-y-3">
+            {[...Array(6)].map((_, i) => <div key={i} className="h-16 skeleton rounded-2xl" />)}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-16">
+            <p className="text-4xl mb-3">⭐</p>
+            <p className="font-black text-white mb-2">{items.length === 0 ? "Watchlist vide" : "Aucun résultat"}</p>
+            <p className="text-white/40 text-sm">
+              {items.length === 0 ? "Ajoute des actifs via la barre ci-dessus" : "Essaie un autre filtre"}
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
+
+            {/* Table header */}
+            <div className="hidden md:grid px-5 py-3 border-b border-white/5 items-center"
+              style={{
+                gridTemplateColumns: "20px 1fr 110px 72px 72px 72px 52px 90px 88px 60px",
+                gap: "12px",
+                background: "rgba(255,255,255,0.025)",
+              }}>
+              <div />
+              {["Actif","Prix","1J","1S","1M","RSI","30 jours","Signal",""].map(h => (
+                <p key={h} className="text-[9px] text-white/25 uppercase tracking-widest font-bold text-right first:text-left">{h}</p>
               ))}
             </div>
-          ) : filtered.length === 0 ? (
-            <div className="text-center py-16">
-              <p className="text-3xl mb-3">📋</p>
-              <p className="text-sm" style={{ color: "#555" }}>Aucun actif dans ce groupe</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-white/[0.04]">
-              {filtered.map((item, idx) => {
-                const up = item.change >= 0
-                return (
-                  <motion.div key={item.symbol}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.03 }}
-                    className="grid items-center px-5 py-3.5 hover:bg-white/[0.02] transition-colors cursor-pointer"
-                    style={{ gridTemplateColumns: "1fr auto auto auto auto", gap: "1rem" }}
-                    onClick={() => router.push(`/dashboard?symbol=${item.symbol}`)}>
 
-                    {/* Asset */}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black text-black flex-shrink-0"
-                        style={{ background: up ? "#22c55e" : "#ef4444" }}>
-                        {item.symbol.replace("-USD", "")[0]}
+            {/* Rows */}
+            {filtered.map(item => {
+              const up1d  = item.change_1d >= 0
+              const isSel = selected.includes(item.symbol)
+              return (
+                <div key={item.symbol}
+                  className="group border-b border-white/[0.04] last:border-0 transition-colors hover:bg-white/[0.02]"
+                  style={{ background: isSel ? "rgba(34,197,94,0.03)" : undefined }}>
+
+                  {/* ── Desktop row ── */}
+                  <div className="hidden md:grid px-5 py-3.5 items-center"
+                    style={{
+                      gridTemplateColumns: "20px 1fr 110px 72px 72px 72px 52px 90px 88px 60px",
+                      gap: "12px",
+                    }}>
+
+                    {/* Checkbox */}
+                    <button onClick={() => toggleSelect(item.symbol)}
+                      className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-all"
+                      style={{
+                        background: isSel ? "#22c55e" : "rgba(255,255,255,0.07)",
+                        border: `1px solid ${isSel ? "#22c55e" : "rgba(255,255,255,0.12)"}`,
+                      }}>
+                      {isSel && <span className="text-[8px] text-black font-black">✓</span>}
+                    </button>
+
+                    {/* Actif */}
+                    <button onClick={() => router.push(`/dashboard?symbol=${item.symbol}`)}
+                      className="flex items-center gap-3 text-left">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center text-[11px] font-black text-black flex-shrink-0"
+                        style={{ background: up1d ? "#22c55e" : "#ef4444" }}>
+                        {item.symbol.replace("-USD","")[0]}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-bold text-white">{item.symbol.replace("-USD", "")}</p>
-                        <p className="text-[10px] truncate max-w-[120px]" style={{ color: "#555" }}>{item.name}</p>
+                        <p className="text-sm font-black text-white group-hover:text-green-400 transition-colors leading-tight">
+                          {item.symbol.replace("-USD","")}
+                        </p>
+                        <p className="text-[10px] text-white/30 truncate max-w-[120px]">{item.name?.slice(0,22)}</p>
                       </div>
-                    </div>
+                    </button>
 
-                    {/* Price */}
-                    <p className="text-sm font-bold text-white tabular-nums text-right">
-                      {item.price < 1 ? `$${item.price.toFixed(4)}` : `$${item.price.toFixed(2)}`}
+                    {/* Prix */}
+                    <p className="text-sm font-black text-white tabular-nums text-right">{formatPrice(item.price)}</p>
+
+                    {/* 1J */}
+                    <p className={`text-xs font-bold tabular-nums text-right ${item.change_1d >= 0 ? "text-green-400" : "text-red-400"}`}>
+                      {item.change_1d >= 0 ? "+" : ""}{item.change_1d.toFixed(2)}%
                     </p>
 
-                    {/* Change */}
-                    <div className="flex items-center gap-1 justify-end">
-                      {up ? <TrendingUp size={13} className="text-green-400" /> : <TrendingDown size={13} className="text-red-400" />}
-                      <span className={`text-sm font-bold tabular-nums ${up ? "text-green-400" : "text-red-400"}`}>
-                        {up ? "+" : ""}{item.change.toFixed(2)}%
-                      </span>
-                    </div>
+                    {/* 1S */}
+                    <p className={`text-xs font-bold tabular-nums text-right ${item.change_1w >= 0 ? "text-green-400" : "text-red-400"}`}>
+                      {item.change_1w >= 0 ? "+" : ""}{item.change_1w.toFixed(2)}%
+                    </p>
+
+                    {/* 1M */}
+                    <p className={`text-xs font-bold tabular-nums text-right ${item.change_1m >= 0 ? "text-green-400" : "text-red-400"}`}>
+                      {item.change_1m >= 0 ? "+" : ""}{item.change_1m.toFixed(2)}%
+                    </p>
+
+                    {/* RSI */}
+                    <p className={`text-xs font-black tabular-nums text-right ${
+                      (item.rsi ?? 50) < 30 ? "text-green-400" :
+                      (item.rsi ?? 50) > 70 ? "text-red-400" : "text-white/50"
+                    }`}>
+                      {item.rsi?.toFixed(0) ?? "—"}
+                    </p>
 
                     {/* Sparkline */}
-                    <div className="w-20 h-8">
-                      {item.history.length > 1 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={item.history} margin={{ top: 2, right: 0, left: 0, bottom: 2 }}>
-                            <defs>
-                              <linearGradient id={`g-${item.symbol}`} x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor={up ? "#22c55e" : "#ef4444"} stopOpacity={0.3} />
-                                <stop offset="100%" stopColor={up ? "#22c55e" : "#ef4444"} stopOpacity={0} />
-                              </linearGradient>
-                            </defs>
-                            <Area type="monotone" dataKey="value"
-                              stroke={up ? "#22c55e" : "#ef4444"} strokeWidth={1.5}
-                              fill={`url(#g-${item.symbol})`} dot={false} />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      ) : <div className="w-full h-full rounded animate-pulse" style={{ background: "#111" }} />}
+                    <div className="flex items-center justify-center">
+                      <Spark data={item.sparkline} up={item.change_1m >= 0} />
+                    </div>
+
+                    {/* Signal */}
+                    <div className="flex items-center justify-end">
+                      <SignalBadge signal={item.signal} />
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-1 justify-end">
-                      <button
-                        onClick={e => { e.stopPropagation(); router.push(`/dashboard?symbol=${item.symbol}`) }}
-                        className="w-7 h-7 rounded-lg flex items-center justify-center transition text-white/30 hover:text-white hover:bg-white/8">
-                        <ArrowUpRight size={13} />
+                    <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => router.push(`/dashboard?symbol=${item.symbol}`)}
+                        title="Trader"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/8 transition">
+                        <TrendingUp size={12} />
                       </button>
-                      <button
-                        onClick={e => { e.stopPropagation(); removeSymbol(item.symbol) }}
-                        className="w-7 h-7 rounded-lg flex items-center justify-center transition text-white/20 hover:text-red-400 hover:bg-red-500/10">
-                        <X size={12} />
+                      <button onClick={() => removeItem(item.symbol)}
+                        title="Supprimer"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-white/20 hover:text-red-400 hover:bg-red-500/10 transition">
+                        <Trash2 size={12} />
                       </button>
                     </div>
-                  </motion.div>
-                )
-              })}
-            </div>
-          )}
-        </div>
+                  </div>
+
+                  {/* ── Mobile row ── */}
+                  <div className="flex md:hidden items-center gap-3 px-4 py-3.5">
+                    <button onClick={() => toggleSelect(item.symbol)}
+                      className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
+                      style={{
+                        background: isSel ? "#22c55e" : "rgba(255,255,255,0.07)",
+                        border: `1px solid ${isSel ? "#22c55e" : "rgba(255,255,255,0.12)"}`,
+                      }}>
+                      {isSel && <span className="text-[8px] text-black font-black">✓</span>}
+                    </button>
+                    <button onClick={() => router.push(`/dashboard?symbol=${item.symbol}`)}
+                      className="flex items-center gap-2 flex-1 text-left">
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center text-[10px] font-black text-black flex-shrink-0"
+                        style={{ background: up1d ? "#22c55e" : "#ef4444" }}>
+                        {item.symbol.replace("-USD","")[0]}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-black text-white">{item.symbol.replace("-USD","")}</p>
+                        <p className="text-[10px] text-white/30">{item.name?.slice(0,18)}</p>
+                      </div>
+                    </button>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-sm font-black text-white tabular-nums">{formatPrice(item.price)}</p>
+                      <p className={`text-xs font-bold tabular-nums ${up1d ? "text-green-400" : "text-red-400"}`}>
+                        {up1d ? "+" : ""}{item.change_1d.toFixed(2)}%
+                      </p>
+                    </div>
+                    <Spark data={item.sparkline} up={item.change_1m >= 0} />
+                    <button onClick={() => removeItem(item.symbol)}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-white/20 hover:text-red-400 transition flex-shrink-0">
+                      <X size={12} />
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {filtered.length > 0 && (
+          <p className="text-[10px] text-white/20 text-center mt-4">
+            Coche des actifs pour les comparer · Clique sur un actif pour trader
+          </p>
+        )}
       </div>
     </div>
   )
