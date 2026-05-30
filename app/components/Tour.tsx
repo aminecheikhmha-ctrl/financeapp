@@ -54,7 +54,7 @@ export const DASHBOARD_TOUR_STEPS: TourStep[] = [
     title: "💰 Paper Trading",
     content: "Achète et vends en simulation — sans argent réel. Parfait pour apprendre sans risque.",
     selector: "[data-tour='buy-btn']",
-    cardSide: "top",
+    cardSide: "left",
     padding: 8,
   },
   {
@@ -62,7 +62,7 @@ export const DASHBOARD_TOUR_STEPS: TourStep[] = [
     title: "🔔 Alertes de prix",
     content: "Fixe un prix cible et reçois une notification dès qu'il est atteint.",
     selector: "[data-tour='alerts']",
-    cardSide: "top",
+    cardSide: "left",
     padding: 8,
   },
 ]
@@ -233,25 +233,42 @@ export default function Tour({ steps, storageKey, onComplete }: Props) {
 
   if (spotlightRect) {
     const { top, left, width, height } = spotlightRect
+    // Centered horizontally on the spotlight
+    const centeredLeft = left + width / 2 - CARD_W / 2
+
     switch (current.cardSide) {
       case "bottom":
         cardTop  = top + height + GAP
-        cardLeft = Math.min(Math.max(left + width / 2 - CARD_W / 2, 12), W - CARD_W - 12)
+        cardLeft = centeredLeft
+        // Flip to top if card goes below viewport
+        if (cardTop + CARD_H > H - 12) cardTop = top - CARD_H - GAP
         break
       case "top":
         cardTop  = top - CARD_H - GAP
-        cardLeft = Math.min(Math.max(left + width / 2 - CARD_W / 2, 12), W - CARD_W - 12)
+        cardLeft = centeredLeft
+        // Flip to bottom if card goes above viewport OR if element is in the top-right
+        // (right-panel elements: prefer left side to avoid right overflow)
+        if (cardTop < 12) cardTop = top + height + GAP
+        if (centeredLeft + CARD_W > W - 12) {
+          // Element is on the right side — show card to the left of it instead
+          cardTop  = Math.max(12, top + height / 2 - CARD_H / 2)
+          cardLeft = left - CARD_W - GAP
+        }
         break
       case "left":
-        cardTop  = Math.min(Math.max(top + height / 2 - CARD_H / 2, 12), H - CARD_H - 12)
+        cardTop  = top + height / 2 - CARD_H / 2
         cardLeft = left - CARD_W - GAP
+        // Flip to right if card goes beyond left edge
+        if (cardLeft < 12) { cardLeft = left + width + GAP }
         break
       case "right":
-        cardTop  = Math.min(Math.max(top + height / 2 - CARD_H / 2, 12), H - CARD_H - 12)
+        cardTop  = top + height / 2 - CARD_H / 2
         cardLeft = left + width + GAP
+        // Flip to left if card goes beyond right edge
+        if (cardLeft + CARD_W > W - 12) { cardLeft = left - CARD_W - GAP }
         break
     }
-    // Clamp to viewport
+    // Final clamp — safety net
     cardTop  = Math.max(12, Math.min(cardTop,  H - CARD_H - 12))
     cardLeft = Math.max(12, Math.min(cardLeft, W - CARD_W - 12))
   }

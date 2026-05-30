@@ -919,7 +919,7 @@ export default function Signaux() {
 
             {/* ── FEED ── */}
             <div className="px-6 py-4 pb-10">
-              <div className="flex items-center justify-between mb-4">
+              <div data-tour="signal-list" className="flex items-center justify-between mb-4">
                 <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold">
                   Tous les signaux ({loading ? "…" : filtered.length})
                 </p>
@@ -967,7 +967,7 @@ export default function Signaux() {
 
               {/* ── LIST VIEW ── */}
               {!loading && filtered.length > 0 && view === "list" && (
-                <div data-tour="signal-list" className="relative">
+                <div className="relative">
                   <div className="space-y-2">
                     {filtered.map((signal, idx) => {
                       const blurred  = isBlurring && idx >= 3
