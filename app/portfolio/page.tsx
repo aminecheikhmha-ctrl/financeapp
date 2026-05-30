@@ -231,7 +231,12 @@ export default function PortfolioPage() {
           : null,
       })
 
-      setPerfHistory(buildPerfHistory(filled))
+      // Build history from realized P&L, then pin last point to actual portfolio value
+      const history = buildPerfHistory(filled)
+      const todayStr = new Date().toISOString().slice(0, 10)
+      const histNoToday = history.filter(d => d.date !== todayStr)
+      histNoToday.push({ date: todayStr, value: parseFloat((cash + posValue).toFixed(2)) })
+      setPerfHistory(histNoToday)
     } catch {}
     setLoading(false)
   }
