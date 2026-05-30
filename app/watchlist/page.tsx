@@ -85,8 +85,6 @@ export default function WatchlistPage() {
   const [selected, setSelected] = useState<string[]>([])
   const [search,   setSearch]   = useState("")
   const [results,  setResults]  = useState<any[]>([])
-  const [addInput, setAddInput] = useState("")
-  const [adding,   setAdding]   = useState(false)
 
   // Persist symbols
   useEffect(() => { localStorage.setItem("watchlist_symbols", JSON.stringify(symbols)) }, [symbols])
@@ -181,15 +179,6 @@ export default function WatchlistPage() {
     setSearch(""); setResults([])
   }
 
-  async function addManual() {
-    if (!addInput.trim()) return
-    setAdding(true)
-    const sym = addInput.toUpperCase().trim()
-    if (!symbols.includes(sym)) setSymbols(prev => [...prev, sym])
-    setAddInput("")
-    setAdding(false)
-  }
-
   function removeItem(sym: string) {
     setSymbols(prev => prev.filter(s => s !== sym))
     setItems(prev => prev.filter(i => i.symbol !== sym))
@@ -267,13 +256,13 @@ export default function WatchlistPage() {
           </div>
         )}
 
-        {/* Search + add */}
-        <div className="flex gap-3 flex-wrap mb-3">
-          {/* Search existing */}
-          <div className="relative flex-1 max-w-xs">
+        {/* Search + add — un seul champ */}
+        <div className="flex gap-2 mb-3">
+          <div className="relative flex-1 max-w-sm">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
             <input value={search} onChange={e => handleSearch(e.target.value)}
-              placeholder="Rechercher un actif à ajouter…"
+              onKeyDown={e => { if (e.key === "Enter" && search.trim()) { addFromSearch(search.toUpperCase().trim()) } }}
+              placeholder="Ajouter un actif — AAPL, BTC-USD, NVDA…"
               className="w-full h-9 pl-8 pr-3 rounded-xl text-xs text-white placeholder-white/20 outline-none"
               style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }} />
             {results.length > 0 && (
@@ -292,21 +281,12 @@ export default function WatchlistPage() {
               </div>
             )}
           </div>
-
-          {/* Quick add */}
-          <div className="flex gap-2">
-            <input value={addInput} onChange={e => setAddInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && addManual()}
-              placeholder="AAPL, BTC-USD…"
-              className="h-9 px-3 rounded-xl text-xs text-white placeholder-white/20 outline-none w-32"
-              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }} />
-            <button onClick={addManual} disabled={!addInput.trim() || adding}
-              className="flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs font-black text-black disabled:opacity-40 transition-all hover:scale-[1.02]"
-              style={{ background: "#22c55e" }}>
-              <Plus size={13} />
-              {adding ? "…" : "Ajouter"}
-            </button>
-          </div>
+          <button onClick={() => { if (search.trim()) addFromSearch(search.toUpperCase().trim()) }}
+            disabled={!search.trim()}
+            className="flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs font-black text-black disabled:opacity-40 transition-all hover:scale-[1.02]"
+            style={{ background: "#22c55e" }}>
+            <Plus size={13} /> Ajouter
+          </button>
         </div>
 
         {/* Filtres + tri */}

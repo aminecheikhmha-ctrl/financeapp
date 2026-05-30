@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect, useMemo, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabase"
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, ReferenceLine,
@@ -56,7 +57,6 @@ function CompareContent() {
   const [assets,      setAssets]      = useState<AssetData[]>([])
   const [loading,     setLoading]     = useState(false)
   const [period,      setPeriod]      = useState<"1M" | "3M" | "6M" | "1Y">("3M")
-  const [newSymbol,   setNewSymbol]   = useState("")
   const [search,      setSearch]      = useState("")
   const [results,     setResults]     = useState<any[]>([])
   const [aiVerdict,   setAiVerdict]   = useState("")
@@ -157,12 +157,6 @@ function CompareContent() {
     setSearch(""); setResults([])
   }
 
-  function addManual() {
-    const sym = newSymbol.toUpperCase().trim()
-    if (sym && !symbols.includes(sym) && symbols.length < 6) setSymbols(prev => [...prev, sym])
-    setNewSymbol("")
-  }
-
   function removeSymbol(sym: string) {
     if (symbols.length <= 1) return
     setSymbols(prev => prev.filter(s => s !== sym))
@@ -173,24 +167,27 @@ function CompareContent() {
     if (assets.length < 2 || loadingAI) return
     setLoadingAI(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      if (!token) { setAiVerdict("Connecte-toi pour utiliser l'analyse IA."); setLoadingAI(false); return }
+
       const summary = assets.map(a => ({
-        symbol: a.symbol,
+        symbol:    a.symbol,
         change_1m: a.change_1m.toFixed(1),
         change_3m: a.change_3m.toFixed(1),
-        rsi: a.rsi,
+        rsi:       a.rsi,
       }))
       const res = await fetch("/api/coach", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          message: `Compare ces actifs en 3 phrases max : ${JSON.stringify(summary)}. Corrélation : ${correlation?.toFixed(2) ?? "inconnue"}. Dis lequel performe mieux, pourquoi, et si la corrélation aide à la diversification.`,
-          context: "Comparaison d'actifs financiers",
+          message: `Compare ces actifs en 3 phrases max : ${JSON.stringify(summary)}. Corrélation entre les 2 premiers : ${correlation?.toFixed(2) ?? "inconnue"}. Dis lequel performe mieux, pourquoi, et si la corrélation aide à la diversification.`,
           history: [],
         }),
       })
       const data = await res.json()
-      setAiVerdict(data.reply ?? "")
-    } catch {}
+      setAiVerdict(data.reply ?? data.error ?? "Erreur lors de l'analyse.")
+    } catch { setAiVerdict("Erreur réseau.") }
     setLoadingAI(false)
   }
 
@@ -265,9 +262,10 @@ function CompareContent() {
             <div className="relative flex gap-2">
               <div className="relative">
                 <input value={search} onChange={e => handleSearch(e.target.value)}
-                  placeholder="Rechercher…"
-                  className="h-9 pl-3 pr-3 rounded-xl text-xs text-white placeholder-white/25 outline-none"
-                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", minWidth: 130 }} />
+                  onKeyDown={e => { if (e.key === "Enter" && search.trim()) addFromSearch(search.toUpperCase().trim()) }}
+                  placeholder="Ajouter — NVDA, SOL-USD…"
+                  className="h-9 px-3 rounded-xl text-xs text-white placeholder-white/25 outline-none"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", minWidth: 170 }} />
                 {results.length > 0 && (
                   <div className="absolute top-full mt-1 left-0 w-56 rounded-xl overflow-hidden z-30 shadow-2xl"
                     style={{ background: "#111", border: "1px solid rgba(255,255,255,0.1)" }}>
@@ -281,12 +279,8 @@ function CompareContent() {
                   </div>
                 )}
               </div>
-              <input value={newSymbol} onChange={e => setNewSymbol(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && addManual()}
-                placeholder="ou NVDA, SOL…"
-                className="h-9 px-3 rounded-xl text-xs text-white placeholder-white/25 outline-none w-28"
-                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }} />
-              <button onClick={addManual} disabled={!newSymbol.trim()}
+              <button onClick={() => { if (search.trim()) addFromSearch(search.toUpperCase().trim()) }}
+                disabled={!search.trim()}
                 className="w-9 h-9 rounded-xl flex items-center justify-center text-black disabled:opacity-40"
                 style={{ background: "#22c55e" }}>
                 <Plus size={14} />
