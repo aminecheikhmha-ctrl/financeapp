@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import {
@@ -123,6 +123,189 @@ function computePortfolio(orders: Order[]) {
   return { openPositions, closedTrades }
 }
 
+// ── Journal Tab ───────────────────────────────────────────────────────────────
+
+type JournalEntry = {
+  trade_id: string
+  note: string
+  emotion: "great" | "good" | "neutral" | "bad" | "terrible" | null
+  tag: "signal_ia" | "manuel" | "swing" | "scalp" | "erreur" | "bon_setup" | null
+}
+
+const EMOTIONS = [
+  { key: "great",    emoji: "🤩", label: "Excellent" },
+  { key: "good",     emoji: "😊", label: "Bon"       },
+  { key: "neutral",  emoji: "😐", label: "Neutre"    },
+  { key: "bad",      emoji: "😟", label: "Mauvais"   },
+  { key: "terrible", emoji: "😡", label: "Nul"       },
+] as const
+
+const TAGS = [
+  { key: "signal_ia", label: "🤖 Signal IA"  },
+  { key: "manuel",    label: "✍️ Manuel"     },
+  { key: "swing",     label: "📅 Swing"      },
+  { key: "scalp",     label: "⚡ Scalp"      },
+  { key: "erreur",    label: "❌ Erreur"      },
+  { key: "bon_setup", label: "✅ Bon setup"  },
+] as const
+
+function JournalTab({ closedTrades, token }: { closedTrades: ClosedTrade[]; token: string }) {
+  const [entries, setEntries] = useState<Record<string, JournalEntry>>({})
+  const [saving, setSaving]   = useState<string | null>(null)
+
+  // Load existing journal entries on mount
+  useEffect(() => {
+    if (!token) return
+    fetch("/api/journal", { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => {
+        if (!Array.isArray(data.entries)) return
+        const map: Record<string, JournalEntry> = {}
+        for (const e of data.entries) { map[e.trade_id] = e }
+        setEntries(map)
+      })
+      .catch(() => {})
+  }, [token])
+
+  const tradeId = (t: ClosedTrade) =>
+    `${t.symbol}_${t.opened_at.slice(0, 10)}_${t.closed_at.slice(0, 10)}`
+
+  const getEntry = (t: ClosedTrade): JournalEntry =>
+    entries[tradeId(t)] ?? { trade_id: tradeId(t), note: "", emotion: null, tag: null }
+
+  const save = useCallback(async (updated: JournalEntry) => {
+    setSaving(updated.trade_id)
+    try {
+      await fetch("/api/journal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(updated),
+      })
+      setEntries(prev => ({ ...prev, [updated.trade_id]: updated }))
+    } catch {}
+    setSaving(null)
+  }, [token])
+
+  const sorted = [...closedTrades].sort((a, b) =>
+    new Date(b.closed_at).getTime() - new Date(a.closed_at).getTime()
+  )
+
+  if (sorted.length === 0) {
+    return (
+      <div className="text-center py-16">
+        <p className="text-4xl mb-3">📓</p>
+        <p className="text-white/40 text-base font-bold mb-1">Aucun trade clôturé</p>
+        <p className="text-white/25 text-sm">Le journal se remplit après chaque vente</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3 mb-6">
+      <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-2">
+        {sorted.length} trade{sorted.length !== 1 ? "s" : ""} à analyser
+      </p>
+      {sorted.map(trade => {
+        const id    = tradeId(trade)
+        const entry = getEntry(trade)
+        const won   = trade.pnl > 0
+        const isSav = saving === id
+
+        return (
+          <div key={id} className="rounded-2xl overflow-hidden"
+            style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
+
+            {/* Trade header */}
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black text-black flex-shrink-0"
+                style={{ background: won ? "#22c55e" : "#ef4444" }}>
+                {trade.symbol.replace("-USD","")[0]}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-white">{trade.symbol.replace("-USD","")}</p>
+                <p className="text-[10px] text-white/30">
+                  {new Date(trade.closed_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                  {" · "}{trade.qty} parts
+                </p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className={`text-sm font-black tabular-nums ${won ? "text-green-400" : "text-red-400"}`}>
+                  {won ? "+" : ""}${trade.pnl.toFixed(2)}
+                </p>
+                <p className={`text-[10px] ${won ? "text-green-400/60" : "text-red-400/60"}`}>
+                  {won ? "+" : ""}{trade.pnl_pct.toFixed(2)}%
+                </p>
+              </div>
+            </div>
+
+            {/* Journal body */}
+            <div className="px-4 py-3 space-y-3">
+
+              {/* Emotion picker */}
+              <div>
+                <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mb-2">Ressenti</p>
+                <div className="flex gap-2 flex-wrap">
+                  {EMOTIONS.map(e => (
+                    <button
+                      key={e.key}
+                      onClick={() => save({ ...entry, emotion: e.key })}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
+                        entry.emotion === e.key
+                          ? "bg-white/12 text-white scale-105"
+                          : "bg-white/4 text-white/40 hover:bg-white/8 hover:text-white/70"
+                      }`}
+                    >
+                      <span>{e.emoji}</span>
+                      <span>{e.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tag picker */}
+              <div>
+                <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mb-2">Type de trade</p>
+                <div className="flex gap-2 flex-wrap">
+                  {TAGS.map(t => (
+                    <button
+                      key={t.key}
+                      onClick={() => save({ ...entry, tag: t.key })}
+                      className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
+                        entry.tag === t.key
+                          ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                          : "bg-white/4 text-white/40 hover:bg-white/8 hover:text-white/70"
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Note textarea */}
+              <div>
+                <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mb-2">Note</p>
+                <textarea
+                  defaultValue={entry.note}
+                  placeholder="Pourquoi ce trade ? Qu'est-ce que tu retiens ?"
+                  rows={2}
+                  className="w-full bg-white/4 border border-white/8 rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 resize-none outline-none focus:border-white/20 transition"
+                  onBlur={e => save({ ...entry, note: e.target.value })}
+                />
+              </div>
+
+              {/* Save indicator */}
+              {isSav && (
+                <p className="text-[10px] text-green-400/60 text-right">Enregistrement...</p>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function PortfolioPage() {
   const router = useRouter()
   const [account, setAccount] = useState<any>(null)
@@ -132,7 +315,8 @@ export default function PortfolioPage() {
   const [pendingOrders, setPendingOrders] = useState<Order[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
   const [perfHistory, setPerfHistory] = useState<{ date: string; value: number }[]>([])
-  const [activeTab, setActiveTab] = useState<"positions" | "orders" | "history" | "stats">("positions")
+  const [activeTab, setActiveTab] = useState<"positions" | "orders" | "history" | "stats" | "journal">("positions")
+  const [token, setToken] = useState<string>("")
   const [loading, setLoading] = useState(true)
   const [shareTrade, setShareTrade] = useState<Order | null>(null)
   const [timeframe, setTimeframe] = useState<"1W" | "1M" | "3M" | "ALL">("1M")
@@ -149,6 +333,7 @@ export default function PortfolioPage() {
     setLoading(true)
     const token = await getToken()
     if (!token) { router.push("/login"); return }
+    setToken(token)
 
     try {
       const res = await fetch("/api/trading/account", {
@@ -291,6 +476,7 @@ export default function PortfolioPage() {
     { key: "orders",    label: `📋 Ordres (${orders.length})` },
     { key: "history",   label: `📈 Historique (${closedTrades.length})` },
     { key: "stats",     label: "🎯 Stats" },
+    { key: "journal",   label: "📓 Journal" },
   ] as const
 
   const filteredHistory = filterHistory(perfHistory)
@@ -826,6 +1012,11 @@ export default function PortfolioPage() {
               )}
             </div>
           </div>
+        )}
+
+        {/* ── TAB JOURNAL ──────────────────────────────────────────────────── */}
+        {activeTab === "journal" && (
+          <JournalTab closedTrades={closedTrades} token={token} />
         )}
 
         {/* ── TAB STATS ────────────────────────────────────────────────────── */}
