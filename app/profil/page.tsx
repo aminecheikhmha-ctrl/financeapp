@@ -422,7 +422,7 @@ export default function ProfilPage() {
               className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black border-2 border-[#0a0a0a]"
               style={{ background: levelInfo.color, color: "#000" }}
             >
-              {levelInfo.level}
+              {levelInfo.icon}
             </div>
           </div>
 
