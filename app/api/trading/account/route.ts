@@ -38,7 +38,6 @@ export async function GET(req: NextRequest) {
     .select("*")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
-    .limit(20)
 
   return NextResponse.json({
     account: account ?? { cash: 100000 },

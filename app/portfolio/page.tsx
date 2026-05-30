@@ -37,6 +37,17 @@ type Order = {
   sl?: number
 }
 
+type ClosedTrade = {
+  symbol: string
+  buy_price: number
+  sell_price: number
+  qty: number
+  pnl: number
+  pnl_pct: number
+  opened_at: string
+  closed_at: string
+}
+
 type Stats = {
   totalValue: number
   totalCash: number
@@ -53,10 +64,70 @@ type Stats = {
   worstTrade: { symbol: string; pnl: number; pnl_pct: number } | null
 }
 
+// ── FIFO portfolio computation ─────────────────────────────────────────────────
+function computePortfolio(orders: Order[]) {
+  // Sort oldest first for correct FIFO matching
+  const sorted = [...orders].sort((a, b) =>
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  )
+
+  const queue: Record<string, Array<{ price: number; qty: number; date: string }>> = {}
+  const closedTrades: ClosedTrade[] = []
+
+  for (const order of sorted) {
+    const sym = order.symbol
+    if (order.side === "buy") {
+      if (!queue[sym]) queue[sym] = []
+      queue[sym].push({ price: order.price, qty: order.qty, date: order.created_at })
+    } else if (order.side === "sell") {
+      let remaining = order.qty
+      while (remaining > 0 && queue[sym]?.length > 0) {
+        const buy = queue[sym][0]
+        const matched = Math.min(remaining, buy.qty)
+        const pnl     = (order.price - buy.price) * matched
+        const pnl_pct = ((order.price - buy.price) / buy.price) * 100
+        closedTrades.push({
+          symbol:    sym,
+          buy_price: buy.price,
+          sell_price: order.price,
+          qty:       matched,
+          pnl:       parseFloat(pnl.toFixed(2)),
+          pnl_pct:   parseFloat(pnl_pct.toFixed(2)),
+          opened_at: buy.date,
+          closed_at: order.created_at,
+        })
+        buy.qty   -= matched
+        remaining -= matched
+        if (buy.qty <= 0) queue[sym].shift()
+      }
+    }
+  }
+
+  // What remains in queue = open positions
+  const openPositions: Array<{
+    symbol: string; qty: number; avg_price: number; total_cost: number; opened_at: string
+  }> = []
+  for (const [sym, buys] of Object.entries(queue)) {
+    const totalQty  = buys.reduce((s, b) => s + b.qty, 0)
+    if (totalQty <= 0) continue
+    const totalCost = buys.reduce((s, b) => s + b.price * b.qty, 0)
+    openPositions.push({
+      symbol:     sym,
+      qty:        parseFloat(totalQty.toFixed(8)),
+      avg_price:  parseFloat((totalCost / totalQty).toFixed(2)),
+      total_cost: parseFloat(totalCost.toFixed(2)),
+      opened_at:  buys[0].date,
+    })
+  }
+
+  return { openPositions, closedTrades }
+}
+
 export default function PortfolioPage() {
   const router = useRouter()
   const [account, setAccount] = useState<any>(null)
   const [positions, setPositions] = useState<Position[]>([])
+  const [closedTrades, setClosedTrades] = useState<ClosedTrade[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [pendingOrders, setPendingOrders] = useState<Order[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
@@ -86,7 +157,6 @@ export default function PortfolioPage() {
       const data = await res.json()
 
       const accountData = data.account
-      const rawPositions: any[] = data.positions ?? []
       const allOrders: Order[] = data.orders ?? []
 
       setPendingOrders(allOrders.filter(o => o.status === "pending"))
@@ -94,85 +164,73 @@ export default function PortfolioPage() {
       setOrders(filled)
       setAccount(accountData)
 
-      // Enrich positions with live prices
-      let enrichedPositions: Position[] = []
-      if (rawPositions.length > 0) {
-        enrichedPositions = await Promise.all(
-          rawPositions.map(async (p) => {
-            try {
-              const r = await fetch(`/api/quote?symbol=${p.symbol}`)
-              const q = await r.json()
-              const cur = q.price ?? p.avg_price
-              const pnl = (cur - p.avg_price) * p.qty
-              const pnl_pct = ((cur - p.avg_price) / p.avg_price) * 100
-              return { ...p, current_price: cur, pnl, pnl_pct, value: cur * p.qty }
-            } catch {
-              return { ...p, current_price: p.avg_price, pnl: 0, pnl_pct: 0, value: p.avg_price * p.qty }
-            }
-          })
-        )
-      }
+      // ── FIFO: derive positions and closed trades from order history ──
+      const { openPositions, closedTrades: closed } = computePortfolio(filled)
+      setClosedTrades(closed)
+
+      // Enrich open positions with live prices
+      const enrichedPositions: Position[] = await Promise.all(
+        openPositions.map(async (p) => {
+          let cur = p.avg_price
+          try {
+            const r = await fetch(`/api/quote?symbol=${encodeURIComponent(p.symbol)}`)
+            const q = await r.json()
+            if (q.price) cur = q.price
+          } catch {}
+          const pnl     = (cur - p.avg_price) * p.qty
+          const pnl_pct = ((cur - p.avg_price) / p.avg_price) * 100
+          const name    = filled.find(o => o.symbol === p.symbol)?.name ?? p.symbol
+          return {
+            symbol: p.symbol,
+            name,
+            qty:           p.qty,
+            avg_price:     p.avg_price,
+            current_price: cur,
+            pnl:           parseFloat(pnl.toFixed(2)),
+            pnl_pct:       parseFloat(pnl_pct.toFixed(2)),
+            value:         parseFloat((cur * p.qty).toFixed(2)),
+          }
+        })
+      )
       setPositions(enrichedPositions)
 
-      // Compute stats
-      const cash = accountData?.cash ?? 100000
-      const invested = enrichedPositions.reduce((s, p) => s + p.avg_price * p.qty, 0)
-      const posValue = enrichedPositions.reduce((s, p) => s + p.value, 0)
+      // ── Stats ──
+      const cash      = accountData?.cash ?? 100000
+      const invested  = enrichedPositions.reduce((s, p) => s + p.avg_price * p.qty, 0)
+      const posValue  = enrichedPositions.reduce((s, p) => s + p.value, 0)
       const totalValue = cash + posValue
-      const totalPnl = totalValue - 100000 // true P&L = total portfolio value minus starting capital
-      const dayPnl = enrichedPositions.reduce((s, p) => s + p.pnl, 0) // open position P&L as day approx
+      const totalPnl  = totalValue - 100000
+      const dayPnl    = enrichedPositions.reduce((s, p) => s + p.pnl, 0)
 
-      // FIFO matching to compute closed-trade stats
-      const buyMap: Record<string, { price: number; qty: number }[]> = {}
-      const closedTrades: { symbol: string; pnl: number; pnlPct: number }[] = []
-      const sortedOrders = [...filled].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-      for (const o of sortedOrders) {
-        if (o.side === "buy") {
-          if (!buyMap[o.symbol]) buyMap[o.symbol] = []
-          buyMap[o.symbol].push({ price: o.price, qty: o.qty })
-        } else if (o.side === "sell" && buyMap[o.symbol]?.length) {
-          const buy = buyMap[o.symbol].shift()!
-          const matchedQty = Math.min(o.qty, buy.qty)
-          const pnl = (o.price - buy.price) * matchedQty
-          const pnlPct = ((o.price - buy.price) / buy.price) * 100
-          closedTrades.push({ symbol: o.symbol, pnl, pnlPct })
-          // If partial fill, push remaining back
-          if (buy.qty > o.qty) buyMap[o.symbol].unshift({ price: buy.price, qty: buy.qty - o.qty })
-        }
-      }
-
-      const tradeWinners = closedTrades.filter(t => t.pnl > 0)
-      const tradeLosers  = closedTrades.filter(t => t.pnl < 0)
-      const winRate = closedTrades.length > 0 ? (tradeWinners.length / closedTrades.length) * 100 : 0
-      const avgWin  = tradeWinners.length > 0 ? tradeWinners.reduce((s, t) => s + t.pnl, 0) / tradeWinners.length : 0
-      const avgLoss = tradeLosers.length  > 0 ? Math.abs(tradeLosers.reduce((s, t) => s + t.pnl, 0) / tradeLosers.length) : 0
-      const totalGains  = tradeWinners.reduce((s, t) => s + t.pnl, 0)
-      const totalLosses = Math.abs(tradeLosers.reduce((s, t) => s + t.pnl, 0))
+      const winners = closed.filter(t => t.pnl > 0)
+      const losers  = closed.filter(t => t.pnl < 0)
+      const winRate = closed.length > 0 ? (winners.length / closed.length) * 100 : 0
+      const avgWin  = winners.length > 0 ? winners.reduce((s, t) => s + t.pnl, 0) / winners.length : 0
+      const avgLoss = losers.length  > 0 ? Math.abs(losers.reduce((s, t) => s + t.pnl, 0) / losers.length) : 0
+      const totalGains  = winners.reduce((s, t) => s + t.pnl, 0)
+      const totalLosses = Math.abs(losers.reduce((s, t) => s + t.pnl, 0))
       const profitFactor = totalLosses > 0 ? totalGains / totalLosses : totalGains > 0 ? Infinity : 0
+      const sortedClosed = [...closed].sort((a, b) => b.pnl - a.pnl)
 
-      const sortedClosed = [...closedTrades].sort((a, b) => b.pnl - a.pnl)
-      const computedStats: Stats = {
+      setStats({
         totalValue,
-        totalCash: cash,
-        totalInvested: invested,
-        totalPnl,
-        totalPnlPct: (totalPnl / 100000) * 100,
-        dayPnl,
-        winRate,
-        avgWin,
-        avgLoss,
+        totalCash:    cash,
+        totalInvested: parseFloat(invested.toFixed(2)),
+        totalPnl:     parseFloat(totalPnl.toFixed(2)),
+        totalPnlPct:  parseFloat(((totalPnl / 100000) * 100).toFixed(2)),
+        dayPnl:       parseFloat(dayPnl.toFixed(2)),
+        winRate:      parseFloat(winRate.toFixed(1)),
+        avgWin:       parseFloat(avgWin.toFixed(2)),
+        avgLoss:      parseFloat(avgLoss.toFixed(2)),
         profitFactor,
-        totalTrades: filled.length,
-        bestTrade: sortedClosed[0] ? { symbol: sortedClosed[0].symbol, pnl: sortedClosed[0].pnl, pnl_pct: sortedClosed[0].pnlPct } : null,
+        totalTrades:  closed.length,   // trades fermés uniquement
+        bestTrade:  sortedClosed[0] ? { symbol: sortedClosed[0].symbol, pnl: sortedClosed[0].pnl, pnl_pct: sortedClosed[0].pnl_pct } : null,
         worstTrade: sortedClosed[sortedClosed.length - 1]?.pnl < 0
-          ? { symbol: sortedClosed[sortedClosed.length - 1].symbol, pnl: sortedClosed[sortedClosed.length - 1].pnl, pnl_pct: sortedClosed[sortedClosed.length - 1].pnlPct }
+          ? { symbol: sortedClosed[sortedClosed.length - 1].symbol, pnl: sortedClosed[sortedClosed.length - 1].pnl, pnl_pct: sortedClosed[sortedClosed.length - 1].pnl_pct }
           : null,
-      }
-      setStats(computedStats)
+      })
 
-      // Build perf history from orders
-      const history = buildPerfHistory(filled)
-      setPerfHistory(history)
+      setPerfHistory(buildPerfHistory(filled))
     } catch {}
     setLoading(false)
   }
@@ -225,7 +283,7 @@ export default function PortfolioPage() {
   const TABS = [
     { key: "positions", label: `📊 Positions (${positions.length})` },
     { key: "orders",    label: `📋 Ordres (${orders.length})` },
-    { key: "history",   label: "📈 Historique" },
+    { key: "history",   label: `📈 Historique (${closedTrades.length})` },
     { key: "stats",     label: "🎯 Stats" },
   ] as const
 
@@ -641,34 +699,112 @@ export default function PortfolioPage() {
 
         {/* ── TAB HISTORIQUE ───────────────────────────────────────────────── */}
         {activeTab === "history" && (
-          <div className="rounded-2xl p-5 mb-6"
-            style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
-            <p className="text-sm font-bold text-white mb-4">Courbe de performance</p>
-            {perfHistory.length > 1 ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <AreaChart data={perfHistory} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
-                  <defs>
-                    <linearGradient id="histGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#22c55e" stopOpacity={0.3} />
-                      <stop offset="100%" stopColor="#22c55e" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="date" tick={{ fill: "#444", fontSize: 10 }} tickLine={false} axisLine={false}
-                    tickFormatter={d => d?.slice(5)} />
-                  <YAxis tick={{ fill: "#444", fontSize: 10 }} tickLine={false} axisLine={false}
-                    tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} domain={["auto","auto"]} />
-                  <Tooltip
-                    contentStyle={{ background: "#111", border: "1px solid #222", borderRadius: 10, fontSize: 11 }}
-                    formatter={(v: any) => [`$${Number(v).toLocaleString()}`, "Portfolio"]}
-                  />
-                  <Area type="monotone" dataKey="value" stroke="#22c55e" strokeWidth={2} fill="url(#histGrad)" dot={false} />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-48 flex items-center justify-center">
-                <p className="text-white/25 text-sm">Place des trades pour voir ton historique</p>
+          <div className="space-y-4 mb-6">
+            {/* Courbe de performance */}
+            <div className="rounded-2xl p-5"
+              style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <p className="text-sm font-bold text-white mb-4">Courbe de performance</p>
+              {perfHistory.length > 1 ? (
+                <ResponsiveContainer width="100%" height={240}>
+                  <AreaChart data={perfHistory} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="histGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#22c55e" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="#22c55e" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="date" tick={{ fill: "#444", fontSize: 10 }} tickLine={false} axisLine={false}
+                      tickFormatter={d => d?.slice(5)} />
+                    <YAxis tick={{ fill: "#444", fontSize: 10 }} tickLine={false} axisLine={false}
+                      tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} domain={["auto","auto"]} />
+                    <Tooltip
+                      contentStyle={{ background: "#111", border: "1px solid #222", borderRadius: 10, fontSize: 11 }}
+                      formatter={(v: any) => [`$${Number(v).toLocaleString()}`, "Portfolio"]}
+                    />
+                    <Area type="monotone" dataKey="value" stroke="#22c55e" strokeWidth={2} fill="url(#histGrad)" dot={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-40 flex items-center justify-center">
+                  <p className="text-white/25 text-sm">Place des trades pour voir ton historique</p>
+                </div>
+              )}
+            </div>
+
+            {/* Trades fermés */}
+            <div className="rounded-2xl overflow-hidden"
+              style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between">
+                <p className="text-sm font-bold text-white">Trades fermés</p>
+                <span className="text-[10px] text-white/25 font-bold">
+                  {closedTrades.length} trade{closedTrades.length !== 1 ? "s" : ""} · P&L réalisé{" "}
+                  <span className={closedTrades.reduce((s, t) => s + t.pnl, 0) >= 0 ? "text-green-400" : "text-red-400"}>
+                    {closedTrades.reduce((s, t) => s + t.pnl, 0) >= 0 ? "+" : ""}
+                    ${closedTrades.reduce((s, t) => s + t.pnl, 0).toFixed(2)}
+                  </span>
+                </span>
               </div>
-            )}
+              {closedTrades.length === 0 ? (
+                <div className="text-center py-10">
+                  <p className="text-white/25 text-sm">Aucun trade fermé</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-white/[0.04]">
+                  {/* Table header */}
+                  <div className="hidden md:grid grid-cols-[1fr_80px_100px_100px_100px_130px] gap-3 px-5 py-2.5"
+                    style={{ background: "rgba(255,255,255,0.02)" }}>
+                    {["Actif","Qty","Achat","Vente","P&L","Date fermeture"].map(h => (
+                      <p key={h} className="text-[9px] text-white/20 uppercase tracking-widest font-bold">{h}</p>
+                    ))}
+                  </div>
+                  {[...closedTrades].sort((a, b) =>
+                    new Date(b.closed_at).getTime() - new Date(a.closed_at).getTime()
+                  ).map((trade, i) => {
+                    const won = trade.pnl > 0
+                    return (
+                      <div key={i}
+                        className="flex md:grid md:grid-cols-[1fr_80px_100px_100px_100px_130px] gap-3 px-5 py-3.5 items-center hover:bg-white/[0.01] transition">
+                        {/* Actif */}
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-black flex-shrink-0"
+                            style={{ background: won ? "#22c55e" : "#ef4444" }}>
+                            {trade.symbol.replace("-USD","")[0]}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-white">{trade.symbol.replace("-USD","")}</p>
+                            <p className="text-[9px] text-white/25">Fermé {won ? "✅ gain" : "❌ perte"}</p>
+                          </div>
+                        </div>
+                        {/* Mobile: P&L inline */}
+                        <div className="flex-1 md:hidden text-right">
+                          <p className={`text-sm font-black ${won ? "text-green-400" : "text-red-400"}`}>
+                            {won ? "+" : ""}{trade.pnl_pct.toFixed(2)}%
+                          </p>
+                          <p className={`text-[10px] ${won ? "text-green-400/60" : "text-red-400/60"}`}>
+                            {won ? "+" : ""}${trade.pnl.toFixed(2)}
+                          </p>
+                        </div>
+                        {/* Desktop columns */}
+                        <p className="hidden md:block text-xs text-white/50 tabular-nums">{trade.qty}</p>
+                        <p className="hidden md:block text-xs text-white/50 tabular-nums">${trade.buy_price.toFixed(2)}</p>
+                        <p className="hidden md:block text-xs text-white/60 tabular-nums">${trade.sell_price.toFixed(2)}</p>
+                        <div className="hidden md:block">
+                          <p className={`text-sm font-black tabular-nums ${won ? "text-green-400" : "text-red-400"}`}>
+                            {won ? "+" : ""}${trade.pnl.toFixed(2)}
+                          </p>
+                          <p className={`text-[10px] tabular-nums ${won ? "text-green-400/60" : "text-red-400/60"}`}>
+                            {won ? "+" : ""}{trade.pnl_pct.toFixed(2)}%
+                          </p>
+                        </div>
+                        <p className="hidden md:block text-[10px] text-white/25">
+                          {new Date(trade.closed_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -682,7 +818,7 @@ export default function PortfolioPage() {
                 { label: "Profit Factor", value: isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : "∞", color: stats.profitFactor >= 1.5 ? "#4ade80" : "#f87171", desc: "Gains / Pertes" },
                 { label: "Gain moyen", value: `+$${stats.avgWin.toFixed(2)}`, color: "#4ade80", desc: "Par position gagnante" },
                 { label: "Perte moyenne", value: `-$${Math.abs(stats.avgLoss).toFixed(2)}`, color: "#f87171", desc: "Par position perdante" },
-                { label: "Total trades", value: String(stats.totalTrades), color: "#60a5fa", desc: "Ordres exécutés" },
+                { label: "Trades fermés", value: String(stats.totalTrades), color: "#60a5fa", desc: "Paires achat/vente" },
                 { label: "P&L total", value: `${stats.totalPnl >= 0 ? "+" : ""}$${stats.totalPnl.toFixed(2)}`, color: stats.totalPnl >= 0 ? "#4ade80" : "#f87171", desc: "Depuis le début" },
               ].map(stat => (
                 <div key={stat.label} className="rounded-2xl p-4"
