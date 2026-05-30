@@ -152,7 +152,10 @@ export const PORTFOLIO_TOUR_STEPS: TourStep[] = [
 
 export default function Tour({ steps, storageKey, onComplete }: Props) {
   const [step,          setStep]          = useState(0)
-  const [visible,       setVisible]       = useState(true)
+  // Lazy init: immediately hidden if already completed — no flash
+  const [visible,       setVisible]       = useState(() =>
+    typeof window === "undefined" ? false : localStorage.getItem(storageKey) !== "1"
+  )
   const [spotlightRect, setSpotlightRect] = useState<Rect | null>(null)
   const [windowSize,    setWindowSize]    = useState({ w: 0, h: 0 })
 
@@ -186,17 +189,14 @@ export default function Tour({ steps, storageKey, onComplete }: Props) {
     attempt(0)
   }, [steps])
 
-  // Init
+  // Init — only set up resize listener (visibility already handled by lazy useState)
   useEffect(() => {
-    if (localStorage.getItem(storageKey) === "1") {
-      setVisible(false)
-      return
-    }
+    if (!visible) return
     setWindowSize({ w: window.innerWidth, h: window.innerHeight })
     const onResize = () => setWindowSize({ w: window.innerWidth, h: window.innerHeight })
     window.addEventListener("resize", onResize)
     return () => window.removeEventListener("resize", onResize)
-  }, [storageKey])
+  }, [visible]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Measure when step changes
   useEffect(() => {

@@ -224,7 +224,8 @@ export default function AnalysesPage() {
   const [loading,       setLoading]       = useState(true)
   const [lastUpdate,    setLastUpdate]    = useState<Date | null>(null)
   const [showTour,      setShowTour]      = useState(false)
-  const observerRef = useRef<IntersectionObserver | null>(null)
+  const observerRef   = useRef<IntersectionObserver | null>(null)
+  const tourCheckedRef = useRef(false)
 
   // ── Derived from snapshot ──
   const vix        = snapshot?.vix        ?? 18
@@ -302,13 +303,17 @@ export default function AnalysesPage() {
     setLoading(false)
   }, [loadSnapshot, loadCorrelations, loadNews])
 
+  useEffect(() => { loadAllData() }, [loadAllData])
+
+  // Tour — trigger once after first load (ref guard prevents re-trigger on refresh)
   useEffect(() => {
-    loadAllData().then(() => {
-      if (localStorage.getItem("tour_analyses_v1") !== "1") {
-        setTimeout(() => setShowTour(true), 800)
-      }
-    })
-  }, [loadAllData])
+    if (loading || tourCheckedRef.current) return
+    tourCheckedRef.current = true
+    if (localStorage.getItem("tour_analyses_v1") !== "1") {
+      const t = setTimeout(() => setShowTour(true), 800)
+      return () => clearTimeout(t)
+    }
+  }, [loading])
 
   // Auto-generate briefing once snapshot is loaded
   useEffect(() => {

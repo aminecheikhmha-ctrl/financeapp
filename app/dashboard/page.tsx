@@ -170,7 +170,7 @@ function DashboardContent() {
               else if (lessonParam === "news" || lessonParam === "news_calculation") setActiveTab("news")
             }
             // Show tour for beginners who haven't completed it
-            if (j.profile?.level === "débutant" && localStorage.getItem("tour_completed") !== "1") {
+            if (j.profile?.level === "débutant" && localStorage.getItem("tour_dashboard_v2") !== "1") {
               setShowTour(true)
             }
           })

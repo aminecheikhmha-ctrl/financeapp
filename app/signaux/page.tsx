@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import type { SignalResult } from "@/app/api/signals/route"
@@ -582,6 +582,7 @@ export default function Signaux() {
   const [plan,         setPlan]         = useState("free")
   const [showUpgrade,  setShowUpgrade]  = useState(false)
   const [showTour,     setShowTour]     = useState(false)
+  const tourCheckedRef                   = useRef(false)
   const [signals,      setSignals]      = useState<SignalResult[]>([])
   const [stats,        setStats]        = useState<Stats | null>(null)
   const [loading,      setLoading]      = useState(true)
@@ -639,9 +640,10 @@ export default function Signaux() {
     return () => clearInterval(interval)
   }, [user, fetchSignals])
 
-  // Tour — trigger once after first load
+  // Tour — trigger once after first load (ref guard prevents re-trigger on refresh)
   useEffect(() => {
-    if (loading) return
+    if (loading || tourCheckedRef.current) return
+    tourCheckedRef.current = true
     if (localStorage.getItem("tour_signaux_v1") !== "1") {
       const t = setTimeout(() => setShowTour(true), 800)
       return () => clearTimeout(t)
