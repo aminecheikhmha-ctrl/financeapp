@@ -324,7 +324,7 @@ export default function AnalysesPage() {
           }
         })
       },
-      { root: mainEl, threshold: 0.15, rootMargin: "-60px 0px -55% 0px" }
+      { root: mainEl, threshold: 0.15, rootMargin: "-20px 0px -55% 0px" }
     )
     document.querySelectorAll("[id^='section-']").forEach(el => observerRef.current?.observe(el))
     return () => observerRef.current?.disconnect()
@@ -346,79 +346,78 @@ export default function AnalysesPage() {
 
   return (
     <div
-      className="flex overflow-hidden"
+      className="flex flex-col overflow-hidden"
       style={{ height: "calc(100vh - var(--topbar-h, 56px))", background: "#080808" }}
     >
 
       {/* ═══════════════════════════════════════════════════════
-          SIDEBAR — fixed, md+ only
+          TICKER TAPE — top, full width, flex-shrink-0
       ═══════════════════════════════════════════════════════ */}
-      <aside className="hidden md:flex flex-col w-[200px] flex-shrink-0 h-full overflow-hidden"
-        style={{ borderRight: "1px solid rgba(255,255,255,0.05)" }}>
-
-        {/* Header */}
-        <div className="flex-shrink-0 px-4 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-          <h2 className="text-[10px] font-black text-white uppercase tracking-widest">Macro</h2>
-          <p className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.25)" }}>Terminal</p>
+      <div className="flex-shrink-0 ticker-wrap overflow-hidden"
+        style={{
+          background:    "rgba(5,5,5,0.97)",
+          backdropFilter:"blur(20px)",
+          borderBottom:  "1px solid rgba(255,255,255,0.05)",
+        }}>
+        <div className="animate-ticker flex gap-10 py-2 px-4 whitespace-nowrap">
+          {[...tickerItems, ...tickerItems].map((item, i) => (
+            <span key={i} className="flex items-center gap-2 text-[11px] flex-shrink-0">
+              <span className="font-mono font-bold" style={{ color: "rgba(255,255,255,0.35)" }}>
+                {(item as AssetData & { key?: string }).label?.replace("ETF", "").trim() ?? ""}
+              </span>
+              <span className="text-white font-bold tabular-nums">{fmtPrice(item.price)}</span>
+              <span className={`font-bold tabular-nums ${(item.change_1d ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                {(item.change_1d ?? 0) >= 0 ? "▲" : "▼"}{Math.abs(item.change_1d ?? 0).toFixed(2)}%
+              </span>
+            </span>
+          ))}
         </div>
+      </div>
 
-        {/* Nav */}
-        <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto scrollbar-hide">
+      {/* ═══════════════════════════════════════════════════════
+          TAB BAR — sections nav, full width, flex-shrink-0
+      ═══════════════════════════════════════════════════════ */}
+      <div className="flex-shrink-0 overflow-x-auto scrollbar-hide"
+        style={{
+          background:  "rgba(8,8,8,0.98)",
+          borderBottom:"1px solid rgba(255,255,255,0.06)",
+        }}>
+        <div className="flex items-center min-w-max px-2">
           {NAV_SECTIONS.map(s => (
             <button key={s.id}
               onClick={() => scrollToSection(s.id)}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all text-left ${
-                activeSection === s.id
-                  ? "bg-white/8 text-white border border-white/10"
-                  : "text-white/30 hover:text-white/60 hover:bg-white/4"
+              className={`flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold transition-all whitespace-nowrap relative flex-shrink-0 ${
+                activeSection === s.id ? "text-white" : "text-white/30 hover:text-white/60"
               }`}>
-              <span className="text-sm flex-shrink-0">{s.icon}</span>
-              <span className="truncate">{s.label}</span>
+              <span className="text-sm leading-none">{s.icon}</span>
+              <span>{s.label}</span>
+              {/* Active underline */}
+              {activeSection === s.id && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full"
+                  style={{ background: "var(--green, #22c55e)" }} />
+              )}
             </button>
           ))}
-        </nav>
 
-        {/* Timestamp + refresh */}
-        <div className="flex-shrink-0 px-4 py-3" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-          <div className="flex items-center gap-2">
-            <span className="live-dot flex-shrink-0" style={{ width: 6, height: 6 }} />
-            <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.25)" }}>
+          {/* Timestamp + refresh pushed to the right */}
+          <div className="flex items-center gap-2 ml-4 pl-4 pr-3 flex-shrink-0"
+            style={{ borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+            <span className="live-dot" style={{ width: 6, height: 6 }} />
+            <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.25)" }}>
               {lastUpdate?.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) ?? "—"}
-            </p>
+            </span>
             <button onClick={loadAllData} disabled={loading} title="Rafraîchir"
-              className={`ml-auto text-white/20 hover:text-white transition disabled:opacity-40 text-base ${loading ? "animate-spin" : ""}`}>
+              className={`text-white/25 hover:text-white transition disabled:opacity-40 text-sm ml-1 ${loading ? "animate-spin" : ""}`}>
               ↻
             </button>
           </div>
         </div>
-      </aside>
+      </div>
 
       {/* ═══════════════════════════════════════════════════════
-          MAIN — scrollable
+          MAIN — scrollable content, full width
       ═══════════════════════════════════════════════════════ */}
       <main className="flex-1 overflow-y-auto scrollbar-hide" id="macro-main">
-
-        {/* TICKER TAPE */}
-        <div className="sticky top-0 z-30 flex-shrink-0 ticker-wrap overflow-hidden"
-          style={{
-            background:    "rgba(5,5,5,0.97)",
-            backdropFilter:"blur(20px)",
-            borderBottom:  "1px solid rgba(255,255,255,0.05)",
-          }}>
-          <div className="animate-ticker flex gap-10 py-2 px-4 whitespace-nowrap">
-            {[...tickerItems, ...tickerItems].map((item, i) => (
-              <span key={i} className="flex items-center gap-2 text-[11px] flex-shrink-0">
-                <span className="font-mono font-bold" style={{ color: "rgba(255,255,255,0.35)" }}>
-                  {(item as AssetData & { key?: string }).label?.replace("ETF", "").trim() ?? ""}
-                </span>
-                <span className="text-white font-bold tabular-nums">{fmtPrice(item.price)}</span>
-                <span className={`font-bold tabular-nums ${(item.change_1d ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
-                  {(item.change_1d ?? 0) >= 0 ? "▲" : "▼"}{Math.abs(item.change_1d ?? 0).toFixed(2)}%
-                </span>
-              </span>
-            ))}
-          </div>
-        </div>
 
         {/* SECTIONS */}
         <div className="px-4 md:px-6 py-6 space-y-12 max-w-5xl mx-auto">
