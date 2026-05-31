@@ -5,34 +5,36 @@ import { usePathname, useRouter } from "next/navigation"
 import { Bell } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import GlobalSearch from "@/app/components/GlobalSearch"
+import { useLanguage } from "@/lib/i18n/context"
 
 const PUBLIC_ROUTES = ["/", "/login", "/signup", "/onboarding", "/pricing", "/preuves"]
-
-const PAGE_TITLES: Record<string, string> = {
-  "/dashboard":    "Dashboard",
-  "/signaux":      "Signaux IA",
-  "/analyses":     "Analyses Macro",
-  "/portfolio":    "Portfolio",
-  "/watchlist":    "Watchlist",
-  "/news":         "Actualités",
-  "/apprendre":    "Académie",
-  "/forum":        "Forum",
-  "/coach":        "Coach IA",
-  "/reports":      "Rapports",
-  "/compare":      "Comparateur",
-  "/profil":       "Mon Profil",
-  "/notifications":"Notifications",
-  "/parametres":   "Paramètres",
-  "/pricing":      "Tarifs",
-  "/social":       "Social Trading",
-  "/admin":        "Administration",
-  "/status":       "Status",
-}
 
 export default function Topbar() {
   const pathname = usePathname()
   const router   = useRouter()
   const dropRef  = useRef<HTMLDivElement>(null)
+  const { t } = useLanguage()
+
+  const PAGE_TITLES: Record<string, string> = {
+    "/dashboard":    t.pageTitles.dashboard,
+    "/signaux":      t.pageTitles.signals,
+    "/analyses":     t.pageTitles.analyses,
+    "/portfolio":    t.pageTitles.portfolio,
+    "/watchlist":    t.pageTitles.watchlist,
+    "/news":         t.pageTitles.news,
+    "/apprendre":    t.pageTitles.academy,
+    "/forum":        t.pageTitles.forum,
+    "/coach":        t.pageTitles.coach,
+    "/reports":      t.pageTitles.reports,
+    "/compare":      t.pageTitles.compare,
+    "/profil":       t.pageTitles.profile,
+    "/notifications":t.pageTitles.notifications,
+    "/parametres":   t.pageTitles.settings,
+    "/pricing":      t.pageTitles.pricing,
+    "/social":       t.pageTitles.social,
+    "/admin":        t.pageTitles.admin,
+    "/status":       t.pageTitles.status,
+  }
 
   const [user,          setUser]          = useState<any>(null)
   const [username,      setUsername]      = useState("")
@@ -140,7 +142,7 @@ export default function Topbar() {
               boxShadow: marketOpen ? "0 0 5px rgba(34,197,94,0.8)" : "none",
             }} />
           <span className="text-[10px] hidden lg:block" style={{ color: "var(--text-muted)" }}>
-            {marketOpen ? "Ouvert" : "Fermé"}
+            {marketOpen ? t.topbar.marketOpen : t.topbar.marketClosed}
           </span>
         </div>
       </div>
@@ -158,7 +160,7 @@ export default function Topbar() {
           <a href="/pricing"
             className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all hover:scale-[1.02] active:scale-95"
             style={{ background: "var(--green-dim)", color: "var(--green-bright)", border: "1px solid var(--green-border)" }}>
-            ⭐ Passer à Pro
+            {t.topbar.upgradePro}
           </a>
         )}
 
@@ -204,10 +206,10 @@ export default function Topbar() {
 
               {/* Links */}
               {[
-                { label: "👤 Mon profil",    href: "/profil" },
-                { label: "⚙️ Paramètres",    href: "/parametres" },
-                { label: "💎 Abonnement",    href: "/pricing" },
-                { label: "🔔 Notifications", href: "/notifications" },
+                { label: t.topbar.myProfile,         href: "/profil" },
+                { label: t.topbar.settings,          href: "/parametres" },
+                { label: t.topbar.subscription,      href: "/pricing" },
+                { label: t.topbar.notificationsLink, href: "/notifications" },
               ].map(link => (
                 <a key={link.href} href={link.href}
                   className="flex items-center px-4 py-2.5 text-sm transition-all text-white/60 hover:text-white hover:bg-white/[0.04]">
@@ -218,7 +220,7 @@ export default function Topbar() {
               <div className="border-t" style={{ borderColor: "var(--border-dim)" }}>
                 <button onClick={handleLogout}
                   className="w-full flex items-center px-4 py-2.5 text-sm transition-all text-red-400/60 hover:text-red-400 hover:bg-red-500/[0.06]">
-                  🚪 Se déconnecter
+                  {t.topbar.signOut}
                 </button>
               </div>
             </div>

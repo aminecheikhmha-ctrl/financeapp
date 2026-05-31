@@ -12,37 +12,40 @@ import {
   GitCompare, Trophy, Settings, LogOut, ChevronLeft, ChevronRight,
   Bot, FileText, Bell, Zap, Users,
 } from "lucide-react"
-
-const NAV_ITEMS = [
-  { href: "/dashboard",    icon: LayoutDashboard, label: "Dashboard",    group: "principal" },
-  { href: "/signaux",      icon: TrendingUp,      label: "Signaux IA",   group: "principal", badge: "LIVE" },
-  { href: "/analyses",     icon: BarChart2,        label: "Analyses",     group: "principal" },
-  { href: "/portfolio",    icon: Briefcase,        label: "Portfolio",    group: "principal" },
-  { href: "/watchlist",    icon: Star,             label: "Watchlist",    group: "principal" },
-  { href: "/news",         icon: Newspaper,        label: "Actualités",   group: "principal" },
-  { href: "/apprendre",    icon: BookOpen,         label: "Académie",     group: "apprendre" },
-  { href: "/forum",        icon: MessageSquare,    label: "Forum",        group: "apprendre" },
-  { href: "/coach",        icon: Bot,              label: "Coach IA",     group: "apprendre" },
-  { href: "/social",       icon: Users,            label: "Social",       group: "apprendre", soon: true },
-  { href: "/reports",      icon: FileText,         label: "Rapports",     group: "outils" },
-  { href: "/compare",      icon: GitCompare,       label: "Comparer",     group: "outils" },
-  { href: "/profil",       icon: Trophy,           label: "Profil",       group: "compte" },
-  { href: "/notifications",icon: Bell,             label: "Notifications",group: "compte" },
-  { href: "/parametres",   icon: Settings,         label: "Paramètres",   group: "compte" },
-] as const
-
-type NavItem = typeof NAV_ITEMS[number]
+import { useLanguage } from "@/lib/i18n/context"
+import LanguagePicker from "@/app/components/LanguagePicker"
 
 const GROUPS = [
-  { key: "principal", label: "Principal" },
-  { key: "apprendre", label: "Apprendre" },
-  { key: "outils",    label: "Outils" },
-  { key: "compte",    label: "Compte" },
-] as const
+  { key: "principal" as const },
+  { key: "apprendre" as const },
+  { key: "outils"    as const },
+  { key: "compte"    as const },
+]
 
 export default function Sidebar() {
   const pathname = usePathname()
   const router   = useRouter()
+  const { t } = useLanguage()
+
+  const NAV_ITEMS = [
+    { href: "/dashboard",    icon: LayoutDashboard, label: t.nav.dashboard,     group: "principal" as const },
+    { href: "/signaux",      icon: TrendingUp,      label: t.nav.signals,       group: "principal" as const, badge: "LIVE" },
+    { href: "/analyses",     icon: BarChart2,        label: t.nav.analyses,      group: "principal" as const },
+    { href: "/portfolio",    icon: Briefcase,        label: t.nav.portfolio,     group: "principal" as const },
+    { href: "/watchlist",    icon: Star,             label: t.nav.watchlist,     group: "principal" as const },
+    { href: "/news",         icon: Newspaper,        label: t.nav.news,          group: "principal" as const },
+    { href: "/apprendre",    icon: BookOpen,         label: t.nav.academy,       group: "apprendre" as const },
+    { href: "/forum",        icon: MessageSquare,    label: t.nav.forum,         group: "apprendre" as const },
+    { href: "/coach",        icon: Bot,              label: t.nav.coach,         group: "apprendre" as const },
+    { href: "/social",       icon: Users,            label: t.nav.social,        group: "apprendre" as const, soon: true },
+    { href: "/reports",      icon: FileText,         label: t.nav.reports,       group: "outils"    as const },
+    { href: "/compare",      icon: GitCompare,       label: t.nav.compare,       group: "outils"    as const },
+    { href: "/profil",       icon: Trophy,           label: t.nav.profile,       group: "compte"    as const },
+    { href: "/notifications",icon: Bell,             label: t.nav.notifications, group: "compte"    as const },
+    { href: "/parametres",   icon: Settings,         label: t.nav.settings,      group: "compte"    as const },
+  ]
+
+  type NavItem = typeof NAV_ITEMS[number]
 
   const [expanded,       setExpanded]      = useState(true)
   const [user,           setUser]          = useState<any>(null)
@@ -205,7 +208,7 @@ export default function Sidebar() {
       return (
         <span className="ml-auto text-[9px] font-black px-1.5 py-0.5 rounded-md"
           style={{ background: "rgba(251,191,36,0.10)", color: "rgba(251,191,36,0.55)", border: "1px solid rgba(251,191,36,0.15)" }}>
-          Bientôt
+          {t.nav.soon}
         </span>
       )
     return null
@@ -225,7 +228,7 @@ export default function Sidebar() {
         {/* Logo — toute la zone cliquable pour toggle */}
         <button
           onClick={toggle}
-          aria-label={expanded ? "Réduire la sidebar" : "Agrandir la sidebar"}
+          aria-label={expanded ? t.sidebar.collapse : t.sidebar.expand}
           className="flex items-center h-14 px-3 border-b flex-shrink-0 w-full transition-colors hover:bg-white/[0.03] group"
           style={{ borderColor: "rgba(255,255,255,0.06)" }}>
           <div className="flex items-center gap-2.5 w-full">
@@ -251,7 +254,7 @@ export default function Sidebar() {
               <div key={group.key} className="mb-1">
                 {expanded && (
                   <p className="text-[9px] text-white/20 uppercase tracking-widest font-bold px-4 py-2">
-                    {group.label}
+                    {t.navGroups[group.key]}
                   </p>
                 )}
                 {items.map(item => {
@@ -340,8 +343,8 @@ export default function Sidebar() {
               style={{ background: "var(--green-dim)", border: "1px solid var(--green-border)" }}>
               <Zap size={14} style={{ color: "var(--green-bright)", flexShrink: 0 }} />
               <div>
-                <p className="text-[12px] font-bold" style={{ color: "var(--green-bright)" }}>Passer à Pro</p>
-                <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>Signaux illimités · IA</p>
+                <p className="text-[12px] font-bold" style={{ color: "var(--green-bright)" }}>{t.nav.upgradeTitle}</p>
+                <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>{t.nav.upgradeDesc}</p>
               </div>
             </a>
           </div>
@@ -418,6 +421,10 @@ export default function Sidebar() {
               )}
             </div>
           )}
+        </div>
+        {/* Language picker */}
+        <div className="flex-shrink-0 px-3 pb-3 flex justify-center">
+          <LanguagePicker variant={expanded ? "pill" : "flags"} />
         </div>
       </aside>
 

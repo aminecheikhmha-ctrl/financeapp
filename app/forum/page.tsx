@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
+import { useLanguage } from "@/lib/i18n/context"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -46,11 +47,8 @@ const CATEGORIES = [
   { key: "actualite",  label: "Actualités",      icon: "📰" },
 ]
 
-const SORT_OPTIONS = [
-  { key: "recent",  label: "Récents" },
-  { key: "popular", label: "Populaires" },
-  { key: "replies", label: "Actifs" },
-]
+// Sort labels are now rendered dynamically from t.forum.sort
+const SORT_KEYS = ["recent", "popular", "replies"] as const
 
 const AVATAR_COLORS = ["#4ade80", "#60a5fa", "#f472b6", "#a78bfa", "#fb923c", "#34d399", "#facc15"]
 
@@ -156,9 +154,10 @@ function NewPostModal({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [moderated, setModerated] = useState(false)
+  const { t } = useLanguage()
 
   async function handleSubmit() {
-    if (!title.trim() || !content.trim()) { setError("Titre et contenu requis"); return }
+    if (!title.trim() || !content.trim()) { setError(`${t.forum.postTitle} ${t.common.error}`); return }
     setLoading(true)
     setError("")
     setModerated(false)
@@ -186,7 +185,7 @@ function NewPostModal({
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:p-4 bg-black/70 backdrop-blur-sm">
       <div className="bg-[#111] border border-white/10 rounded-t-2xl sm:rounded-2xl w-full max-w-[95vw] sm:max-w-lg p-5 sm:p-6 shadow-2xl mx-auto">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-white">Nouveau post</h2>
+          <h2 className="text-lg font-bold text-white">{t.forum.newPost}</h2>
           <button onClick={onClose} className="text-gray-600 hover:text-white transition text-xl leading-none">×</button>
         </div>
 
@@ -217,13 +216,13 @@ function NewPostModal({
           <input
             value={title}
             onChange={e => setTitle(e.target.value)}
-            placeholder="Titre du post"
+            placeholder={t.forum.postTitle}
             className="w-full bg-white/5 border border-white/8 text-white px-4 py-3 rounded-xl text-sm placeholder-gray-600 outline-none focus:border-green-500/50 transition"
           />
           <textarea
             value={content}
             onChange={e => setContent(e.target.value)}
-            placeholder="Partage ton analyse, ta question, ton idée..."
+            placeholder={t.forum.postContent}
             rows={5}
             className="w-full bg-white/5 border border-white/8 text-white px-4 py-3 rounded-xl text-sm placeholder-gray-600 outline-none focus:border-green-500/50 transition resize-none"
           />
@@ -252,7 +251,7 @@ function NewPostModal({
               style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
               <span className="text-base flex-shrink-0">🚫</span>
               <div>
-                <p className="text-sm font-bold text-red-400">Post refusé par la modération</p>
+                <p className="text-sm font-bold text-red-400">{t.forum.moderated}</p>
                 <p className="text-xs text-red-400/70 mt-0.5">{error}</p>
               </div>
             </div>
@@ -266,14 +265,14 @@ function NewPostModal({
             onClick={onClose}
             className="px-4 py-2 rounded-xl text-sm text-gray-400 hover:text-white transition"
           >
-            Annuler
+            {t.common.cancel}
           </button>
           <button
             onClick={handleSubmit}
             disabled={loading}
             className="px-6 py-2 rounded-xl text-sm font-semibold bg-green-500 hover:bg-green-400 text-black transition disabled:opacity-50"
           >
-            {loading ? "Publication..." : "Publier"}
+            {loading ? "..." : t.forum.publish}
           </button>
         </div>
       </div>
@@ -379,6 +378,7 @@ function LeaderboardTab() {
 
 export default function Forum() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [tab, setTab] = useState<"forum" | "leaderboard">("forum")
   const [user, setUser] = useState<any>(null)
   const [posts, setPosts] = useState<Post[]>([])
@@ -469,7 +469,7 @@ export default function Forum() {
                   onClick={() => setShowModal(true)}
                   className="flex items-center gap-2 px-4 py-2.5 bg-green-500 hover:bg-green-400 text-black text-sm font-bold rounded-xl transition"
                 >
-                  ✏️ Nouveau post
+                  ✏️ {t.forum.newPost}
                 </button>
               ) : (
                 <a href="/login" className="px-4 py-2.5 bg-green-500/10 border border-green-500/30 text-green-400 text-sm font-semibold rounded-xl hover:bg-green-500/20 transition">
@@ -506,22 +506,22 @@ export default function Forum() {
                   <input
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    placeholder="Rechercher..."
+                    placeholder={t.forum.searchPlaceholder}
                     className="w-full pl-9 pr-4 py-2.5 bg-white/5 border border-white/8 text-white text-sm rounded-xl placeholder-gray-600 outline-none focus:border-green-500/40 transition"
                   />
                 </div>
                 <div className="flex gap-1">
-                  {SORT_OPTIONS.map(s => (
+                  {SORT_KEYS.map(key => (
                     <button
-                      key={s.key}
-                      onClick={() => setSort(s.key)}
+                      key={key}
+                      onClick={() => setSort(key)}
                       className={`flex-shrink-0 whitespace-nowrap px-2.5 py-2 rounded-xl text-xs font-semibold transition ${
-                        sort === s.key
+                        sort === key
                           ? "bg-green-500/15 text-green-400 border border-green-500/20"
                           : "text-gray-500 bg-white/5 hover:text-white"
                       }`}
                     >
-                      {s.label}
+                      {t.forum.sort[key]}
                     </button>
                   ))}
                 </div>
@@ -552,7 +552,7 @@ export default function Forum() {
               ) : posts.length === 0 ? (
                 <div className="text-center py-16">
                   <div className="text-5xl mb-4">💬</div>
-                  <h3 className="text-white font-bold text-lg mb-2">Le forum est vide</h3>
+                  <h3 className="text-white font-bold text-lg mb-2">{t.forum.noPost}</h3>
                   <p className="text-gray-500 text-sm mb-6">Sois le premier à partager une analyse ou poser une question !</p>
                   <button
                     onClick={() => setShowModal(true)}

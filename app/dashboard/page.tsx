@@ -17,6 +17,7 @@ import TooltipHint from "@/app/components/Tooltip"
 import { cn } from "@/lib/utils"
 import { Search, Plus, TrendingUp, TrendingDown, ChevronRight, Settings, ArrowUpRight, Star } from "lucide-react"
 import GlobalSearch from "@/app/components/GlobalSearch"
+import { useLanguage } from "@/lib/i18n/context"
 
 type TickerData = {
   symbol: string
@@ -61,6 +62,7 @@ function DashboardContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const toast = useToast()
+  const { t } = useLanguage()
 
   const [ticker, setTicker] = useState(searchParams.get("symbol") ?? "AAPL")
   const lessonParam = searchParams.get("lesson")
@@ -903,14 +905,14 @@ function DashboardContent() {
             <div className="flex border-b border-white/[0.05] overflow-x-auto scrollbar-hide">
               {((userProfile?.xp ?? 0) < 1500
                 ? [
-                    { key: "ia", label: "Que dit l'IA ? 🤖" },
-                    { key: "chart", label: "Signaux" },
+                    { key: "ia", label: `${t.dashboard.signals} 🤖` },
+                    { key: "chart", label: t.dashboard.tabs.signals },
                     { key: "news", label: "📰 News" },
                   ]
                 : [
-                    { key: "chart", label: "Signaux" },
-                    { key: "technique", label: "Indicateurs" },
-                    { key: "ia", label: "Que dit l'IA ? 🤖" },
+                    { key: "chart", label: t.dashboard.tabs.signals },
+                    { key: "technique", label: "Indicators" },
+                    { key: "ia", label: `${t.dashboard.signals} 🤖` },
                     { key: "news", label: "📰 News & Sentiment" },
                   ]
               ).map(tab => {
@@ -962,12 +964,12 @@ function DashboardContent() {
                               <span className="text-xs font-bold text-white">${s.price?.toFixed(2)}</span>
                               <span className="text-[10px] text-gray-600">{s.date}</span>
                               {s.type === "buy" && (
-                                <button onClick={isDemo ? () => setShowSignupModal(true) : openBuy} className="text-[10px] px-2 py-0.5 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 transition">Acheter</button>
+                                <button onClick={isDemo ? () => setShowSignupModal(true) : openBuy} className="text-[10px] px-2 py-0.5 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 transition">{t.dashboard.buyBtn}</button>
                               )}
                             </div>
                           ))}
                         </div>
-                      ) : <p className="text-gray-600 text-xs text-center py-4">Aucun signal détecté</p>}
+                      ) : <p className="text-gray-600 text-xs text-center py-4">{t.dashboard.noSignals}</p>}
                     </>
                   ) : (
                     <div className="text-center py-6">
@@ -1152,7 +1154,7 @@ function DashboardContent() {
                   <div className="flex gap-2 p-3 border-b border-white/[0.05]">
                     <button onClick={fetchNewsData} disabled={loadingNews}
                       className="flex-1 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-400 hover:bg-blue-500/20 transition disabled:opacity-40">
-                      {loadingNews ? "⏳ Chargement..." : "🔄 Actualiser les news"}
+                      {loadingNews ? `⏳ ${t.common.loading}` : `🔄 ${t.common.refresh}`}
                     </button>
                   </div>
                   {!newsData && !loadingNews && (
@@ -1408,7 +1410,7 @@ function DashboardContent() {
 
                           {prediction.recommendation === "ACHETER" && (
                             <button onClick={isDemo ? () => setShowSignupModal(true) : openBuy} className="w-full py-2 rounded-lg bg-green-500 hover:bg-green-400 text-white text-xs font-bold transition">
-                              Acheter {ticker.replace("-USD", "")}
+                              {t.dashboard.buyBtn} {ticker.replace("-USD", "")}
                             </button>
                           )}
                           {prediction.recommendation === "VENDRE" && (
@@ -1417,7 +1419,7 @@ function DashboardContent() {
                               else { setOrderModal("short"); setOrderQty("1") }
                             }}
                               className="w-full py-2 rounded-lg bg-red-500 hover:bg-red-400 text-white text-xs font-bold transition">
-                              {position && position.qty > 0 ? `Vendre ${ticker.replace("-USD", "")}` : `Shorter ${ticker.replace("-USD", "")}`}
+                              {position && position.qty > 0 ? `${t.dashboard.sellBtn} ${ticker.replace("-USD", "")}` : `Short ${ticker.replace("-USD", "")}`}
                             </button>
                           )}
                         </div>
@@ -1479,15 +1481,15 @@ function DashboardContent() {
               {([
                 { key: "trade",  label: "Trade",  icon: "⚡" },
                 { key: "calc",   label: "Calc",   icon: "🧮" },
-                { key: "ordres", label: "Ordres", icon: "📋" },
-              ] as const).map(t => (
-                <button key={t.key} onClick={() => setRightTab(t.key)}
+                { key: "ordres", label: t.dashboard.tabs.orders, icon: "📋" },
+              ] as const).map(tab => (
+                <button key={tab.key} onClick={() => setRightTab(tab.key)}
                   className={`flex-1 py-2 text-[11px] font-bold transition border-b-2 ${
-                    rightTab === t.key
+                    rightTab === tab.key
                       ? "text-white border-white"
                       : "text-gray-600 border-transparent hover:text-gray-400"
                   }`}>
-                  {t.icon} {t.label}
+                  {tab.icon} {tab.label}
                 </button>
               ))}
             </div>
@@ -1546,7 +1548,7 @@ function DashboardContent() {
                   </div>
                 ) : (
                   <div className="px-4 py-3 border-b border-white/[0.05]">
-                    <p className="text-[9px] text-gray-700 uppercase tracking-widest">Aucune position sur {ticker.replace("-USD", "")}</p>
+                    <p className="text-[9px] text-gray-700 uppercase tracking-widest">{t.dashboard.noPositions} — {ticker.replace("-USD", "")}</p>
                   </div>
                 )}
 
@@ -1554,7 +1556,7 @@ function DashboardContent() {
                 <div data-tour="buy-btn" className="px-4 py-3 border-b border-white/[0.05] space-y-2">
                   <button onClick={isDemo ? () => setShowSignupModal(true) : openBuy}
                     className="w-full py-3 rounded-xl btn-primary text-sm tracking-wide">
-                    Acheter {ticker.replace("-USD", "")}
+                    {t.dashboard.buyBtn} {ticker.replace("-USD", "")}
                   </button>
                   <button
                     onClick={isDemo ? () => setShowSignupModal(true) : () => {
@@ -1568,7 +1570,7 @@ function DashboardContent() {
                     }}
                     className="w-full py-2.5 rounded-xl text-sm font-bold transition bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 cursor-pointer">
                     {position && position.qty > 0
-                      ? `Vendre ${position.qty} parts`
+                      ? `${t.dashboard.sellBtn} ${position.qty} shares`
                       : position && position.qty < 0
                         ? `🔄 Racheter (Short ${Math.abs(position.qty)})`
                         : `📉 Shorter ${ticker.replace("-USD", "")}`}
@@ -1631,7 +1633,7 @@ function DashboardContent() {
                 <div className="px-4 py-3 border-b border-white/[0.05]">
                   <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-2">Mes ordres · {ticker.replace("-USD", "")}</p>
                   {orderHistory.length === 0 ? (
-                    <p className="text-[10px] text-gray-700 py-2">Aucun ordre sur cet actif</p>
+                    <p className="text-[10px] text-gray-700 py-2">{t.dashboard.noOrders}</p>
                   ) : (
                     <div className="space-y-1.5">
                       {[...orderHistory].reverse().slice(0, 10).map((o, i) => (
@@ -1776,13 +1778,13 @@ function DashboardContent() {
                 </div>
                 <div>
                   <p className="text-base font-black">
-                    {orderModal === "buy" ? "Acheter" : orderModal === "short" ? "Shorter" : "Vendre"} {ticker.replace("-USD", "")}
+                    {orderModal === "buy" ? t.dashboard.buyBtn : orderModal === "short" ? "Short" : t.dashboard.sellBtn} {ticker.replace("-USD", "")}
                   </p>
                   {orderModal === "short" && (
-                    <p className="text-[10px] text-orange-400/70 mt-0.5">📉 Vente à découvert — position négative</p>
+                    <p className="text-[10px] text-orange-400/70 mt-0.5">📉 Short sell — negative position</p>
                   )}
                   <p className="text-[10px] text-gray-500">
-                    {activeData?.name} · {isPending ? "Ordre différé" : "Marché au prix actuel"}
+                    {activeData?.name} · {isPending ? "Deferred order" : t.dashboard.market}
                   </p>
                 </div>
               </div>
@@ -1795,7 +1797,7 @@ function DashboardContent() {
                 style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
                 <span className="text-lg flex-shrink-0">🕐</span>
                 <div>
-                  <p className="text-xs font-bold text-yellow-400 mb-0.5">Marché fermé — Ordre différé</p>
+                  <p className="text-xs font-bold text-yellow-400 mb-0.5">Market closed — Deferred order</p>
                   <p className="text-[11px] text-white/40 leading-relaxed">
                     {mktStatus.message}. Ton ordre sera placé automatiquement à la prochaine ouverture au prix du marché.
                   </p>
@@ -1827,7 +1829,7 @@ function DashboardContent() {
                     color: isPending ? "#fbbf24" : "#4ade80",
                     border: `1px solid ${isPending ? "rgba(245,158,11,0.2)" : "rgba(34,197,94,0.2)"}`,
                   }}>
-                  {isPending ? "⏳ Différé" : "⚡ Marché"}
+                  {isPending ? "⏳ Deferred" : "⚡ Market"}
                 </span>
               </div>
             </div>
@@ -1837,7 +1839,7 @@ function DashboardContent() {
               <div className="flex rounded-lg overflow-hidden border border-white/10">
                 <button onClick={() => setOrderMode("qty")}
                   className={`flex-1 py-1.5 text-xs font-bold transition ${orderMode === "qty" ? "bg-white/10 text-white" : "text-gray-600 hover:text-gray-400"}`}>
-                  Quantité
+                  {t.dashboard.quantity}
                 </button>
                 <button onClick={() => setOrderMode("capital")}
                   className={`flex-1 py-1.5 text-xs font-bold transition ${orderMode === "capital" ? "bg-white/10 text-white" : "text-gray-600 hover:text-gray-400"}`}>
@@ -1932,7 +1934,7 @@ function DashboardContent() {
 
               <div className="flex gap-2 pt-1">
                 <button onClick={() => { setOrderModal(null); setOrderMsg("") }}
-                  className="px-4 py-2.5 rounded-xl border border-white/10 text-gray-500 hover:text-white transition text-sm">Annuler</button>
+                  className="px-4 py-2.5 rounded-xl border border-white/10 text-gray-500 hover:text-white transition text-sm">{t.common.cancel}</button>
                 <button onClick={() => placeOrder(orderModal)} disabled={orderLoading}
                   className="flex-1 py-2.5 rounded-xl text-sm font-black transition disabled:opacity-50 flex items-center justify-center gap-2 text-white"
                   style={{
@@ -1949,13 +1951,13 @@ function DashboardContent() {
                   )}
                   {orderLoading ? "En cours..." : isPending
                     ? `⏳ Planifier ${orderModal === "buy" ? "l'achat" : orderModal === "short" ? "le short" : "la vente"}`
-                    : orderModal === "buy" ? "🟢 Confirmer l'achat" : orderModal === "short" ? "📉 Confirmer le short" : "🔴 Confirmer la vente"
+                    : orderModal === "buy" ? `🟢 ${t.dashboard.confirm}` : orderModal === "short" ? `📉 ${t.dashboard.confirm}` : `🔴 ${t.dashboard.confirm}`
                   }
                 </button>
               </div>
               {isPending && !orderLoading && (
                 <p className="text-[10px] text-white/20 text-center mt-2">
-                  Tu peux annuler depuis ton portfolio avant l&apos;ouverture
+                  You can cancel from your portfolio before market open
                 </p>
               )}
             </div>
@@ -2024,13 +2026,13 @@ function DashboardContent() {
           onClick={() => { setOrderSide("buy"); setShowMobileOrder(true); import("@/lib/capacitor").then(m => m.haptic("light")) }}
           className="flex-1 py-3.5 rounded-2xl text-sm font-black text-black"
           style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", boxShadow: "0 4px 20px rgba(34,197,94,0.3)" }}>
-          🟢 Acheter
+          🟢 {t.dashboard.buyBtn}
         </button>
         <button
           onClick={() => { setOrderSide("sell"); setShowMobileOrder(true); import("@/lib/capacitor").then(m => m.haptic("light")) }}
           className="flex-1 py-3.5 rounded-2xl text-sm font-black text-white"
           style={{ background: "linear-gradient(135deg, #ef4444, #dc2626)", boxShadow: "0 4px 20px rgba(239,68,68,0.3)" }}>
-          🔴 Vendre
+          🔴 {t.dashboard.sellBtn}
         </button>
       </div>
 
@@ -2054,17 +2056,17 @@ function DashboardContent() {
         </div>
         <div className="p-4 space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-base font-black text-white">{orderSide === "buy" ? "🟢 Acheter" : "🔴 Vendre"} {ticker.replace("-USD", "")}</p>
+            <p className="text-base font-black text-white">{orderSide === "buy" ? `🟢 ${t.dashboard.buyBtn}` : `🔴 ${t.dashboard.sellBtn}`} {ticker.replace("-USD", "")}</p>
             <button onClick={() => setShowMobileOrder(false)} className="text-white/30 hover:text-white transition text-xl">×</button>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <button onClick={() => setOrderSide("buy")}
               className={`py-2.5 rounded-xl text-sm font-black transition-all ${orderSide === "buy" ? "bg-green-500 text-black" : "bg-white/5 text-white/40"}`}>
-              🟢 Acheter
+              🟢 {t.dashboard.buyBtn}
             </button>
             <button onClick={() => setOrderSide("sell")}
               className={`py-2.5 rounded-xl text-sm font-black transition-all ${orderSide === "sell" ? "bg-red-500 text-white" : "bg-white/5 text-white/40"}`}>
-              🔴 Vendre
+              🔴 {t.dashboard.sellBtn}
             </button>
           </div>
           <MarketStatusBar symbol={ticker} showDetail />
@@ -2092,7 +2094,7 @@ function DashboardContent() {
               background: orderSide === "buy" ? "linear-gradient(135deg, #22c55e, #16a34a)" : "linear-gradient(135deg, #ef4444, #dc2626)",
               color: orderSide === "buy" ? "black" : "white",
             }}>
-            Confirmer
+            {t.common.confirm}
           </button>
         </div>
       </div>

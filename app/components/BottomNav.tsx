@@ -9,30 +9,32 @@ import {
 } from "lucide-react"
 import { haptic } from "@/lib/capacitor"
 import { supabase } from "@/lib/supabase"
+import { useLanguage } from "@/lib/i18n/context"
 
 const PUBLIC_ROUTES = ["/", "/login", "/signup", "/onboarding", "/pricing", "/preuves"]
-
-const TABS = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/signaux",   icon: TrendingUp,      label: "Signaux",   badge: true },
-  { href: "/portfolio", icon: Briefcase,        label: "Portfolio" },
-  { href: "/apprendre", icon: BookOpen,         label: "Académie" },
-] as const
-
-const MENU_ITEMS = [
-  { href: "/watchlist",    icon: Star,           label: "Watchlist" },
-  { href: "/news",         icon: Newspaper,      label: "Actualités" },
-  { href: "/forum",        icon: MessageSquare,  label: "Forum" },
-  { href: "/compare",      icon: GitCompare,     label: "Comparer" },
-  { href: "/reports",      icon: FileText,       label: "Rapports" },
-  { href: "/coach",        icon: Bot,            label: "Coach IA" },
-  { href: "/social",       icon: Users,          label: "Social" },
-  { href: "/parametres",   icon: Settings,       label: "Paramètres" },
-]
 
 export default function BottomNav() {
   const pathname = usePathname()
   const router   = useRouter()
+  const { t } = useLanguage()
+
+  const TABS = [
+    { href: "/dashboard", icon: LayoutDashboard, label: t.nav.dashboard },
+    { href: "/signaux",   icon: TrendingUp,      label: t.nav.signals,   badge: true },
+    { href: "/portfolio", icon: Briefcase,        label: t.nav.portfolio },
+    { href: "/apprendre", icon: BookOpen,         label: t.nav.academy },
+  ]
+
+  const MENU_ITEMS = [
+    { href: "/watchlist",    icon: Star,           label: t.nav.watchlist },
+    { href: "/news",         icon: Newspaper,      label: t.nav.news },
+    { href: "/forum",        icon: MessageSquare,  label: t.nav.forum },
+    { href: "/compare",      icon: GitCompare,     label: t.nav.compare },
+    { href: "/reports",      icon: FileText,       label: t.nav.reports },
+    { href: "/coach",        icon: Bot,            label: t.nav.coach },
+    { href: "/social",       icon: Users,          label: t.nav.social },
+    { href: "/parametres",   icon: Settings,       label: t.nav.settings },
+  ]
 
   const [user,        setUser]        = useState<any>(null)
   const [signalCount, setSignalCount] = useState(0)
@@ -168,7 +170,7 @@ export default function BottomNav() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-white font-bold text-sm truncate">{username ?? user?.email?.split("@")[0]}</p>
-            <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>Voir mon profil →</p>
+            <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>{t.nav.profile} →</p>
           </div>
         </a>
 
@@ -202,7 +204,7 @@ export default function BottomNav() {
             onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.06)"}
             onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
             <LogOut size={16} style={{ flexShrink: 0 }} />
-            <span className="text-sm font-semibold">Déconnexion</span>
+            <span className="text-sm font-semibold">{t.nav.logout}</span>
           </button>
         </div>
       </div>
@@ -272,7 +274,7 @@ export default function BottomNav() {
               strokeWidth={moreActive ? 2.4 : 1.7} />
             <span className="text-[10px] font-semibold"
               style={{ color: moreActive ? "var(--green)" : "rgba(255,255,255,0.25)" }}>
-              Plus
+              {t.nav.more}
             </span>
           </button>
         </div>

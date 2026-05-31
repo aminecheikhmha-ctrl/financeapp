@@ -6,45 +6,55 @@ import { supabase } from "@/lib/supabase"
 import { motion, AnimatePresence } from "framer-motion"
 import { haptic } from "@/lib/capacitor"
 import TradexLogo from "@/app/components/TradexLogo"
+import { useLanguage } from "@/lib/i18n/context"
 
-type OnboardingStep = "welcome" | "level" | "goals" | "assets" | "capital" | "done"
-const STEPS: OnboardingStep[] = ["welcome", "level", "goals", "assets", "capital", "done"]
+type OnboardingStep = "language" | "welcome" | "level" | "goals" | "assets" | "capital" | "done"
+const STEPS: OnboardingStep[] = ["language", "welcome", "level", "goals", "assets", "capital", "done"]
 
 const LEVELS = [
-  { key: "debutant",       label: "Débutant",      desc: "Je découvre le trading",                          icon: "🌱", color: "#4ade80" },
-  { key: "intermediaire",  label: "Intermédiaire", desc: "Je trade depuis moins de 2 ans",                  icon: "📊", color: "#60a5fa" },
-  { key: "avance",         label: "Avancé",         desc: "Je trade régulièrement depuis 2+ ans",            icon: "🏆", color: "#a78bfa" },
-  { key: "professionnel",  label: "Professionnel",  desc: "C'est mon métier ou j'ai une formation finance",  icon: "💎", color: "#fbbf24" },
+  { key: "debutant",       labelKey: "beginner" as const,     descKey: "beginnerDesc" as const,     icon: "🌱", color: "#4ade80" },
+  { key: "intermediaire",  labelKey: "intermediate" as const, descKey: "intermediateDesc" as const, icon: "📊", color: "#60a5fa" },
+  { key: "avance",         labelKey: "advanced" as const,     descKey: "advancedDesc" as const,     icon: "🏆", color: "#a78bfa" },
+  { key: "professionnel",  labelKey: "advanced" as const,     descKey: "advancedDesc" as const,     icon: "💎", color: "#fbbf24" },
 ]
 
 const GOALS = [
-  { key: "apprendre",      label: "Apprendre le trading",          icon: "📚" },
-  { key: "revenus",        label: "Générer des revenus passifs",    icon: "💰" },
-  { key: "investissement", label: "Investir à long terme",          icon: "📈" },
-  { key: "swing",          label: "Swing trading actif",            icon: "🌊" },
-  { key: "crypto",         label: "Trader les cryptos",             icon: "₿"  },
-  { key: "decouverte",     label: "Découvrir les marchés",          icon: "🔭" },
+  { key: "apprendre",      labelKey: "learn" as const,    descKey: "learnDesc" as const,    icon: "📚" },
+  { key: "revenus",        labelKey: "passive" as const,  descKey: "passiveDesc" as const,  icon: "💰" },
+  { key: "investissement", labelKey: "grow" as const,     descKey: "growDesc" as const,     icon: "📈" },
+  { key: "swing",          labelKey: "fun" as const,      descKey: "funDesc" as const,      icon: "🌊" },
+  { key: "crypto",         labelKey: "learn" as const,    descKey: "learnDesc" as const,    icon: "₿"  },
+  { key: "decouverte",     labelKey: "fun" as const,      descKey: "funDesc" as const,      icon: "🔭" },
 ]
 
 const ASSET_TYPES = [
-  { key: "stocks",      label: "Actions",          icon: "📈", desc: "Apple, Tesla, NVIDIA..."   },
-  { key: "crypto",      label: "Cryptos",           icon: "₿",  desc: "Bitcoin, Ethereum..."      },
-  { key: "etf",         label: "ETF / Indices",     icon: "📦", desc: "S&P 500, Nasdaq..."        },
-  { key: "forex",       label: "Forex",             icon: "💱", desc: "EUR/USD, GBP/USD..."       },
-  { key: "commodities", label: "Matières premières",icon: "🥇", desc: "Or, pétrole..."            },
+  { key: "stocks",      icon: "📈", desc: "Apple, Tesla, NVIDIA..."  },
+  { key: "crypto",      icon: "₿",  desc: "Bitcoin, Ethereum..."     },
+  { key: "etf",         icon: "📦", desc: "S&P 500, Nasdaq..."       },
+  { key: "forex",       icon: "💱", desc: "EUR/USD, GBP/USD..."      },
+  { key: "commodities", icon: "🥇", desc: "Or, pétrole..."           },
 ]
 
+const ASSET_LABEL_KEYS: Record<string, string> = {
+  stocks: "Actions",
+  crypto: "Cryptos",
+  etf: "ETF / Indices",
+  forex: "Forex",
+  commodities: "Matières premières",
+}
+
 const CAPITAL_RANGES = [
-  { key: "discover", label: "Je découvre",          desc: "Mode démo uniquement",          icon: "👀" },
-  { key: "small",    label: "< 1 000€",             desc: "Petit portefeuille",             icon: "💶" },
-  { key: "medium",   label: "1 000 — 10 000€",      desc: "Portefeuille moyen",             icon: "💰" },
-  { key: "large",    label: "10 000 — 50 000€",     desc: "Portefeuille avancé",            icon: "💎" },
-  { key: "pro",      label: "> 50 000€",            desc: "Portefeuille professionnel",     icon: "🏦" },
+  { key: "discover", label: "Je découvre",       desc: "Mode démo uniquement",      icon: "👀" },
+  { key: "small",    label: "< 1 000€",          desc: "Petit portefeuille",        icon: "💶" },
+  { key: "medium",   label: "1 000 — 10 000€",   desc: "Portefeuille moyen",        icon: "💰" },
+  { key: "large",    label: "10 000 — 50 000€",  desc: "Portefeuille avancé",       icon: "💎" },
+  { key: "pro",      label: "> 50 000€",         desc: "Portefeuille professionnel", icon: "🏦" },
 ]
 
 export default function OnboardingPage() {
   const router = useRouter()
-  const [step, setStep]   = useState<OnboardingStep>("welcome")
+  const { t, lang, setLang } = useLanguage()
+  const [step, setStep]   = useState<OnboardingStep>("language")
   const [user, setUser]   = useState<any>(null)
   const [saving, setSaving] = useState(false)
   const [selections, setSelections] = useState({
@@ -137,7 +147,7 @@ export default function OnboardingPage() {
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
         <TradexLogo size={28} showText textSize="sm" />
-        {step !== "welcome" && step !== "done" && (
+        {step !== "language" && step !== "welcome" && step !== "done" && (
           <div className="flex items-center gap-3">
             <div className="w-32 h-1.5 rounded-full bg-white/10 overflow-hidden">
               <div className="h-full rounded-full bg-green-400 transition-all duration-500"
@@ -160,6 +170,31 @@ export default function OnboardingPage() {
             className="w-full max-w-lg"
           >
 
+            {/* ── LANGUAGE ── */}
+            {step === "language" && (
+              <div className="text-center">
+                <div className="text-5xl mb-6">🌐</div>
+                <h1 className="text-3xl font-black text-white mb-3">{t.onboarding.stepLanguage}</h1>
+                <p className="text-white/40 text-sm mb-10">{t.onboarding.languageLabel}</p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                  {(["en", "fr"] as const).map(l => (
+                    <button
+                      key={l}
+                      onClick={() => { setLang(l); haptic("light"); next() }}
+                      className="w-full sm:w-48 flex items-center justify-center gap-3 py-5 rounded-2xl font-black text-lg transition-all hover:scale-[1.03]"
+                      style={{
+                        background: lang === l ? "rgba(34,197,94,0.12)" : "rgba(255,255,255,0.04)",
+                        border: `2px solid ${lang === l ? "rgba(34,197,94,0.40)" : "rgba(255,255,255,0.10)"}`,
+                        color: "#fff",
+                      }}>
+                      <span className="text-3xl">{l === "en" ? "🇬🇧" : "🇫🇷"}</span>
+                      <span>{l === "en" ? "English" : "Français"}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* ── WELCOME ── */}
             {step === "welcome" && (
               <div className="text-center">
@@ -168,10 +203,9 @@ export default function OnboardingPage() {
                     style={{ background: "rgba(34,197,94,0.5)", animationDuration: "2s" }} />
                   <TradexLogo size={96} />
                 </div>
-                <h1 className="text-3xl font-black text-white mb-3">Bienvenue sur Tradex 🎉</h1>
+                <h1 className="text-3xl font-black text-white mb-3">{t.onboarding.doneTitle}</h1>
                 <p className="text-white/50 text-base leading-relaxed mb-6">
-                  La plateforme de trading IA qui s'adapte à ton niveau. Commence avec{" "}
-                  <strong className="text-green-400">$100 000 fictifs</strong> et apprends sans risque.
+                  {t.onboarding.doneSubtitle}
                 </p>
 
                 {/* Username */}
@@ -208,7 +242,7 @@ export default function OnboardingPage() {
                 <button onClick={next} disabled={!selections.username.trim()}
                   className="w-full py-4 rounded-2xl font-black text-base text-black transition-all hover:scale-[1.02] disabled:opacity-40 disabled:cursor-not-allowed"
                   style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}>
-                  Commencer l'aventure →
+                  {t.onboarding.next}
                 </button>
               </div>
             )}
@@ -218,8 +252,8 @@ export default function OnboardingPage() {
               <div>
                 <div className="text-center mb-8">
                   <p className="text-4xl mb-3">📊</p>
-                  <h2 className="text-2xl font-black text-white mb-2">Quel est ton niveau ?</h2>
-                  <p className="text-white/40 text-sm">Pour personnaliser ton expérience</p>
+                  <h2 className="text-2xl font-black text-white mb-2">{t.onboarding.stepLevel}</h2>
+                  <p className="text-white/40 text-sm">{t.onboarding.doneSubtitle}</p>
                 </div>
                 <div className="space-y-3 mb-8">
                   {LEVELS.map(level => (
@@ -233,8 +267,8 @@ export default function OnboardingPage() {
                       }}>
                       <span className="text-3xl">{level.icon}</span>
                       <div className="flex-1">
-                        <p className="font-black text-white">{level.label}</p>
-                        <p className="text-xs text-white/40 mt-0.5">{level.desc}</p>
+                        <p className="font-black text-white">{t.onboarding.levels[level.labelKey]}</p>
+                        <p className="text-xs text-white/40 mt-0.5">{t.onboarding.levels[level.descKey]}</p>
                       </div>
                       {selections.level === level.key && (
                         <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-black flex-shrink-0"
@@ -244,11 +278,11 @@ export default function OnboardingPage() {
                   ))}
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={prev} className="px-5 py-3 rounded-xl text-sm font-semibold text-white/40 hover:text-white transition border border-white/[0.08]">← Retour</button>
+                  <button onClick={prev} className="px-5 py-3 rounded-xl text-sm font-semibold text-white/40 hover:text-white transition border border-white/[0.08]">{t.onboarding.prev}</button>
                   <button onClick={next} disabled={!selections.level}
                     className="flex-1 py-3 rounded-xl font-black text-sm text-black disabled:opacity-40 transition-all hover:scale-[1.01]"
                     style={{ background: "#22c55e" }}>
-                    Continuer →
+                    {t.onboarding.next}
                   </button>
                 </div>
               </div>
@@ -259,8 +293,8 @@ export default function OnboardingPage() {
               <div>
                 <div className="text-center mb-8">
                   <p className="text-4xl mb-3">🎯</p>
-                  <h2 className="text-2xl font-black text-white mb-2">Quels sont tes objectifs ?</h2>
-                  <p className="text-white/40 text-sm">Sélectionne tout ce qui te correspond</p>
+                  <h2 className="text-2xl font-black text-white mb-2">{t.onboarding.stepGoal}</h2>
+                  <p className="text-white/40 text-sm">{t.onboarding.skip}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-3 mb-8">
                   {GOALS.map(goal => {
@@ -273,18 +307,18 @@ export default function OnboardingPage() {
                           border: `1px solid ${selected ? "rgba(34,197,94,0.30)" : "rgba(255,255,255,0.07)"}`,
                         }}>
                         <span className="text-2xl">{goal.icon}</span>
-                        <span className="text-sm font-semibold text-white/70 flex-1">{goal.label}</span>
+                        <span className="text-sm font-semibold text-white/70 flex-1">{t.onboarding.goals[goal.labelKey]}</span>
                         {selected && <span className="text-green-400 text-sm">✓</span>}
                       </button>
                     )
                   })}
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={prev} className="px-5 py-3 rounded-xl text-sm font-semibold text-white/40 hover:text-white transition border border-white/[0.08]">← Retour</button>
+                  <button onClick={prev} className="px-5 py-3 rounded-xl text-sm font-semibold text-white/40 hover:text-white transition border border-white/[0.08]">{t.onboarding.prev}</button>
                   <button onClick={next} disabled={selections.goals.length === 0}
                     className="flex-1 py-3 rounded-xl font-black text-sm text-black disabled:opacity-40 transition-all hover:scale-[1.01]"
                     style={{ background: "#22c55e" }}>
-                    Continuer →
+                    {t.onboarding.next}
                   </button>
                 </div>
               </div>
@@ -295,8 +329,8 @@ export default function OnboardingPage() {
               <div>
                 <div className="text-center mb-8">
                   <p className="text-4xl mb-3">💹</p>
-                  <h2 className="text-2xl font-black text-white mb-2">Quels marchés t'intéressent ?</h2>
-                  <p className="text-white/40 text-sm">Choisis un ou plusieurs marchés</p>
+                  <h2 className="text-2xl font-black text-white mb-2">{t.onboarding.stepStyle}</h2>
+                  <p className="text-white/40 text-sm">{t.onboarding.skip}</p>
                 </div>
                 <div className="space-y-3 mb-8">
                   {ASSET_TYPES.map(asset => {
@@ -310,7 +344,7 @@ export default function OnboardingPage() {
                         }}>
                         <span className="text-2xl">{asset.icon}</span>
                         <div className="flex-1">
-                          <p className="font-bold text-white">{asset.label}</p>
+                          <p className="font-bold text-white">{ASSET_LABEL_KEYS[asset.key]}</p>
                           <p className="text-xs text-white/35">{asset.desc}</p>
                         </div>
                         {selected && (
@@ -321,11 +355,11 @@ export default function OnboardingPage() {
                   })}
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={prev} className="px-5 py-3 rounded-xl text-sm font-semibold text-white/40 hover:text-white transition border border-white/[0.08]">← Retour</button>
+                  <button onClick={prev} className="px-5 py-3 rounded-xl text-sm font-semibold text-white/40 hover:text-white transition border border-white/[0.08]">{t.onboarding.prev}</button>
                   <button onClick={next} disabled={selections.assets.length === 0}
                     className="flex-1 py-3 rounded-xl font-black text-sm text-black disabled:opacity-40 transition-all hover:scale-[1.01]"
                     style={{ background: "#22c55e" }}>
-                    Continuer →
+                    {t.onboarding.next}
                   </button>
                 </div>
               </div>
@@ -336,8 +370,8 @@ export default function OnboardingPage() {
               <div>
                 <div className="text-center mb-8">
                   <p className="text-4xl mb-3">💰</p>
-                  <h2 className="text-2xl font-black text-white mb-2">Ton capital de trading ?</h2>
-                  <p className="text-white/40 text-sm">Pour calibrer les recommandations · Anonyme et confidentiel</p>
+                  <h2 className="text-2xl font-black text-white mb-2">{t.onboarding.stepRisk}</h2>
+                  <p className="text-white/40 text-sm">{t.onboarding.skip}</p>
                 </div>
                 <div className="space-y-2.5 mb-8">
                   {CAPITAL_RANGES.map(range => (
@@ -360,11 +394,11 @@ export default function OnboardingPage() {
                   ))}
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={prev} className="px-5 py-3 rounded-xl text-sm font-semibold text-white/40 hover:text-white transition border border-white/[0.08]">← Retour</button>
+                  <button onClick={prev} className="px-5 py-3 rounded-xl text-sm font-semibold text-white/40 hover:text-white transition border border-white/[0.08]">{t.onboarding.prev}</button>
                   <button onClick={completeOnboarding} disabled={!selections.capital || saving}
                     className="flex-1 py-3 rounded-xl font-black text-sm text-black disabled:opacity-40 transition-all hover:scale-[1.01]"
                     style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}>
-                    {saving ? "⏳ Finalisation..." : "🚀 Terminer l'inscription"}
+                    {saving ? "⏳ " + t.common.loading : "🚀 " + t.onboarding.doneCta}
                   </button>
                 </div>
               </div>
@@ -375,24 +409,22 @@ export default function OnboardingPage() {
               <div className="text-center">
                 <div className="text-7xl mb-6 animate-bounce">🎉</div>
                 <h2 className="text-3xl font-black text-white mb-3">
-                  Tu es prêt, {selections.username || "Trader"} !
+                  {t.onboarding.doneTitle}
                 </h2>
                 <p className="text-white/50 text-base leading-relaxed mb-8">
-                  Ton compte Tradex est configuré. Tu as reçu{" "}
-                  <strong className="text-green-400">$100 000 fictifs</strong> et{" "}
-                  <strong className="text-yellow-400">+100 XP</strong> pour démarrer.
+                  {t.onboarding.doneSubtitle}
                 </p>
 
-                {/* Résumé */}
+                {/* Summary */}
                 <div className="rounded-2xl p-5 mb-8 text-left"
                   style={{ background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.15)" }}>
-                  <p className="text-[10px] text-green-400/60 uppercase tracking-widest font-bold mb-3">Ton profil</p>
+                  <p className="text-[10px] text-green-400/60 uppercase tracking-widest font-bold mb-3">{t.onboarding.languageLabel}</p>
                   <div className="space-y-2">
                     {[
-                      { label: "Pseudo",   value: selections.username },
-                      { label: "Niveau",   value: LEVELS.find(l => l.key === selections.level)?.label },
-                      { label: "Marchés",  value: selections.assets.map(a => ASSET_TYPES.find(t => t.key === a)?.label).join(", ") },
-                      { label: "Capital",  value: CAPITAL_RANGES.find(c => c.key === selections.capital)?.label },
+                      { label: "Pseudo",  value: selections.username },
+                      { label: t.onboarding.stepLevel,  value: LEVELS.find(l => l.key === selections.level)?.labelKey ? t.onboarding.levels[LEVELS.find(l => l.key === selections.level)!.labelKey] : "" },
+                      { label: t.onboarding.stepStyle,  value: selections.assets.map(a => ASSET_LABEL_KEYS[a]).join(", ") },
+                      { label: t.onboarding.stepRisk,   value: CAPITAL_RANGES.find(c => c.key === selections.capital)?.label },
                     ].map(item => (
                       <div key={item.label} className="flex justify-between text-sm">
                         <span className="text-white/40">{item.label}</span>
@@ -406,11 +438,7 @@ export default function OnboardingPage() {
                   <button onClick={() => router.push("/dashboard")}
                     className="w-full py-4 rounded-2xl font-black text-base text-black transition-all hover:scale-[1.02]"
                     style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", boxShadow: "0 0 40px rgba(34,197,94,0.25)" }}>
-                    🚀 Accéder au Dashboard
-                  </button>
-                  <button onClick={() => router.push("/apprendre")}
-                    className="w-full py-3 rounded-2xl font-semibold text-sm text-white/50 hover:text-white transition border border-white/10">
-                    📚 Commencer par l'académie
+                    🚀 {t.onboarding.doneCta}
                   </button>
                 </div>
               </div>
@@ -421,11 +449,11 @@ export default function OnboardingPage() {
       </div>
 
       {/* Skip */}
-      {step !== "welcome" && step !== "done" && (
+      {step !== "language" && step !== "welcome" && step !== "done" && (
         <div className="text-center pb-6">
           <button onClick={() => router.push("/dashboard")}
             className="text-xs text-white/20 hover:text-white/50 transition">
-            Passer l'onboarding →
+            {t.onboarding.skip} →
           </button>
         </div>
       )}

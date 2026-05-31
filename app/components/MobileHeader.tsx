@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { usePathname, useRouter } from "next/navigation"
+import { useLanguage } from "@/lib/i18n/context"
 
 const PUBLIC_ROUTES = ["/", "/login", "/signup", "/onboarding", "/pricing", "/preuves"]
 
 export default function MobileHeader() {
   const pathname = usePathname()
   const router   = useRouter()
+  const { t } = useLanguage()
 
   const [user,        setUser]        = useState<any>(null)
   const [searchOpen,  setSearchOpen]  = useState(false)
@@ -90,7 +92,7 @@ export default function MobileHeader() {
                 autoFocus
                 value={query}
                 onChange={e => handleSearch(e.target.value)}
-                placeholder="AAPL, Bitcoin, NVDA..."
+                placeholder={t.mobileSearch.placeholder}
                 className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-gray-600"
               />
               {query && (
@@ -103,7 +105,7 @@ export default function MobileHeader() {
               onClick={closeSearch}
               className="text-gray-400 font-semibold text-sm flex-shrink-0 px-1"
             >
-              Annuler
+              {t.mobileSearch.cancel}
             </button>
           </div>
 
@@ -139,13 +141,13 @@ export default function MobileHeader() {
             {!searching && query.length >= 2 && results.length === 0 && (
               <div className="text-center mt-12">
                 <p className="text-3xl mb-3">🔍</p>
-                <p className="text-gray-500 text-sm">Aucun résultat pour <span className="text-white">"{query}"</span></p>
+                <p className="text-gray-500 text-sm">{t.mobileSearch.noResults} <span className="text-white">"{query}"</span></p>
               </div>
             )}
 
             {!searching && query.length === 0 && (
               <div className="mt-6">
-                <p className="text-gray-600 text-xs font-semibold uppercase tracking-widest mb-3">Suggestions</p>
+                <p className="text-gray-600 text-xs font-semibold uppercase tracking-widest mb-3">{t.mobileSearch.suggestions}</p>
                 <div className="flex flex-wrap gap-2">
                   {["AAPL", "TSLA", "NVDA", "BTC-USD", "ETH-USD", "MSFT", "AMZN", "SPY"].map(sym => (
                     <button

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { Plus, Search, GitCompare, Trash2, TrendingUp, TrendingDown, X } from "lucide-react"
 import { formatPrice } from "@/lib/format"
+import { useLanguage } from "@/lib/i18n/context"
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -74,6 +75,7 @@ function SignalBadge({ signal }: { signal: string | null }) {
 
 export default function WatchlistPage() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [items,    setItems]    = useState<WatchlistItem[]>([])
   const [loading,  setLoading]  = useState(true)
   const [symbols,  setSymbols]  = useState<string[]>(() => {
@@ -211,7 +213,7 @@ export default function WatchlistPage() {
       <div className="px-6 py-5 border-b border-white/5">
         <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
           <div>
-            <h1 className="text-2xl font-black text-white">Ma Watchlist</h1>
+            <h1 className="text-2xl font-black text-white">{t.watchlist.title}</h1>
             <p className="text-white/30 text-sm mt-0.5">
               {items.length} actifs · <span className="text-green-400">▲ {up}</span> · <span className="text-red-400">▼ {down}</span>
             </p>
@@ -225,7 +227,7 @@ export default function WatchlistPage() {
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black text-black transition-all hover:scale-[1.02]"
                 style={{ background: "#22c55e" }}>
                 <GitCompare size={14} />
-                Comparer ({selected.length})
+                {t.watchlist.compareBtn.replace("{n}", String(selected.length))}
               </button>
             ) : items.length >= 2 ? (
               <button
@@ -233,7 +235,7 @@ export default function WatchlistPage() {
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border transition-all hover:bg-white/4"
                 style={{ borderColor: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }}>
                 <GitCompare size={14} />
-                Comparer tout
+                {t.watchlist.compareBtn.replace("{n}", String(items.slice(0, 4).length))}
               </button>
             ) : null}
           </div>
@@ -262,7 +264,7 @@ export default function WatchlistPage() {
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
             <input value={search} onChange={e => handleSearch(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter" && search.trim()) { addFromSearch(search.toUpperCase().trim()) } }}
-              placeholder="Ajouter un actif — AAPL, BTC-USD, NVDA…"
+              placeholder={t.watchlist.searchPlaceholder}
               className="w-full h-9 pl-8 pr-3 rounded-xl text-xs text-white placeholder-white/20 outline-none"
               style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }} />
             {results.length > 0 && (
@@ -331,9 +333,9 @@ export default function WatchlistPage() {
         ) : filtered.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-4xl mb-3">⭐</p>
-            <p className="font-black text-white mb-2">{items.length === 0 ? "Watchlist vide" : "Aucun résultat"}</p>
+            <p className="font-black text-white mb-2">{items.length === 0 ? t.watchlist.empty : t.common.noResults}</p>
             <p className="text-white/40 text-sm">
-              {items.length === 0 ? "Ajoute des actifs via la barre ci-dessus" : "Essaie un autre filtre"}
+              {items.length === 0 ? t.watchlist.emptyDesc : t.watchlist.emptyDesc}
             </p>
           </div>
         ) : (
@@ -347,7 +349,7 @@ export default function WatchlistPage() {
                 background: "rgba(255,255,255,0.025)",
               }}>
               <div />
-              {["Actif","Prix","1J","1S","1M","RSI","30 jours","Signal",""].map(h => (
+              {[t.watchlist.columns.asset, t.watchlist.columns.price, t.watchlist.columns.day, t.watchlist.columns.week, t.watchlist.columns.month, t.watchlist.columns.rsi, "30d", t.watchlist.columns.signal, ""].map(h => (
                 <p key={h} className="text-[9px] text-white/25 uppercase tracking-widest font-bold text-right first:text-left">{h}</p>
               ))}
             </div>

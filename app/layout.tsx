@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
+import { I18nProvider } from "@/lib/i18n/context"
 import Navbar          from "./components/Navbar"
 import Sidebar         from "./components/Sidebar"
 import BottomNav       from "./components/BottomNav"
@@ -95,7 +96,8 @@ export default function RootLayout({
         `}} />
       </head>
       <body className={`${inter.variable} font-sans bg-[#050505] text-white`}>
-        <a href="#main-content" className="skip-link">Aller au contenu principal</a>
+        <a href="#main-content" className="skip-link">Skip to content</a>
+        <I18nProvider>
         <ToastProvider>
           <AppSplashScreen />
           <NativePushSetup />
@@ -114,6 +116,7 @@ export default function RootLayout({
           <ChatBot />
           <CookieBanner />
         </ToastProvider>
+        </I18nProvider>
       </body>
     </html>
   )

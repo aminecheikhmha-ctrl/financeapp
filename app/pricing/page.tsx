@@ -4,21 +4,19 @@ import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { Check, X, Zap, Shield, Star } from "lucide-react"
 import TradexLogo from "@/app/components/TradexLogo"
+import { useLanguage } from "@/lib/i18n/context"
 
 type BillingPeriod = "monthly" | "annual"
 
 const PLANS = [
   {
-    key: "free",
-    name: "Free",
+    key: "free" as const,
     icon: "🌱",
     color: "#9ca3af",
     monthlyPrice: 0,
     annualPrice: 0,
-    description: "Parfait pour découvrir le trading",
-    cta: "Commencer gratuitement",
     ctaStyle: "secondary",
-    badge: undefined as string | undefined,
+    hasBadge: false,
     stripePriceId: undefined as string | undefined,
     stripePriceIdAnnual: undefined as string | undefined,
     features: [
@@ -37,16 +35,13 @@ const PLANS = [
     ],
   },
   {
-    key: "pro",
-    name: "Pro",
+    key: "pro" as const,
     icon: "⭐",
     color: "#22c55e",
     monthlyPrice: 19,
     annualPrice: 15,
-    description: "Pour les traders actifs sérieux",
-    cta: "Passer à Pro",
     ctaStyle: "primary",
-    badge: "LE PLUS POPULAIRE" as string | undefined,
+    hasBadge: true,
     stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID,
     stripePriceIdAnnual: process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID,
     features: [
@@ -65,16 +60,13 @@ const PLANS = [
     ],
   },
   {
-    key: "premium",
-    name: "Premium",
+    key: "premium" as const,
     icon: "💎",
     color: "#fbbf24",
     monthlyPrice: 49,
     annualPrice: 39,
-    description: "Pour les traders professionnels",
-    cta: "Passer Premium",
     ctaStyle: "gold",
-    badge: undefined as string | undefined,
+    hasBadge: false,
     stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PREMIUM_MONTHLY_PRICE_ID,
     stripePriceIdAnnual: process.env.NEXT_PUBLIC_STRIPE_PREMIUM_ANNUAL_PRICE_ID,
     features: [
@@ -128,6 +120,7 @@ const COMPARISON_ROWS = [
 
 export default function PricingPage() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [billing, setBilling] = useState<BillingPeriod>("monthly")
   const [loading, setLoading] = useState<string | null>(null)
   const [currentPlan, setCurrentPlan] = useState("free")
@@ -181,17 +174,17 @@ export default function PricingPage() {
             <a href="/dashboard"
               className="px-4 py-2 rounded-lg text-sm font-bold text-black transition hover:opacity-90"
               style={{ background: "#22c55e" }}>
-              ← Dashboard
+              {t.pricing.backToDashboard}
             </a>
           ) : (
             <>
               <a href="/login" className="px-4 py-2 rounded-lg text-sm text-white/50 hover:text-white transition">
-                Se connecter
+                {t.auth.loginLink}
               </a>
               <a href="/signup"
                 className="px-4 py-2 rounded-lg text-sm font-bold text-black transition hover:opacity-90"
                 style={{ background: "#22c55e" }}>
-                Essayer gratuitement
+                {t.pricing.plans.free.cta}
               </a>
             </>
           )}
@@ -203,21 +196,20 @@ export default function PricingPage() {
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6"
           style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
           <Zap size={14} className="text-green-400" />
-          <span className="text-xs text-green-400 font-bold">30 jours satisfait ou remboursé</span>
+          <span className="text-xs text-green-400 font-bold">{t.pricing.badge}</span>
         </div>
         <h1 className="text-4xl md:text-5xl font-black text-white mb-4 leading-tight">
-          Investis dans ton<br />
           <span style={{
             background: "linear-gradient(135deg, #4ade80, #22c55e)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
             backgroundClip: "text",
           }}>
-            éducation financière
+            {t.pricing.title}
           </span>
         </h1>
         <p className="text-white/50 text-lg mb-8">
-          Commence gratuitement. Upgrade quand tu es prêt. Annulation à tout moment.
+          {t.pricing.subtitle}
         </p>
 
         {/* Billing toggle */}
@@ -226,12 +218,12 @@ export default function PricingPage() {
           <button
             onClick={() => setBilling("monthly")}
             className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${billing === "monthly" ? "bg-white text-black" : "text-white/50 hover:text-white"}`}>
-            Mensuel
+            {t.pricing.monthly}
           </button>
           <button
             onClick={() => setBilling("annual")}
             className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${billing === "annual" ? "bg-white text-black" : "text-white/50 hover:text-white"}`}>
-            Annuel
+            {t.pricing.annual}
             <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full"
               style={{
                 background: billing === "annual" ? "#22c55e" : "rgba(34,197,94,0.2)",
@@ -249,7 +241,9 @@ export default function PricingPage() {
           {PLANS.map(plan => {
             const price = billing === "annual" ? plan.annualPrice : plan.monthlyPrice
             const isCurrent = currentPlan === plan.key
-            const isPopular = plan.badge !== undefined
+            const isPopular = plan.hasBadge
+            const planT = t.pricing.plans[plan.key]
+            const badge = plan.hasBadge ? ("badge" in planT ? planT.badge : undefined) : undefined
             return (
               <div key={plan.key}
                 className={`relative rounded-3xl overflow-hidden ${isPopular ? "md:scale-[1.03] md:-mt-3" : ""}`}
@@ -258,31 +252,31 @@ export default function PricingPage() {
                   border: `2px solid ${isPopular ? "rgba(34,197,94,0.3)" : "rgba(255,255,255,0.08)"}`,
                   boxShadow: isPopular ? "0 0 40px rgba(34,197,94,0.1)" : "none",
                 }}>
-                {plan.badge && (
+                {badge && (
                   <div className="absolute top-0 left-0 right-0 py-2 text-center text-[10px] font-black text-black uppercase tracking-widest"
                     style={{ background: "#22c55e" }}>
-                    {plan.badge}
+                    {badge}
                   </div>
                 )}
-                <div className={`p-7 ${plan.badge ? "pt-10" : ""}`}>
+                <div className={`p-7 ${badge ? "pt-10" : ""}`}>
                   <div className="flex items-center gap-2.5 mb-4">
                     <span className="text-3xl">{plan.icon}</span>
                     <div>
-                      <p className="font-black text-white text-lg">{plan.name}</p>
-                      <p className="text-xs text-white/40">{plan.description}</p>
+                      <p className="font-black text-white text-lg">{planT.name}</p>
+                      <p className="text-xs text-white/40">{planT.desc}</p>
                     </div>
                   </div>
                   <div className="mb-6">
                     <div className="flex items-baseline gap-1">
                       <span className="text-4xl font-black text-white">{price === 0 ? "0€" : `${price}€`}</span>
-                      {price > 0 && <span className="text-white/30 text-sm">/mois</span>}
+                      {price > 0 && <span className="text-white/30 text-sm">{t.pricing.perMonth}</span>}
                     </div>
                     {billing === "annual" && price > 0 && (
                       <p className="text-[11px] text-white/30 mt-1">
-                        Facturé {price * 12}€/an · Économise {(plan.monthlyPrice - price) * 12}€
+                        {t.pricing.billedAnnually.replace("{price}", String(price * 12)).replace("{save}", String((plan.monthlyPrice - price) * 12))}
                       </p>
                     )}
-                    {price === 0 && <p className="text-[11px] text-white/30 mt-1">Pour toujours</p>}
+                    {price === 0 && <p className="text-[11px] text-white/30 mt-1">{t.pricing.forever}</p>}
                   </div>
                   <button
                     onClick={() => handleSubscribe(plan)}
@@ -298,7 +292,7 @@ export default function PricingPage() {
                         : "white",
                       border: plan.ctaStyle === "secondary" ? "1px solid rgba(255,255,255,0.12)" : "none",
                     }}>
-                    {loading === plan.key ? "⏳ Chargement..." : isCurrent ? "✓ Plan actuel" : plan.cta}
+                    {loading === plan.key ? t.common.loading : isCurrent ? t.pricing.currentPlan : planT.cta}
                   </button>
                   <div className="space-y-2.5">
                     {plan.features.map((feature, i) => (
@@ -322,9 +316,9 @@ export default function PricingPage() {
         {/* Trust badges */}
         <div className="mt-8 flex flex-col md:flex-row items-center justify-center gap-6 text-center">
           {[
-            { icon: <Shield size={18} className="text-green-400" />, text: "30 jours satisfait ou remboursé" },
-            { icon: <Check size={18} className="text-green-400" />, text: "Annulation à tout moment, sans frais" },
-            { icon: <Star size={18} className="text-green-400" />, text: "Paiement 100% sécurisé par Stripe" },
+            { icon: <Shield size={18} className="text-green-400" />, text: t.pricing.trustBadges.moneyBack },
+            { icon: <Check size={18} className="text-green-400" />, text: t.pricing.trustBadges.cancel },
+            { icon: <Star size={18} className="text-green-400" />, text: t.pricing.trustBadges.secure },
           ].map((item, i) => (
             <div key={i} className="flex items-center gap-2 text-sm text-white/40">
               {item.icon}{item.text}
@@ -336,13 +330,13 @@ export default function PricingPage() {
       {/* Comparison table */}
       <div className="border-t border-white/5 py-16 px-6">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-black text-white text-center mb-12">Comparaison détaillée</h2>
+          <h2 className="text-3xl font-black text-white text-center mb-12">{t.pricing.comparisonTitle}</h2>
           <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
             <div className="grid grid-cols-[2fr_1fr_1fr_1fr]" style={{ background: "rgba(255,255,255,0.02)" }}>
               <div className="px-5 py-4 text-[10px] text-white/25 uppercase tracking-widest font-bold">Fonctionnalité</div>
               {PLANS.map(plan => (
                 <div key={plan.key} className="px-4 py-4 text-center">
-                  <p className="text-sm font-black" style={{ color: plan.color }}>{plan.name}</p>
+                  <p className="text-sm font-black" style={{ color: plan.color }}>{t.pricing.plans[plan.key as keyof typeof t.pricing.plans]?.name ?? plan.key}</p>
                 </div>
               ))}
             </div>
@@ -367,7 +361,7 @@ export default function PricingPage() {
       {/* Testimonials */}
       <div className="border-t border-white/5 py-16 px-6">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-black text-white text-center mb-12">Ce que disent nos traders</h2>
+          <h2 className="text-3xl font-black text-white text-center mb-12">{t.pricing.testimonialsTitle}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {TESTIMONIALS.map(t => (
               <div key={t.name} className="rounded-2xl p-5"
@@ -395,7 +389,7 @@ export default function PricingPage() {
       {/* FAQ */}
       <div className="border-t border-white/5 py-16 px-6">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-3xl font-black text-white text-center mb-12">Questions fréquentes</h2>
+          <h2 className="text-3xl font-black text-white text-center mb-12">{t.pricing.faqTitle}</h2>
           <div className="space-y-3">
             {FAQS.map((faq, i) => (
               <div key={i}
@@ -426,32 +420,32 @@ export default function PricingPage() {
         {isLoggedIn ? (
           <>
             <h2 className="text-4xl font-black text-white mb-4">
-              Prêt à passer<br />au niveau supérieur ?
+              {t.pricing.loggedInCta}
             </h2>
             <p className="text-white/40 mb-8 max-w-md mx-auto">
-              Choisis ton plan ci-dessus et débloque toutes les fonctionnalités Pro ou Premium en quelques secondes.
+              {t.pricing.loggedInDesc}
             </p>
             <a href="/dashboard"
               className="inline-flex items-center gap-2 px-10 py-5 rounded-2xl text-lg font-black text-black transition-all hover:scale-[1.03]"
               style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", boxShadow: "0 0 50px rgba(34,197,94,0.25)" }}>
-              Retour au dashboard →
+              {t.pricing.backToDashboard}
             </a>
-            <p className="text-xs text-white/20 mt-4">✓ Annulation à tout moment · ✓ Paiement sécurisé Stripe</p>
+            <p className="text-xs text-white/20 mt-4">{t.pricing.trustBadges.cancel} · {t.pricing.trustBadges.secure}</p>
           </>
         ) : (
           <>
             <h2 className="text-4xl font-black text-white mb-4">
-              Commence aujourd&apos;hui,<br />gratuitement
+              {t.pricing.finalCta}
             </h2>
             <p className="text-white/40 mb-8 max-w-md mx-auto">
-              Rejoins des milliers de traders qui utilisent Tradex pour progresser chaque jour.
+              {t.pricing.finalCtaDesc}
             </p>
             <a href="/signup"
               className="inline-flex items-center gap-2 px-10 py-5 rounded-2xl text-lg font-black text-black transition-all hover:scale-[1.03]"
               style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", boxShadow: "0 0 50px rgba(34,197,94,0.25)" }}>
-              Créer mon compte gratuit →
+              {t.pricing.finalCtaBtn}
             </a>
-            <p className="text-xs text-white/20 mt-4">✓ Sans carte de crédit · ✓ Sans engagement · ✓ $100k fictifs offerts</p>
+            <p className="text-xs text-white/20 mt-4">{t.pricing.noCard}</p>
           </>
         )}
       </div>

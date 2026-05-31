@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { Search, RefreshCw } from "lucide-react"
+import { useLanguage } from "@/lib/i18n/context"
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -317,6 +318,7 @@ function HeroCard({ article }: { article: Article }) {
 // ─── Main page ─────────────────────────────────────────────────────────────────
 
 export default function NewsPage() {
+  const { t } = useLanguage()
   const [activeTheme, setActiveTheme] = useState<ThemeKey>("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [articles, setArticles]       = useState<Article[]>([])
@@ -432,7 +434,7 @@ export default function NewsPage() {
 
         {/* Header */}
         <div className="flex-shrink-0 px-4 pt-4 pb-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-          <h2 className="text-[9px] font-black text-white uppercase tracking-widest">Thèmes</h2>
+          <h2 className="text-[9px] font-black text-white uppercase tracking-widest">{t.news.tabs.macro}</h2>
         </div>
 
         {/* Themes list */}
@@ -641,10 +643,10 @@ export default function NewsPage() {
           {!loading && filteredArticles.length === 0 && articles.length > 0 && (
             <div className="text-center py-24">
               <p className="text-4xl mb-3">📭</p>
-              <p className="text-sm font-semibold text-white/30 mb-3">Aucune actualité pour ce thème</p>
+              <p className="text-sm font-semibold text-white/30 mb-3">{t.news.noNews}</p>
               <button onClick={() => { selectTheme("all") }}
                 className="text-xs text-white/30 underline hover:text-white transition">
-                Afficher tout
+                {t.common.seeAll}
               </button>
             </div>
           )}
@@ -673,7 +675,7 @@ export default function NewsPage() {
 
           {/* Fear & Greed */}
           <div className="p-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-            <p className="text-[9px] text-white/20 uppercase tracking-widest font-black mb-3">Fear &amp; Greed Index</p>
+            <p className="text-[9px] text-white/20 uppercase tracking-widest font-black mb-3">{t.news.fearGreed}</p>
             <FearGreedGaugeMini data={fearGreed} />
             {fearGreed && (
               <p className="text-[10px] leading-relaxed mt-2" style={{ color: "rgba(255,255,255,0.22)" }}>
@@ -771,7 +773,7 @@ export default function NewsPage() {
 
           {/* Economic Calendar */}
           <div className="p-4">
-            <p className="text-[9px] text-white/20 uppercase tracking-widest font-black mb-3">📅 Calendrier</p>
+            <p className="text-[9px] text-white/20 uppercase tracking-widest font-black mb-3">📅 {t.news.calendar}</p>
             {econEvents.length > 0 ? (
               <div className="space-y-2">
                 {econEvents.slice(0, 6).map((ev, i) => (

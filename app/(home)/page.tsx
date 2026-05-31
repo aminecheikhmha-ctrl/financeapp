@@ -1,18 +1,11 @@
-import FAQItem from "@/app/components/FAQItem"
+"use client"
 
-export const metadata = {
-  title: "Tradex — Trading intelligent avec l'IA | Signaux, Analyses, Académie",
-  description: "Signaux de trading IA en temps réel, analyses algorithmiques sur 160+ actifs, paper trading et académie interactive. Tradez plus intelligemment.",
-  keywords: ["signaux trading", "trading IA", "analyse technique", "RSI MACD", "paper trading", "académie trading"],
-  openGraph: {
-    title: "Tradex — Trading intelligent avec l'IA",
-    description: "Signaux en temps réel · Analyses IA · Paper Trading · Académie interactive",
-    type: "website",
-    locale: "fr_FR",
-  },
-}
+import FAQItem from "@/app/components/FAQItem"
+import { useLanguage } from "@/lib/i18n/context"
+import LanguagePicker from "@/app/components/LanguagePicker"
 
 export default function HomePage() {
+  const { t } = useLanguage()
   return (
     <main style={{ background: "#050505", minHeight: "100vh" }}>
       {/* SECTION 1 — HERO */}
@@ -60,12 +53,13 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
             <a href="/signup" className="group relative flex items-center gap-2.5 px-8 py-4 rounded-2xl text-base font-black text-black transition-all hover:scale-[1.03] active:scale-[0.98]"
               style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", boxShadow: "0 0 40px rgba(34,197,94,0.3), 0 4px 20px rgba(0,0,0,0.3)" }}>
-              Commencer gratuitement →
+              {t.home.heroCta}
             </a>
             <a href="/dashboard" className="flex items-center gap-2.5 px-8 py-4 rounded-2xl text-base font-bold transition-all hover:bg-white/5"
               style={{ color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.10)" }}>
-              Voir le dashboard <span className="text-green-400 text-xs font-black ml-1">DEMO</span>
+              {t.home.heroLogin} <span className="text-green-400 text-xs font-black ml-1">DEMO</span>
             </a>
+            <LanguagePicker variant="flags" />
           </div>
 
           {/* Social proof */}
@@ -271,7 +265,7 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <p className="text-xs text-green-400 font-black uppercase tracking-widest mb-3">Témoignages</p>
-            <h2 className="text-4xl font-black text-white">Ce que disent nos traders</h2>
+            <h2 className="text-4xl font-black text-white">{t.home.testimonialsTitle}</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {[
@@ -298,7 +292,7 @@ export default function HomePage() {
       {/* SECTION 6 — FAQ */}
       <section className="py-24 px-6" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-4xl font-black text-white text-center mb-12">Questions fréquentes</h2>
+          <h2 className="text-4xl font-black text-white text-center mb-12">{t.home.faqTitle}</h2>
           <div className="space-y-3">
             {[
               { q: "Est-ce que Tradex utilise de vraies données de marché ?", a: "Oui, toutes les données proviennent de Yahoo Finance en temps réel. Les prix, variations et volumes sont mis à jour en continu." },
@@ -320,14 +314,14 @@ export default function HomePage() {
             style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)" }}>
             🚀
           </div>
-          <h2 className="text-4xl font-black text-white mb-4">Prêt à trader plus intelligemment ?</h2>
-          <p className="mb-8" style={{ color: "rgba(255,255,255,0.4)" }}>Rejoins 10,000+ traders. Gratuit, sans CB, annulation à tout moment.</p>
+          <h2 className="text-4xl font-black text-white mb-4">{t.home.finalCta}</h2>
+          <p className="mb-8" style={{ color: "rgba(255,255,255,0.4)" }}>{t.home.finalCtaDesc}</p>
           <a href="/signup" className="inline-flex items-center gap-2 px-10 py-5 rounded-2xl text-lg font-black text-black transition-all hover:scale-[1.03] active:scale-[0.98]"
             style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", boxShadow: "0 0 60px rgba(34,197,94,0.3)" }}>
-            Commencer gratuitement →
+            {t.home.heroCta}
           </a>
           <p className="text-xs mt-4" style={{ color: "rgba(255,255,255,0.2)" }}>
-            ✓ Sans carte de crédit · ✓ $100,000 fictifs offerts · ✓ Annulation à tout moment
+            {t.home.footerRisk}
           </p>
         </div>
       </section>

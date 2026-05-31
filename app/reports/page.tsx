@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { useLanguage } from "@/lib/i18n/context"
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend, CartesianGrid,
@@ -186,6 +187,7 @@ function PnLCalendar({ data }: { data: ReportData["dailySnapshots"] }) {
 
 export default function ReportsPage() {
   const router = useRouter()
+  const { t } = useLanguage()
   const reportRef = useRef<HTMLDivElement>(null)
 
   const [loading, setLoading] = useState(true)
@@ -365,10 +367,10 @@ export default function ReportsPage() {
   const pnlColor = report.totalPnlPct >= 0 ? "text-green-400" : "text-red-400"
   const PERIODS: Period[] = ["1M", "3M", "6M", "1Y", "ALL"]
   const SECTIONS = [
-    { key: "performance" as Section, label: "📊 Performance" },
-    { key: "assets" as Section, label: "📈 Par actif" },
-    { key: "sectors" as Section, label: "🌍 Secteurs" },
-    { key: "comportement" as Section, label: "🧠 Comportement" },
+    { key: "performance" as Section, label: `📊 ${t.reports.tabs.performance}` },
+    { key: "assets" as Section, label: `📈 ${t.reports.tabs.risk}` },
+    { key: "sectors" as Section, label: `🌍 ${t.reports.tabs.ai}` },
+    { key: "comportement" as Section, label: `🧠 ${t.reports.tabs.tax}` },
   ]
 
   return (
@@ -378,17 +380,17 @@ export default function ReportsPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div>
-            <h1 className="text-2xl md:text-3xl font-black text-white">📊 Rapports</h1>
-            <p className="text-gray-500 text-sm mt-1">Analyse professionnelle de tes performances</p>
+            <h1 className="text-2xl md:text-3xl font-black text-white">📊 {t.reports.title}</h1>
+            <p className="text-gray-500 text-sm mt-1">{t.reports.subtitle}</p>
           </div>
           <div className="flex gap-2">
             <button onClick={handleCSV} disabled={csvLoading}
               className="flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold text-white transition disabled:opacity-50">
-              {csvLoading ? "Export..." : "📊 Exporter CSV"}
+              {csvLoading ? t.common.loading : `📊 ${t.common.export} CSV`}
             </button>
             <button onClick={handlePDF} disabled={pdfLoading}
               className="flex items-center gap-1.5 px-3 py-2 bg-green-500/15 hover:bg-green-500/25 border border-green-500/30 rounded-xl text-xs font-bold text-green-400 transition disabled:opacity-50">
-              {pdfLoading ? "Génération..." : "📄 Exporter PDF"}
+              {pdfLoading ? t.reports.generating : `📄 ${t.reports.download}`}
             </button>
           </div>
         </div>
@@ -420,7 +422,7 @@ export default function ReportsPage() {
             <button onClick={generateAIReport} disabled={generatingReport}
               className="px-4 py-2 rounded-xl text-sm font-bold transition-all hover:scale-[1.02] disabled:opacity-50"
               style={{ background: "rgba(139,92,246,0.12)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.2)" }}>
-              {generatingReport ? "⏳ Génération..." : "Générer mon analyse personnalisée →"}
+              {generatingReport ? `⏳ ${t.reports.generating}` : `${t.reports.generate} →`}
             </button>
           )}
         </div>
@@ -484,19 +486,19 @@ export default function ReportsPage() {
           {section === "performance" && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <KPICard label="Sharpe Ratio" value={report.sharpe} tooltip={KPI_TOOLTIPS.sharpe}
+                <KPICard label={t.reports.sharpe} value={report.sharpe} tooltip={KPI_TOOLTIPS.sharpe}
                   color={report.sharpe > 1 ? "text-green-400" : report.sharpe > 0 ? "text-orange-400" : "text-red-400"} />
-                <KPICard label="Max Drawdown" value={`-${report.maxDrawdown}`} suffix="%" tooltip={KPI_TOOLTIPS.maxDrawdown}
+                <KPICard label={t.reports.maxDrawdown} value={`-${report.maxDrawdown}`} suffix="%" tooltip={KPI_TOOLTIPS.maxDrawdown}
                   color={report.maxDrawdown < 10 ? "text-green-400" : report.maxDrawdown < 20 ? "text-orange-400" : "text-red-400"} />
-                <KPICard label="Profit Factor" value={report.profitFactor} tooltip={KPI_TOOLTIPS.profitFactor}
+                <KPICard label={t.profile.tradingStats.profitFactor} value={report.profitFactor} tooltip={KPI_TOOLTIPS.profitFactor}
                   color={report.profitFactor > 1.5 ? "text-green-400" : report.profitFactor > 1 ? "text-orange-400" : "text-red-400"} />
-                <KPICard label="R/R Moyen" value={report.avgRR} tooltip={KPI_TOOLTIPS.avgRR}
+                <KPICard label={t.profile.tradingStats.avgRR} value={report.avgRR} tooltip={KPI_TOOLTIPS.avgRR}
                   color={report.avgRR > 1.5 ? "text-green-400" : "text-orange-400"} />
                 <KPICard label="Sortino" value={report.sortino} tooltip={KPI_TOOLTIPS.sortino}
                   color={report.sortino > 1 ? "text-green-400" : "text-orange-400"} />
-                <KPICard label="Volatilité/an" value={report.annualizedVol.toFixed(1)} suffix="%" tooltip={KPI_TOOLTIPS.volatility} />
-                <KPICard label="Meilleur trade" value={report.bestTrade ? `+${report.bestTrade.pnlPct.toFixed(1)}%` : "—"} color="text-green-400" />
-                <KPICard label="Pire trade" value={report.worstTrade ? `${report.worstTrade.pnlPct.toFixed(1)}%` : "—"} color="text-red-400" />
+                <KPICard label={t.reports.volatility} value={report.annualizedVol.toFixed(1)} suffix="%" tooltip={KPI_TOOLTIPS.volatility} />
+                <KPICard label={t.reports.bestMonth} value={report.bestTrade ? `+${report.bestTrade.pnlPct.toFixed(1)}%` : "—"} color="text-green-400" />
+                <KPICard label={t.reports.worstMonth} value={report.worstTrade ? `${report.worstTrade.pnlPct.toFixed(1)}%` : "—"} color="text-red-400" />
               </div>
 
               {report.benchmarkCurve.length > 1 && (

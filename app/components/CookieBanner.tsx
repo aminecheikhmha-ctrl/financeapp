@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
+import { useLanguage } from "@/lib/i18n/context"
 
 export default function CookieBanner() {
   const pathname = usePathname()
+  const { t } = useLanguage()
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
@@ -34,10 +36,10 @@ export default function CookieBanner() {
         <div className="flex items-start gap-3 mb-3">
           <span className="text-xl flex-shrink-0">🍪</span>
           <div>
-            <p className="text-white font-bold text-sm">Cookies &amp; confidentialité</p>
+            <p className="text-white font-bold text-sm">{t.cookies.title}</p>
             <p className="text-gray-400 text-xs mt-0.5 leading-relaxed">
-              Nous utilisons des cookies pour améliorer ton expérience.
-              <a href="/legal/cookies" className="text-green-400 hover:underline ml-1">En savoir plus</a>
+              {t.cookies.description}
+              <a href="/legal/cookies" className="text-green-400 hover:underline ml-1">{t.cookies.learnMore}</a>
             </p>
           </div>
         </div>
@@ -46,13 +48,13 @@ export default function CookieBanner() {
             onClick={essential}
             className="flex-1 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-semibold text-gray-300 transition"
           >
-            Essentiels seulement
+            {t.cookies.essentialOnly}
           </button>
           <button
             onClick={accept}
             className="flex-1 px-3 py-2 bg-green-500 hover:bg-green-400 rounded-xl text-xs font-bold text-black transition"
           >
-            Tout accepter
+            {t.cookies.acceptAll}
           </button>
         </div>
       </div>

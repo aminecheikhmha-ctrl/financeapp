@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { useLanguage } from "@/lib/i18n/context"
 
 interface Message {
   role: "user" | "assistant"
@@ -57,6 +58,7 @@ function MessageBubble({ msg }: { msg: Message }) {
 
 export default function CoachPage() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [user, setUser] = useState<any>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
@@ -126,9 +128,9 @@ export default function CoachPage() {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-green-500/15 border border-green-500/30 text-3xl mb-3">
             🤖
           </div>
-          <h1 className="text-2xl font-black text-white">Coach IA Trading</h1>
+          <h1 className="text-2xl font-black text-white">{t.coach.title}</h1>
           <p className="text-gray-500 text-sm mt-1">
-            Outil éducatif interactif — ne constitue pas un conseil financier
+            {t.coach.systemNote}
           </p>
         </div>
 
@@ -152,7 +154,7 @@ export default function CoachPage() {
 
               {/* Suggestions */}
               <div className="pl-11">
-                <p className="text-xs text-gray-600 mb-2 font-semibold uppercase tracking-wide">Suggestions</p>
+                <p className="text-xs text-gray-600 mb-2 font-semibold uppercase tracking-wide">{t.coach.suggestions}</p>
                 <div className="flex flex-wrap gap-2">
                   {SUGGESTED.map(s => (
                     <button
@@ -204,7 +206,7 @@ export default function CoachPage() {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKey}
-              placeholder="Pose ta question..."
+              placeholder={t.coach.placeholder}
               rows={1}
               className="flex-1 bg-transparent text-sm text-white placeholder-gray-600 outline-none resize-none max-h-32"
               style={{ lineHeight: "1.5" }}

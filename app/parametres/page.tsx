@@ -8,6 +8,8 @@ import {
   Bell, Shield, Palette, Globe, CreditCard, LogOut,
   ChevronRight, Settings, User,
 } from "lucide-react"
+import { useLanguage } from "@/lib/i18n/context"
+import LanguagePicker from "@/app/components/LanguagePicker"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -39,14 +41,6 @@ const DEFAULT_SETTINGS: AppSettings = {
 
 type Section = "notifications" | "trading" | "privacy" | "appearance" | "account" | "billing"
 
-const SECTIONS: { key: Section; label: string; icon: any }[] = [
-  { key: "notifications", label: "Notifications", icon: Bell       },
-  { key: "trading",       label: "Trading",       icon: CreditCard },
-  { key: "privacy",       label: "Confidentialité", icon: Shield   },
-  { key: "appearance",    label: "Apparence",     icon: Palette    },
-  { key: "account",       label: "Compte",        icon: User       },
-  { key: "billing",       label: "Abonnement",    icon: CreditCard },
-]
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -129,6 +123,17 @@ function ReferralSection() {
 
 export default function ParametresPage() {
   const router = useRouter()
+  const { t } = useLanguage()
+
+  const SECTIONS = [
+    { key: "notifications" as Section, label: t.settings.tabs.notifications, icon: Bell       },
+    { key: "trading"       as Section, label: t.settings.tabs.preferences,   icon: CreditCard },
+    { key: "privacy"       as Section, label: t.settings.tabs.security,      icon: Shield     },
+    { key: "appearance"    as Section, label: t.settings.tabs.profile,       icon: Palette    },
+    { key: "account"       as Section, label: t.settings.username,           icon: User       },
+    { key: "billing"       as Section, label: t.settings.tabs.subscription,  icon: CreditCard },
+  ]
+
   const [user, setUser]         = useState<any>(null)
   const [plan, setPlan]         = useState("free")
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
@@ -225,7 +230,7 @@ export default function ParametresPage() {
 
       {/* Header */}
       <div className="px-6 py-5 border-b border-white/5">
-        <h1 className="text-2xl font-black text-white">Paramètres</h1>
+        <h1 className="text-2xl font-black text-white">{t.settings.title}</h1>
         <p className="text-white/30 text-sm mt-0.5">{user?.email}</p>
       </div>
 
@@ -252,7 +257,7 @@ export default function ParametresPage() {
             <button onClick={handleLogout}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-all">
               <LogOut size={15} />
-              Se déconnecter
+              {t.nav.logout}
             </button>
           </div>
         </nav>
@@ -277,21 +282,21 @@ export default function ParametresPage() {
           {/* ── NOTIFICATIONS ── */}
           {activeSection === "notifications" && (
             <div>
-              <h2 className="text-base font-black text-white mb-5">🔔 Notifications</h2>
+              <h2 className="text-base font-black text-white mb-5">🔔 {t.settings.tabs.notifications}</h2>
               <Card>
-                <SettingRow label="Notifications push" desc="Alertes sur ton téléphone et navigateur" saved={saved === "notifications_push"}>
+                <SettingRow label={t.settings.notifications.signals} saved={saved === "notifications_push"}>
                   <Toggle value={settings.notifications_push} onChange={v => updateSetting("notifications_push", v)} />
                 </SettingRow>
-                <SettingRow label="Emails de résumé" desc="Rapport hebdomadaire et actualités importantes" saved={saved === "notifications_email"}>
+                <SettingRow label={t.settings.notifications.weekly} saved={saved === "notifications_email"}>
                   <Toggle value={settings.notifications_email} onChange={v => updateSetting("notifications_email", v)} />
                 </SettingRow>
-                <SettingRow label="Alertes signaux IA" desc="Notification quand un signal fort est détecté" saved={saved === "notifications_signals"}>
+                <SettingRow label={t.settings.notifications.signals} saved={saved === "notifications_signals"}>
                   <Toggle value={settings.notifications_signals} onChange={v => updateSetting("notifications_signals", v)} />
                 </SettingRow>
-                <SettingRow label="News importantes" desc="Breaking news sur tes actifs suivis" saved={saved === "notifications_news"}>
+                <SettingRow label={t.settings.notifications.news} saved={saved === "notifications_news"}>
                   <Toggle value={settings.notifications_news} onChange={v => updateSetting("notifications_news", v)} />
                 </SettingRow>
-                <SettingRow label="Sons" desc="Sons lors des actions importantes" saved={saved === "sound_enabled"}>
+                <SettingRow label={t.common.refresh} saved={saved === "sound_enabled"}>
                   <Toggle value={settings.sound_enabled} onChange={v => updateSetting("sound_enabled", v)} />
                 </SettingRow>
               </Card>
@@ -301,7 +306,7 @@ export default function ParametresPage() {
           {/* ── TRADING ── */}
           {activeSection === "trading" && (
             <div>
-              <h2 className="text-base font-black text-white mb-5">💼 Préférences de trading</h2>
+              <h2 className="text-base font-black text-white mb-5">💼 {t.settings.tabs.preferences}</h2>
               <Card>
                 <SettingRow label="Actif par défaut" desc="Actif affiché à l'ouverture du dashboard">
                   <input value={settings.default_symbol}
@@ -343,7 +348,7 @@ export default function ParametresPage() {
           {/* ── PRIVACY ── */}
           {activeSection === "privacy" && (
             <div>
-              <h2 className="text-base font-black text-white mb-5">🔒 Confidentialité</h2>
+              <h2 className="text-base font-black text-white mb-5">🔒 {t.settings.tabs.security}</h2>
               <Card>
                 <SettingRow label="Afficher mon P&L publiquement" desc="Visible dans le classement social" saved={saved === "show_pnl_public"}>
                   <Toggle value={settings.show_pnl_public} onChange={v => updateSetting("show_pnl_public", v)} />
@@ -373,10 +378,10 @@ export default function ParametresPage() {
                   <p className="text-xs text-white/50 mb-4">Cette action est irréversible. Toutes tes données seront supprimées définitivement.</p>
                   <div className="flex gap-2">
                     <button onClick={() => setDeleteConfirm(false)}
-                      className="flex-1 py-2 rounded-lg text-xs font-semibold text-white/40 border border-white/10">Annuler</button>
+                      className="flex-1 py-2 rounded-lg text-xs font-semibold text-white/40 border border-white/10">{t.common.cancel}</button>
                     <button onClick={() => alert("Contacte support@tradex.io pour supprimer ton compte.")}
                       className="flex-1 py-2 rounded-lg text-xs font-bold text-white bg-red-500/20 border border-red-500/30">
-                      Supprimer définitivement
+                      {t.settings.security.deleteAccount}
                     </button>
                   </div>
                 </div>
@@ -387,21 +392,21 @@ export default function ParametresPage() {
           {/* ── APPEARANCE ── */}
           {activeSection === "appearance" && (
             <div>
-              <h2 className="text-base font-black text-white mb-5">🎨 Apparence & Profil</h2>
+              <h2 className="text-base font-black text-white mb-5">🎨 {t.settings.tabs.profile}</h2>
 
               {/* Username + Avatar color */}
               <div className="rounded-2xl p-5 mb-4"
                 style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-4">Profil public</p>
+                <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-4">{t.settings.tabs.profile}</p>
                 <div className="mb-4">
-                  <label className="text-xs text-white/40 mb-1.5 block">Pseudo</label>
+                  <label className="text-xs text-white/40 mb-1.5 block">{t.settings.username}</label>
                   <input value={editUsername} onChange={e => setEditUsername(e.target.value)}
                     maxLength={20}
                     className="w-full px-3 py-2.5 rounded-xl text-sm text-white outline-none"
                     style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }} />
                 </div>
                 <div className="mb-4">
-                  <label className="text-xs text-white/40 mb-2 block">Couleur de l'avatar</label>
+                  <label className="text-xs text-white/40 mb-2 block">{t.settings.avatar}</label>
                   <div className="flex gap-2 flex-wrap">
                     {AVATAR_COLORS.map(c => (
                       <button key={c} onClick={() => setEditColor(c)}
@@ -418,21 +423,15 @@ export default function ParametresPage() {
                   <button onClick={saveProfile} disabled={savingProfile}
                     className="px-4 py-2 rounded-xl text-xs font-black text-black transition"
                     style={{ background: "#22c55e" }}>
-                    {savingProfile ? "..." : "Sauvegarder"}
+                    {savingProfile ? "..." : t.settings.saveProfile}
                   </button>
                   {profileMsg && <span className="text-xs text-green-400 font-bold">{profileMsg}</span>}
                 </div>
               </div>
 
               <Card>
-                <SettingRow label="Langue" desc="Langue de l'interface">
-                  <select value={settings.language}
-                    onChange={e => updateSetting("language", e.target.value as "fr" | "en")}
-                    className="text-xs font-bold px-2 py-1.5 rounded-lg outline-none text-white"
-                    style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)" }}>
-                    <option value="fr" style={{ background: "#111" }}>🇫🇷 Français</option>
-                    <option value="en" style={{ background: "#111" }}>🇺🇸 English</option>
-                  </select>
+                <SettingRow label={t.settings.language}>
+                  <LanguagePicker />
                 </SettingRow>
               </Card>
             </div>
@@ -441,7 +440,7 @@ export default function ParametresPage() {
           {/* ── ACCOUNT ── */}
           {activeSection === "account" && (
             <div>
-              <h2 className="text-base font-black text-white mb-5">👤 Informations du compte</h2>
+              <h2 className="text-base font-black text-white mb-5">👤 {t.settings.tabs.profile}</h2>
 
               <div className="rounded-2xl overflow-hidden mb-4"
                 style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
@@ -463,7 +462,7 @@ export default function ParametresPage() {
               {/* Password reset */}
               <div className="rounded-2xl p-5 mb-4"
                 style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <p className="text-sm font-black text-white mb-3">Changer le mot de passe</p>
+                <p className="text-sm font-black text-white mb-3">{t.settings.security.changePassword}</p>
                 <button onClick={async () => {
                   const { error } = await supabase.auth.resetPasswordForEmail(user?.email, {
                     redirectTo: `${window.location.origin}/reset-password`
@@ -487,7 +486,7 @@ export default function ParametresPage() {
           {/* ── BILLING ── */}
           {activeSection === "billing" && (
             <div>
-              <h2 className="text-base font-black text-white mb-5">💎 Abonnement</h2>
+              <h2 className="text-base font-black text-white mb-5">💎 {t.settings.tabs.subscription}</h2>
 
               {/* Current plan */}
               <div className="rounded-2xl p-5 mb-4"
@@ -512,17 +511,17 @@ export default function ParametresPage() {
                     <button onClick={() => router.push("/pricing")}
                       className="px-4 py-2 rounded-xl text-xs font-black text-black transition hover:scale-[1.02]"
                       style={{ background: "#22c55e" }}>
-                      Passer à Pro →
+                      {t.settings.subscription.upgrade} →
                     </button>
                   )}
                 </div>
                 {plan !== "free" && (
                   <div className="flex gap-2 mt-4">
                     <button className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white/40 border border-white/10 hover:text-white transition">
-                      Gérer l'abonnement
+                      {t.settings.subscription.manageBilling}
                     </button>
                     <button className="px-3 py-1.5 rounded-lg text-xs font-semibold text-red-400/60 border border-red-500/15 hover:text-red-400 hover:bg-red-500/10 transition">
-                      Annuler
+                      {t.settings.subscription.cancel}
                     </button>
                   </div>
                 )}

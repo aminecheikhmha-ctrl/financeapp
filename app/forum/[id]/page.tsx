@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useParams, useRouter } from "next/navigation"
+import { useLanguage } from "@/lib/i18n/context"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -131,6 +132,7 @@ function SymbolCard({ symbol }: { symbol: string }) {
 export default function PostDetail() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
+  const { t } = useLanguage()
   const [post, setPost] = useState<Post | null>(null)
   const [replies, setReplies] = useState<Reply[]>([])
   const [user, setUser] = useState<any>(null)
@@ -393,7 +395,7 @@ export default function PostDetail() {
         {/* Reply form */}
         {user ? (
           <div className="bg-[#111] border border-white/8 rounded-2xl p-5">
-            <h3 className="text-sm font-bold text-white mb-4">Répondre</h3>
+            <h3 className="text-sm font-bold text-white mb-4">{t.forum.writeReply}</h3>
 
             {/* Author row */}
             <div className="flex items-center gap-3 mb-4 p-3 rounded-xl bg-white/3 border border-white/5">
@@ -419,7 +421,7 @@ export default function PostDetail() {
             <textarea
               value={replyText}
               onChange={e => setReplyText(e.target.value)}
-              placeholder="Écris ta réponse..."
+              placeholder={t.forum.writeReply}
               rows={4}
               className="w-full bg-white/5 border border-white/8 text-white px-4 py-3 rounded-xl text-sm placeholder-gray-600 outline-none focus:border-green-500/40 transition resize-none mb-4"
             />
@@ -429,7 +431,7 @@ export default function PostDetail() {
                   style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
                   <span className="text-base flex-shrink-0">🚫</span>
                   <div>
-                    <p className="text-sm font-bold text-red-400">Commentaire refusé</p>
+                    <p className="text-sm font-bold text-red-400">{t.forum.moderated}</p>
                     <p className="text-xs text-red-400/70 mt-0.5">{replyError}</p>
                   </div>
                 </div>
@@ -443,7 +445,7 @@ export default function PostDetail() {
                 disabled={replyLoading || !replyText.trim()}
                 className="px-6 py-2.5 bg-green-500 hover:bg-green-400 text-black text-sm font-bold rounded-xl transition disabled:opacity-50"
               >
-                {replyLoading ? "Envoi..." : "Répondre"}
+                {replyLoading ? "..." : t.forum.send}
               </button>
             </div>
           </div>

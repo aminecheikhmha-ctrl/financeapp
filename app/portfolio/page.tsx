@@ -9,6 +9,7 @@ import {
 } from "recharts"
 import { TrendingUp, TrendingDown, ArrowUpRight, Share2, Download, RefreshCw } from "lucide-react"
 import ShareTradeCard from "@/app/components/ShareTradeCard"
+import { useLanguage } from "@/lib/i18n/context"
 
 const POSITION_COLORS = ["#22c55e","#60a5fa","#f97316","#a78bfa","#f59e0b","#ec4899","#06b6d4"]
 
@@ -132,26 +133,28 @@ type JournalEntry = {
   tag: "signal_ia" | "manuel" | "swing" | "scalp" | "erreur" | "bon_setup" | null
 }
 
+// NOTE: emotion/tag labels are now read from t.portfolio.journal at render time
 const EMOTIONS = [
-  { key: "great",    emoji: "🤩", label: "Excellent" },
-  { key: "good",     emoji: "😊", label: "Bon"       },
-  { key: "neutral",  emoji: "😐", label: "Neutre"    },
-  { key: "bad",      emoji: "😟", label: "Mauvais"   },
-  { key: "terrible", emoji: "😡", label: "Nul"       },
+  { key: "great",    emoji: "🤩" },
+  { key: "good",     emoji: "😊" },
+  { key: "neutral",  emoji: "😐" },
+  { key: "bad",      emoji: "😟" },
+  { key: "terrible", emoji: "😡" },
 ] as const
 
 const TAGS = [
-  { key: "signal_ia", label: "🤖 Signal IA"  },
-  { key: "manuel",    label: "✍️ Manuel"     },
-  { key: "swing",     label: "📅 Swing"      },
-  { key: "scalp",     label: "⚡ Scalp"      },
-  { key: "erreur",    label: "❌ Erreur"      },
-  { key: "bon_setup", label: "✅ Bon setup"  },
+  { key: "signal_ia" },
+  { key: "manuel"    },
+  { key: "swing"     },
+  { key: "scalp"     },
+  { key: "erreur"    },
+  { key: "bon_setup" },
 ] as const
 
 function JournalTab({ closedTrades, token }: { closedTrades: ClosedTrade[]; token: string }) {
   const [entries, setEntries] = useState<Record<string, JournalEntry>>({})
   const [saving, setSaving]   = useState<string | null>(null)
+  const { t } = useLanguage()
 
   // Load existing journal entries on mount
   useEffect(() => {
@@ -243,7 +246,7 @@ function JournalTab({ closedTrades, token }: { closedTrades: ClosedTrade[]; toke
 
               {/* Emotion picker */}
               <div>
-                <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mb-2">Ressenti</p>
+                <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mb-2">{t.portfolio.journal.emotion}</p>
                 <div className="flex gap-2 flex-wrap">
                   {EMOTIONS.map(e => (
                     <button
@@ -256,7 +259,7 @@ function JournalTab({ closedTrades, token }: { closedTrades: ClosedTrade[]; toke
                       }`}
                     >
                       <span>{e.emoji}</span>
-                      <span>{e.label}</span>
+                      <span>{t.portfolio.journal.emotions[e.key]}</span>
                     </button>
                   ))}
                 </div>
@@ -264,19 +267,19 @@ function JournalTab({ closedTrades, token }: { closedTrades: ClosedTrade[]; toke
 
               {/* Tag picker */}
               <div>
-                <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mb-2">Type de trade</p>
+                <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mb-2">{t.portfolio.journal.tag}</p>
                 <div className="flex gap-2 flex-wrap">
-                  {TAGS.map(t => (
+                  {TAGS.map(tag => (
                     <button
-                      key={t.key}
-                      onClick={() => save({ ...entry, tag: t.key })}
+                      key={tag.key}
+                      onClick={() => save({ ...entry, tag: tag.key })}
                       className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
-                        entry.tag === t.key
+                        entry.tag === tag.key
                           ? "bg-green-500/20 text-green-400 border border-green-500/30"
                           : "bg-white/4 text-white/40 hover:bg-white/8 hover:text-white/70"
                       }`}
                     >
-                      {t.label}
+                      {t.portfolio.journal.tags[tag.key]}
                     </button>
                   ))}
                 </div>
@@ -284,10 +287,10 @@ function JournalTab({ closedTrades, token }: { closedTrades: ClosedTrade[]; toke
 
               {/* Note textarea */}
               <div>
-                <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mb-2">Note</p>
+                <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mb-2">{t.portfolio.journal.note}</p>
                 <textarea
                   defaultValue={entry.note}
-                  placeholder="Pourquoi ce trade ? Qu'est-ce que tu retiens ?"
+                  placeholder={t.portfolio.journal.notePlaceholder}
                   rows={2}
                   className="w-full bg-white/4 border border-white/8 rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 resize-none outline-none focus:border-white/20 transition"
                   onBlur={e => save({ ...entry, note: e.target.value })}
@@ -308,6 +311,7 @@ function JournalTab({ closedTrades, token }: { closedTrades: ClosedTrade[]; toke
 
 export default function PortfolioPage() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [account, setAccount] = useState<any>(null)
   const [positions, setPositions] = useState<Position[]>([])
   const [closedTrades, setClosedTrades] = useState<ClosedTrade[]>([])
@@ -472,11 +476,11 @@ export default function PortfolioPage() {
   }, [positions, account])
 
   const TABS = [
-    { key: "positions", label: `📊 Positions (${positions.length})` },
-    { key: "orders",    label: `📋 Ordres (${orders.length})` },
-    { key: "history",   label: `📈 Historique (${closedTrades.length})` },
-    { key: "stats",     label: "🎯 Stats" },
-    { key: "journal",   label: "📓 Journal" },
+    { key: "positions", label: `📊 ${t.portfolio.tabs.positions} (${positions.length})` },
+    { key: "orders",    label: `📋 ${t.portfolio.tabs.orders} (${orders.length})` },
+    { key: "history",   label: `📈 ${t.portfolio.tabs.performance} (${closedTrades.length})` },
+    { key: "stats",     label: `🎯 ${t.portfolio.winRate}` },
+    { key: "journal",   label: t.portfolio.tabs.journal },
   ] as const
 
   const filteredHistory = filterHistory(perfHistory)
@@ -536,28 +540,28 @@ export default function PortfolioPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
             {
-              label: "Aujourd'hui",
+              label: t.portfolio.totalPl,
               value: `${(stats?.dayPnl ?? 0) >= 0 ? "+" : ""}$${(stats?.dayPnl ?? 0).toFixed(2)}`,
               sub: `${positions.length} position${positions.length !== 1 ? "s" : ""} ouvert${positions.length !== 1 ? "es" : "e"}`,
               color: (stats?.dayPnl ?? 0) >= 0 ? "#4ade80" : "#f87171",
               icon: (stats?.dayPnl ?? 0) >= 0 ? "📈" : "📉",
             },
             {
-              label: "Cash disponible",
+              label: t.portfolio.cashAvailable,
               value: `$${(account?.cash ?? 0).toFixed(2)}`,
               sub: stats ? `${(((account?.cash ?? 0) / stats.totalValue) * 100).toFixed(1)}% du portfolio` : "—",
               color: "#60a5fa",
               icon: "💵",
             },
             {
-              label: "Investi",
+              label: t.portfolio.invested,
               value: `$${(stats?.totalInvested ?? 0).toFixed(2)}`,
               sub: `${orders.filter(o => o.side === "buy").length} achat${orders.filter(o => o.side === "buy").length !== 1 ? "s" : ""} au total`,
               color: "#a78bfa",
               icon: "💼",
             },
             {
-              label: "Win Rate",
+              label: t.portfolio.winRate,
               value: `${(stats?.winRate ?? 0).toFixed(1)}%`,
               sub: `Profit factor ${isFinite(stats?.profitFactor ?? 0) ? (stats?.profitFactor ?? 0).toFixed(2) : "∞"}`,
               color: (stats?.winRate ?? 0) >= 50 ? "#4ade80" : "#f87171",
@@ -584,14 +588,14 @@ export default function PortfolioPage() {
         <div className="rounded-2xl p-5"
           style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
           <div className="flex items-center justify-between mb-4">
-            <p className="text-sm font-bold text-white">Performance du portfolio</p>
+            <p className="text-sm font-bold text-white">{t.portfolio.tabs.performance}</p>
             <div className="flex gap-1">
               {(["1W","1M","3M","ALL"] as const).map(tf => (
                 <button key={tf} onClick={() => setTimeframe(tf)}
                   className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
                     timeframe === tf ? "bg-white/10 text-white" : "text-white/25 hover:text-white/50"
                   }`}>
-                  {tf}
+                  {t.portfolio.performancePeriods[tf]}
                 </button>
               ))}
             </div>
@@ -736,7 +740,7 @@ export default function PortfolioPage() {
           positions.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-4xl mb-3">📊</p>
-              <p className="text-white/40 text-base font-bold mb-1">Aucune position ouverte</p>
+              <p className="text-white/40 text-base font-bold mb-1">{t.portfolio.noPositions}</p>
               <p className="text-white/25 text-sm mb-4">Achète ton premier actif pour commencer</p>
               <button onClick={() => router.push("/dashboard")}
                 className="px-6 py-2.5 rounded-xl text-sm font-black text-black"
@@ -834,7 +838,7 @@ export default function PortfolioPage() {
               style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
               {orders.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-white/25 text-sm">Aucun ordre exécuté</p>
+                  <p className="text-white/25 text-sm">{t.portfolio.noOrders}</p>
                 </div>
               ) : (
                 <div className="divide-y divide-white/[0.04]">
@@ -896,14 +900,14 @@ export default function PortfolioPage() {
             <div className="rounded-2xl p-5"
               style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
               <div className="flex items-center justify-between mb-4">
-                <p className="text-sm font-bold text-white">Courbe de performance</p>
+                <p className="text-sm font-bold text-white">{t.portfolio.tabs.performance}</p>
                 <div className="flex gap-1">
                   {(["1W","1M","3M","ALL"] as const).map(tf => (
                     <button key={tf} onClick={() => setTimeframe(tf)}
                       className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
                         timeframe === tf ? "bg-white/10 text-white" : "text-white/25 hover:text-white/50"
                       }`}>
-                      {tf}
+                      {t.portfolio.performancePeriods[tf]}
                     </button>
                   ))}
                 </div>

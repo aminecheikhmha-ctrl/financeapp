@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { useLanguage } from "@/lib/i18n/context"
 import {
   ACHIEVEMENTS, RARITY_COLORS, getLevelInfo, XP_LEVELS,
   type AchievementCategory, type Rarity,
@@ -279,6 +280,7 @@ type Tab = "trading" | "achievements" | "classement"
 
 export default function ProfilPage() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [user, setUser]               = useState<any>(null)
   const [profile, setProfile]         = useState<any>(null)
   const [account, setAccount]         = useState<{ cash: number } | null>(null)
@@ -362,9 +364,9 @@ export default function ProfilPage() {
     : 0
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: "trading",      label: "📊 Trading"    },
-    { key: "achievements", label: "🏅 Succès"     },
-    { key: "classement",   label: "🏆 Classement" },
+    { key: "trading",      label: `📊 ${t.profile.tabs.stats}`         },
+    { key: "achievements", label: `🏅 ${t.profile.tabs.achievements}`  },
+    { key: "classement",   label: `🏆 ${t.profile.tabs.leaderboard}`   },
   ]
 
   if (loading) {
@@ -560,50 +562,50 @@ export default function ProfilPage() {
             {/* Primary stats */}
             <div className="grid grid-cols-2 gap-3">
               <StatCard
-                label="P&L réalisé"
+                label={t.profile.tradingStats.totalPl}
                 value={(stats.totalPnl >= 0 ? "+" : "") + "$" + Math.abs(stats.totalPnl).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-                sub={`${stats.closedTrades.length} trades clôturés`}
+                sub={`${stats.closedTrades.length} ${t.profile.tradingStats.closedTrades.toLowerCase()}`}
                 color={stats.totalPnl >= 0 ? "#4ade80" : "#f87171"}
               />
               <StatCard
-                label="Win Rate"
+                label={t.profile.tradingStats.winRate}
                 value={`${stats.winRate.toFixed(0)}%`}
                 sub={`${stats.wins.length}W / ${stats.losses.length}L`}
                 color={stats.winRate >= 50 ? "#4ade80" : "#f87171"}
               />
               <StatCard
-                label="Gain moyen"
+                label={t.profile.tradingStats.avgRR}
                 value={`+$${stats.avgWin.toFixed(0)}`}
-                sub="par trade gagnant"
+                sub={t.profile.tradingStats.bestTrade.toLowerCase()}
                 color="#4ade80"
               />
               <StatCard
-                label="Perte moyenne"
+                label={t.profile.tradingStats.worstTrade}
                 value={`-$${stats.avgLoss.toFixed(0)}`}
-                sub="par trade perdant"
+                sub={t.profile.tradingStats.worstTrade.toLowerCase()}
                 color="#f87171"
               />
               <StatCard
-                label="Ratio R/R"
+                label={t.profile.tradingStats.avgRR}
                 value={stats.rrRatio > 0 ? stats.rrRatio.toFixed(2) : "–"}
-                sub="gain / perte moyen"
+                sub={t.profile.tradingStats.avgRR.toLowerCase()}
                 color={stats.rrRatio >= 1 ? "#4ade80" : "#f59e0b"}
               />
               <StatCard
-                label="Profit Factor"
+                label={t.profile.tradingStats.profitFactor}
                 value={
                   stats.profitFactor === Infinity ? "∞"
                   : stats.profitFactor > 0 ? stats.profitFactor.toFixed(2)
                   : "–"
                 }
-                sub="brut / pertes brutes"
+                sub={t.profile.tradingStats.profitFactor.toLowerCase()}
                 color={stats.profitFactor >= 1.5 ? "#4ade80" : stats.profitFactor >= 1 ? "#f59e0b" : "#f87171"}
               />
             </div>
 
             {/* Volume */}
             <div className="bg-[#111] border border-white/5 rounded-2xl p-4">
-              <p className="text-gray-500 text-[10px] font-semibold uppercase tracking-wide mb-3">Volume total investi</p>
+              <p className="text-gray-500 text-[10px] font-semibold uppercase tracking-wide mb-3">{t.profile.tradingStats.volume}</p>
               <p className="text-white font-black text-3xl">
                 ${stats.totalVolume.toLocaleString("en-US", { maximumFractionDigits: 0 })}
               </p>
@@ -615,7 +617,7 @@ export default function ProfilPage() {
               <div className="grid grid-cols-2 gap-3">
                 {stats.bestTrade && (
                   <div className="bg-green-500/6 border border-green-500/20 rounded-2xl p-4">
-                    <p className="text-green-400 text-[10px] font-bold uppercase tracking-wide mb-1">🏆 Meilleur trade</p>
+                    <p className="text-green-400 text-[10px] font-bold uppercase tracking-wide mb-1">🏆 {t.profile.tradingStats.bestTrade}</p>
                     <p className="text-white font-black text-lg">{stats.bestTrade.symbol}</p>
                     <p className="text-green-400 font-bold text-sm">+${stats.bestTrade.pnl.toFixed(0)}</p>
                     <p className="text-green-400/60 text-[10px]">+{stats.bestTrade.pnl_pct.toFixed(1)}%</p>
@@ -623,7 +625,7 @@ export default function ProfilPage() {
                 )}
                 {stats.worstTrade && (
                   <div className="bg-red-500/6 border border-red-500/20 rounded-2xl p-4">
-                    <p className="text-red-400 text-[10px] font-bold uppercase tracking-wide mb-1">💸 Pire trade</p>
+                    <p className="text-red-400 text-[10px] font-bold uppercase tracking-wide mb-1">💸 {t.profile.tradingStats.worstTrade}</p>
                     <p className="text-white font-black text-lg">{stats.worstTrade.symbol}</p>
                     <p className="text-red-400 font-bold text-sm">-${Math.abs(stats.worstTrade.pnl).toFixed(0)}</p>
                     <p className="text-red-400/60 text-[10px]">{stats.worstTrade.pnl_pct.toFixed(1)}%</p>
@@ -635,8 +637,7 @@ export default function ProfilPage() {
             {stats.closedTrades.length === 0 && (
               <div className="text-center py-10 text-gray-600">
                 <p className="text-4xl mb-3">📊</p>
-                <p className="text-sm">Aucun trade clôturé pour l'instant</p>
-                <p className="text-xs mt-1">Commence à trader dans le Dashboard !</p>
+                <p className="text-sm">{t.profile.noTrades}</p>
               </div>
             )}
 
@@ -725,7 +726,7 @@ export default function ProfilPage() {
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm font-bold truncate ${isMe ? "text-green-400" : "text-white"}`}>
                         {trader.username ?? "Anonyme"}
-                        {isMe && <span className="text-[10px] text-green-500 ml-1">← vous</span>}
+                        {isMe && <span className="text-[10px] text-green-500 ml-1">← {t.profile.leaderboard.you}</span>}
                       </p>
                       <p className="text-gray-600 text-xs">{trader.total_trades ?? 0} trades</p>
                     </div>

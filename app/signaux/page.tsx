@@ -8,6 +8,7 @@ import UpgradeModal from "@/app/components/UpgradeModal"
 import Tour, { SIGNAUX_TOUR_STEPS } from "@/app/components/Tour"
 import { getPlan } from "@/lib/plans"
 import { formatPrice, formatChange } from "@/lib/format"
+import { useLanguage } from "@/lib/i18n/context"
 
 // ─── Design tokens ─────────────────────────────────────────────────────────
 const D = {
@@ -296,6 +297,7 @@ function CompactSignalCard({ signal, rank, onUpgrade, blurred }: {
   signal: SignalResult; rank: number; onUpgrade: () => void; blurred?: boolean
 }) {
   const router  = useRouter()
+  const { t }   = useLanguage()
   const bullish = isBull(signal.signal)
   const color   = bullish ? D.green : D.red
   const pctTp   = signal.entry_price ? ((signal.tp1 - signal.entry_price) / signal.entry_price) * 100 : 0
@@ -379,7 +381,7 @@ function CompactSignalCard({ signal, rank, onUpgrade, blurred }: {
         {/* TP / Entry / SL */}
         <div className="grid grid-cols-3 gap-2 mb-3">
           <div className="text-center p-2 rounded-xl" style={{ background: "rgba(255,255,255,0.04)" }}>
-            <p className="text-[8px] text-white/25 mb-0.5">Entrée</p>
+            <p className="text-[8px] text-white/25 mb-0.5">{t.signals.card.entry}</p>
             <p className="text-xs font-black text-white tabular-nums">{formatPrice(signal.entry_price)}</p>
           </div>
           <div className="text-center p-2 rounded-xl" style={{ background: "rgba(34,197,94,0.08)" }}>
@@ -416,6 +418,7 @@ function CompactSignalCard({ signal, rank, onUpgrade, blurred }: {
 // ─── HistoriqueView ───────────────────────────────────────────────────────────
 function HistoriqueView({ rows }: { rows: HistoriqueRow[] }) {
   const router = useRouter()
+  const { t } = useLanguage()
   if (rows.length === 0) return (
     <div className="text-center py-16" style={{ color: "rgba(255,255,255,0.3)" }}>
       <p className="text-4xl mb-3">📋</p>
@@ -505,22 +508,22 @@ function HistoriqueView({ rows }: { rows: HistoriqueRow[] }) {
 
             <div className="grid grid-cols-5 gap-1.5 text-center">
               {[
-                { label: "Entrée", val: row.prix_entree },
-                { label: "TP1",    val: row.take_profit_1 },
-                { label: "TP2",    val: row.take_profit_2 },
-                { label: "TP3",    val: row.take_profit_3 ?? null },
-                { label: "SL",     val: row.stop_loss },
-              ].map(({ label, val }) => val != null && (
-                <div key={label}>
+                { label: t.signals.card.entry, key: "entry", val: row.prix_entree },
+                { label: t.signals.card.tp1,   key: "tp1",   val: row.take_profit_1 },
+                { label: "TP2",                key: "tp2",   val: row.take_profit_2 },
+                { label: "TP3",                key: "tp3",   val: row.take_profit_3 ?? null },
+                { label: t.signals.card.sl,    key: "sl",    val: row.stop_loss },
+              ].map(({ label, key, val }) => val != null && (
+                <div key={key}>
                   <p className="text-[9px] font-bold uppercase mb-0.5"
-                    style={{ color: label === "SL" ? D.red : label === "Entrée" ? "rgba(255,255,255,0.3)" : D.green }}>
+                    style={{ color: key === "sl" ? D.red : key === "entry" ? "rgba(255,255,255,0.3)" : D.green }}>
                     {label}
                   </p>
                   <p className="text-white text-[10px] font-semibold">
                     {val < 1 ? val.toFixed(4) : val.toLocaleString("fr-FR", { maximumFractionDigits: 2 })}
                   </p>
-                  {label !== "Entrée" && (
-                    <p className="text-[9px]" style={{ color: label === "SL" ? "rgba(239,68,68,0.6)" : "rgba(34,197,94,0.6)" }}>
+                  {key !== "entry" && (
+                    <p className="text-[9px]" style={{ color: key === "sl" ? "rgba(239,68,68,0.6)" : "rgba(34,197,94,0.6)" }}>
                       {pctChange(row.prix_entree, val)}
                     </p>
                   )}
@@ -577,6 +580,7 @@ function SkeletonRow() {
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function Signaux() {
   const router = useRouter()
+  const { t } = useLanguage()
 
   const [user,         setUser]         = useState<any>(null)
   const [plan,         setPlan]         = useState("free")
@@ -696,7 +700,7 @@ export default function Signaux() {
           {/* Title + status + countdown */}
           <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl font-black text-white">Signaux IA</h1>
+              <h1 className="text-2xl font-black text-white">{t.signals.title}</h1>
 
               {/* Tabs */}
               <div className="flex rounded-xl overflow-hidden" style={{ border: `1px solid ${D.border}` }}>
@@ -831,11 +835,11 @@ export default function Signaux() {
           <div data-tour="signal-filters" className="flex gap-1.5 flex-wrap items-center">
             {/* Signal type */}
             {[
-              { key: "all",        label: "🌐 Tous" },
-              { key: "ACHAT_FORT", label: "⚡ Fort achat",  color: "#f97316" },
-              { key: "ACHAT",      label: "↗ Achat",        color: "#22c55e" },
-              { key: "VENTE",      label: "↘ Vente",        color: "#ef4444" },
-              { key: "VENTE_FORT", label: "⚡ Fort vente",  color: "#dc2626" },
+              { key: "all",        label: `🌐 ${t.signals.filters.all}` },
+              { key: "ACHAT_FORT", label: `⚡ ${t.signals.filters.strong_buy}`,  color: "#f97316" },
+              { key: "ACHAT",      label: `↗ ${t.signals.filters.buy}`,          color: "#22c55e" },
+              { key: "VENTE",      label: `↘ ${t.signals.filters.sell}`,         color: "#ef4444" },
+              { key: "VENTE_FORT", label: `⚡ ${t.signals.filters.strong_sell}`, color: "#dc2626" },
             ].map(f => (
               <button key={f.key} onClick={() => setFilterSignal(f.key)}
                 className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
@@ -874,11 +878,11 @@ export default function Signaux() {
 
             {/* Sort — pushed right */}
             <div className="ml-auto flex items-center gap-1">
-              <span className="text-[10px] text-white/25 hidden sm:block">Trier :</span>
+              <span className="text-[10px] text-white/25 hidden sm:block">{t.signals.sort.confluence} :</span>
               {[
-                { key: "confluence", label: "Confiance" },
+                { key: "confluence", label: t.signals.sort.confluence },
                 { key: "rr",         label: "R/R" },
-                { key: "change",     label: "Variation" },
+                { key: "change",     label: t.signals.sort.recent },
               ].map(s => (
                 <button key={s.key} onClick={() => setSortBy(s.key)}
                   className="px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all"
@@ -949,7 +953,7 @@ export default function Signaux() {
               {!loading && filtered.length === 0 && (
                 <div className="text-center py-16">
                   <p className="text-4xl mb-3">📡</p>
-                  <p className="font-black text-white mb-2">Aucun signal trouvé</p>
+                  <p className="font-black text-white mb-2">{t.signals.noSignals}</p>
                   <p className="text-white/40 text-sm mb-4">
                     {filterSignal !== "all" || filterType !== "all_types"
                       ? "Essaie de changer les filtres."
@@ -1205,7 +1209,7 @@ export default function Signaux() {
         ════════════════════════════════════════════════ */}
         {tab === "historique" && (
           <div className="px-6 py-6 space-y-4">
-            <h2 className="text-xl font-black tracking-tight text-white">Historique des signaux</h2>
+            <h2 className="text-xl font-black tracking-tight text-white">{t.signals.lastUpdate}</h2>
             {plan === "free" ? (
               <div className="text-center py-16 rounded-2xl" style={{ border: `1px solid ${D.border}` }}>
                 <p className="text-4xl mb-3">🔒</p>

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { COURSES, LEVEL_COLORS, getTotalChapters, type Course } from "@/lib/courses"
 import { getPlan, type PlanKey } from "@/lib/plans"
 import UpgradeModal from "@/app/components/UpgradeModal"
+import { useLanguage } from "@/lib/i18n/context"
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type ProgressMap = Record<string, Set<number>>
@@ -93,6 +94,7 @@ function CourseCard({ course, progress, onClick, plan, onUpgrade, index }: {
   course: Course; progress: ProgressMap; onClick: () => void
   plan: PlanKey; onUpgrade: () => void; index: number
 }) {
+  const { t } = useLanguage()
   const lc   = LEVEL_COLORS[course.level]
   const { done, total, pct } = getCourseProgress(course, progress)
   const isCompleted = pct === 100 && total > 0
@@ -128,7 +130,7 @@ function CourseCard({ course, progress, onClick, plan, onUpgrade, index }: {
           style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(1px)" }}>
           <div className="text-center">
             <span className="text-4xl">🔒</span>
-            <p className="text-white/40 text-xs font-bold mt-2">Pro requis</p>
+            <p className="text-white/40 text-xs font-bold mt-2">{t.academy.locked}</p>
           </div>
         </div>
       )}
@@ -143,7 +145,7 @@ function CourseCard({ course, progress, onClick, plan, onUpgrade, index }: {
             <span className="text-3xl">{course.icon}</span>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest"
               style={{ background: lc.bg, color: lc.text, border: `1px solid ${lc.border}` }}>
-              {getLevelLabel(course.level)}
+              {course.level === "débutant" ? t.academy.levels.beginner : course.level === "intermédiaire" ? t.academy.levels.intermediate : t.academy.levels.advanced}
             </span>
           </div>
           {isCompleted && <span className="text-xl">✅</span>}
@@ -199,7 +201,7 @@ function CourseCard({ course, progress, onClick, plan, onUpgrade, index }: {
             color: isCompleted ? "#4ade80" : lc.text,
             border: `1px solid ${isCompleted ? "rgba(74,222,128,0.25)" : lc.border}`,
           }}>
-          {isCompleted ? "✅ Revoir le cours" : isStarted ? "▶ Reprendre →" : "Commencer →"}
+          {isCompleted ? `✅ ${t.academy.completed}` : isStarted ? `▶ ${t.academy.continueCourse} →` : `${t.academy.startCourse} →`}
         </motion.button>
       </div>
     </motion.div>
@@ -209,6 +211,7 @@ function CourseCard({ course, progress, onClick, plan, onUpgrade, index }: {
 // ─── Main ──────────────────────────────────────────────────────────────────────
 export default function Apprendre() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [user, setUser]                   = useState<any>(null)
   const [progress, setProgress]           = useState<ProgressMap>({})
   const [ready, setReady]                 = useState(false)
@@ -741,7 +744,7 @@ export default function Apprendre() {
                     ? (lv === "all" ? "#fff" : LEVEL_COLORS[lv as keyof typeof LEVEL_COLORS]?.text ?? "#fff")
                     : "#444",
                 }}>
-                {lv === "all" ? "Tous" : lv === "débutant" ? "🌱" : lv === "intermédiaire" ? "📊" : "🏆"}{lv !== "all" ? ` ${getLevelLabel(lv)}` : ""}
+                {lv === "all" ? t.signals.filters.all : lv === "débutant" ? "🌱" : lv === "intermédiaire" ? "📊" : "🏆"}{lv !== "all" ? ` ${lv === "débutant" ? t.academy.levels.beginner : lv === "intermédiaire" ? t.academy.levels.intermediate : t.academy.levels.advanced}` : ""}
               </button>
             ))}
           </div>
@@ -759,7 +762,7 @@ export default function Apprendre() {
 
           {/* Status */}
           <div className="flex rounded-xl overflow-hidden flex-shrink-0" style={{ border: "1px solid #1a1a1a" }}>
-            {([["all","Tous"],["new","Nouveau"],["started","En cours"],["completed","✅ Complété"]] as const).map(([k,l]) => (
+            {([["all", t.signals.filters.all],["new","Nouveau"],["started",t.academy.continueCourse],["completed",`✅ ${t.academy.completed}`]] as [string, string][]).map(([k,l]) => (
               <button key={k} onClick={() => setStatus(k as any)}
                 className="px-3 py-2 text-[10px] font-bold uppercase tracking-wide transition-colors"
                 style={{ background: statusFilter === k ? "#1a1a1a" : "transparent", color: statusFilter === k ? "#fff" : "#444" }}>
@@ -781,7 +784,7 @@ export default function Apprendre() {
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="text-center py-24" style={{ color: "#333" }}>
               <p className="text-4xl mb-3">🎓</p>
-              <p className="text-sm">Aucun cours ne correspond aux filtres.</p>
+              <p className="text-sm">{t.academy.noCourses}</p>
             </motion.div>
           ) : (
             <motion.div

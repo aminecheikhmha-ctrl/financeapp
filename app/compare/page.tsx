@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { useLanguage } from "@/lib/i18n/context"
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, ReferenceLine,
@@ -50,6 +51,7 @@ function computeCorrelation(x: number[], y: number[]): number {
 function CompareContent() {
   const searchParams = useSearchParams()
   const router       = useRouter()
+  const { t } = useLanguage()
 
   const [symbols,     setSymbols]     = useState<string[]>(
     searchParams.get("symbols")?.split(",").filter(Boolean).slice(0, 6) ?? ["AAPL", "MSFT"]
@@ -212,13 +214,13 @@ function CompareContent() {
   }
 
   const ROWS: { label: string; fn: (a: AssetData) => string; valFn?: (a: AssetData) => number; colorFn?: (a: AssetData) => string }[] = [
-    { label: "Prix actuel",  fn: a => formatPrice(a.price) },
-    { label: "Variation 1J", fn: a => formatChange(a.change_1d), valFn: a => a.change_1d, colorFn: a => a.change_1d >= 0 ? "#4ade80" : "#f87171" },
-    { label: "Variation 1S", fn: a => formatChange(a.change_1w), valFn: a => a.change_1w, colorFn: a => a.change_1w >= 0 ? "#4ade80" : "#f87171" },
-    { label: "Variation 1M", fn: a => formatChange(a.change_1m), valFn: a => a.change_1m, colorFn: a => a.change_1m >= 0 ? "#4ade80" : "#f87171" },
-    { label: "Variation 3M", fn: a => formatChange(a.change_3m), valFn: a => a.change_3m, colorFn: a => a.change_3m >= 0 ? "#4ade80" : "#f87171" },
-    { label: "Variation 1A", fn: a => formatChange(a.change_1y), valFn: a => a.change_1y, colorFn: a => a.change_1y >= 0 ? "#4ade80" : "#f87171" },
-    { label: "RSI (14)",     fn: a => a.rsi.toFixed(1), colorFn: a => a.rsi < 30 ? "#4ade80" : a.rsi > 70 ? "#f87171" : "rgba(255,255,255,0.6)" },
+    { label: t.compare.metrics.price,  fn: a => formatPrice(a.price) },
+    { label: t.compare.metrics.perf1d, fn: a => formatChange(a.change_1d), valFn: a => a.change_1d, colorFn: a => a.change_1d >= 0 ? "#4ade80" : "#f87171" },
+    { label: t.watchlist.columns.week, fn: a => formatChange(a.change_1w), valFn: a => a.change_1w, colorFn: a => a.change_1w >= 0 ? "#4ade80" : "#f87171" },
+    { label: t.compare.metrics.perf1m, fn: a => formatChange(a.change_1m), valFn: a => a.change_1m, colorFn: a => a.change_1m >= 0 ? "#4ade80" : "#f87171" },
+    { label: t.compare.metrics.perf3m, fn: a => formatChange(a.change_3m), valFn: a => a.change_3m, colorFn: a => a.change_3m >= 0 ? "#4ade80" : "#f87171" },
+    { label: "1Y %",                   fn: a => formatChange(a.change_1y), valFn: a => a.change_1y, colorFn: a => a.change_1y >= 0 ? "#4ade80" : "#f87171" },
+    { label: t.compare.metrics.rsi,    fn: a => a.rsi.toFixed(1), colorFn: a => a.rsi < 30 ? "#4ade80" : a.rsi > 70 ? "#f87171" : "rgba(255,255,255,0.6)" },
   ]
 
   return (
@@ -228,8 +230,8 @@ function CompareContent() {
         {/* HEADER */}
         <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-black text-white">Comparateur d'actifs</h1>
-            <p className="text-white/30 text-sm mt-0.5">Performance base 100 · Jusqu'à 6 actifs</p>
+            <h1 className="text-2xl font-black text-white">{t.compare.title}</h1>
+            <p className="text-white/30 text-sm mt-0.5">{t.compare.subtitle}</p>
           </div>
           <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
             {(["1M","3M","6M","1Y"] as const).map(p => (
@@ -263,7 +265,7 @@ function CompareContent() {
               <div className="relative">
                 <input value={search} onChange={e => handleSearch(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter" && search.trim()) addFromSearch(search.toUpperCase().trim()) }}
-                  placeholder="Ajouter — NVDA, SOL-USD…"
+                  placeholder={t.compare.searchPlaceholder}
                   className="h-9 px-3 rounded-xl text-xs text-white placeholder-white/25 outline-none"
                   style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", minWidth: 170 }} />
                 {results.length > 0 && (
@@ -342,7 +344,7 @@ function CompareContent() {
             <div className="rounded-2xl p-5"
               style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
               <p className="text-sm font-black text-white mb-4">
-                ⚡ Corrélation — {assets[0].symbol.replace("-USD","")} / {assets[1].symbol.replace("-USD","")}
+                ⚡ {t.compare.correlation} — {assets[0].symbol.replace("-USD","")} / {assets[1].symbol.replace("-USD","")}
               </p>
               {correlation !== null && (() => {
                 const abs  = Math.abs(correlation)
@@ -366,10 +368,10 @@ function CompareContent() {
                     </div>
                     <p className="text-[11px] text-white/40 leading-relaxed">
                       {abs > 0.8
-                        ? `${assets[0].symbol} et ${assets[1].symbol} évoluent quasi ensemble — diversification limitée.`
+                        ? t.compare.correlationHigh
                         : abs > 0.5
-                          ? "Corrélation modérée — diversification partielle."
-                          : "Faible corrélation — bonne diversification entre ces actifs."}
+                          ? t.compare.correlationMed
+                          : t.compare.correlationLow}
                     </p>
                   </>
                 )
@@ -380,12 +382,12 @@ function CompareContent() {
             <div className="rounded-2xl p-5"
               style={{ background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.18)" }}>
               <div className="flex items-center justify-between mb-4">
-                <p className="text-sm font-black text-white">🤖 Verdict IA</p>
+                <p className="text-sm font-black text-white">🤖 {t.compare.aiVerdict}</p>
                 {!aiVerdict && !loadingAI && (
                   <button onClick={generateVerdict}
                     className="text-[10px] font-black px-3 py-1.5 rounded-lg transition-all hover:scale-[1.02]"
                     style={{ background: "rgba(139,92,246,0.2)", color: "#a78bfa" }}>
-                    Analyser →
+                    {t.compare.aiVerdictBtn}
                   </button>
                 )}
                 {aiVerdict && (
@@ -405,7 +407,7 @@ function CompareContent() {
                 <p className="text-sm text-white/70 leading-relaxed">{aiVerdict}</p>
               ) : (
                 <p className="text-sm text-white/25 italic">
-                  Clique sur "Analyser" pour un verdict comparatif généré par IA.
+                  {t.compare.aiLoading}
                 </p>
               )}
             </div>
@@ -418,7 +420,7 @@ function CompareContent() {
             style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
             <div className="px-5 py-3 border-b border-white/5"
               style={{ background: "rgba(255,255,255,0.02)" }}>
-              <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold">Métriques détaillées</p>
+              <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold">{t.compare.tableTitle}</p>
             </div>
             <table className="w-full">
               <thead>

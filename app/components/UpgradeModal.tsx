@@ -1,5 +1,6 @@
 "use client"
 import { useEffect } from "react"
+import { useLanguage } from "@/lib/i18n/context"
 
 interface Props {
   open: boolean
@@ -7,46 +8,17 @@ interface Props {
   context?: "signals" | "analysis" | "alerts" | "screener" | "watchlist" | "courses" | "backtest"
 }
 
-const CONTEXTS = {
-  signals: {
-    title: "Débloquez les signaux illimités 🚀",
-    desc: "Tu as atteint ta limite de 3 signaux/jour. Passe à Pro pour un accès illimité.",
-    icon: "📡",
-  },
-  analysis: {
-    title: "Analyses IA illimitées ✨",
-    desc: "Tu as utilisé tes 2 analyses IA gratuites aujourd'hui. Rechargez demain ou passez à Pro.",
-    icon: "🧠",
-  },
-  alerts: {
-    title: "Active les alertes prix 🔔",
-    desc: "Les alertes de prix sont réservées aux membres Pro. Sois notifié quand un actif atteint ton niveau.",
-    icon: "🔔",
-  },
-  screener: {
-    title: "Screener avancé 🔬",
-    desc: "Filtre les marchés mondiaux avec notre screener IA. Disponible en Pro.",
-    icon: "🔬",
-  },
-  watchlist: {
-    title: "Watchlist illimitée 📊",
-    desc: "Tu as atteint la limite de 5 actifs en gratuit. Passe à Pro pour une watchlist illimitée.",
-    icon: "📊",
-  },
-  courses: {
-    title: "Débloquez tous les cours 📚",
-    desc: "Ce cours est réservé aux membres Pro. Accède à l'académie complète avec plus de 15 cours.",
-    icon: "📚",
-  },
-  backtest: {
-    title: "Backtesting disponible en Pro 📈",
-    desc: "Teste tes stratégies sur des données historiques. Fonctionnalité Pro/Premium.",
-    icon: "📈",
-  },
-}
-
 export default function UpgradeModal({ open, onClose, context = "signals" }: Props) {
-  const ctx = CONTEXTS[context]
+  const { t } = useLanguage()
+
+  const TRANSLATED_CONTEXTS: Record<string, { title: string; desc: string; icon: string }> = {
+    signals:  t.upgradeModal.signals,
+    analysis: t.upgradeModal.analysis,
+    alerts:   t.upgradeModal.alerts,
+    coach:    t.upgradeModal.coach,
+  }
+
+  const ctx = TRANSLATED_CONTEXTS[context] ?? t.upgradeModal.default
 
   useEffect(() => {
     if (open) document.body.style.overflow = "hidden"
@@ -89,14 +61,7 @@ export default function UpgradeModal({ open, onClose, context = "signals" }: Pro
 
           {/* Features */}
           <div className="bg-white/[0.03] border border-white/[0.08] rounded-xl p-4 mb-5 space-y-2">
-            {[
-              "Signaux illimités en temps réel",
-              "Analyses IA sans limite",
-              "Alertes de prix illimitées",
-              "Screener avancé 100+ actifs",
-              "Accès à toute l'académie",
-              "Capital paper trading 100k$",
-            ].map(f => (
+            {(t.upgradeModal.features as readonly string[]).map(f => (
               <div key={f} className="flex items-center gap-2 text-sm">
                 <span className="text-green-400 font-bold flex-shrink-0">✓</span>
                 <span className="text-gray-300">{f}</span>
@@ -116,13 +81,13 @@ export default function UpgradeModal({ open, onClose, context = "signals" }: Pro
             href="/pricing"
             className="block w-full text-center py-3 rounded-xl bg-green-500 hover:bg-green-400 text-black font-black text-sm transition mb-2"
           >
-            Voir les offres →
+            {t.upgradeModal.cta.replace("{price}", "14,99")}
           </a>
           <button
             onClick={onClose}
             className="block w-full text-center py-2 text-gray-600 hover:text-gray-400 text-sm transition"
           >
-            Plus tard
+            {t.common.later}
           </button>
         </div>
       </div>
