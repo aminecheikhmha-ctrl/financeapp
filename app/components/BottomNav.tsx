@@ -41,6 +41,8 @@ export default function BottomNav() {
   const [avatarColor, setAvatarColor] = useState("#22c55e")
   const [avatarUrl,   setAvatarUrl]   = useState<string | null>(null)
   const touchStartY = useRef(0)
+  const navRef      = useRef<HTMLElement>(null)
+  const menuRef     = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -67,6 +69,48 @@ export default function BottomNav() {
 
   // Close menu on route change
   useEffect(() => { setMenuOpen(false) }, [pathname])
+
+  // Swipe gestures — native listeners with passive:false so we can preventDefault
+  useEffect(() => {
+    const nav  = navRef.current
+    const menu = menuRef.current
+    if (!nav || !menu) return
+
+    let startY = 0
+
+    // Nav bar: swipe up → open menu
+    const navStart = (e: TouchEvent) => { startY = e.touches[0].clientY }
+    const navEnd   = (e: TouchEvent) => {
+      const delta = e.changedTouches[0].clientY - startY
+      if (delta < -30) {
+        e.preventDefault()
+        haptic("light")
+        setMenuOpen(true)
+      }
+    }
+
+    // Menu panel: swipe down → close menu
+    const menuStart = (e: TouchEvent) => { startY = e.touches[0].clientY }
+    const menuEnd   = (e: TouchEvent) => {
+      const delta = e.changedTouches[0].clientY - startY
+      if (delta > 60) {
+        e.preventDefault()
+        setMenuOpen(false)
+      }
+    }
+
+    nav.addEventListener("touchstart",  navStart,  { passive: true })
+    nav.addEventListener("touchend",    navEnd,    { passive: false })
+    menu.addEventListener("touchstart", menuStart, { passive: true })
+    menu.addEventListener("touchend",   menuEnd,   { passive: false })
+
+    return () => {
+      nav.removeEventListener("touchstart",  navStart)
+      nav.removeEventListener("touchend",    navEnd)
+      menu.removeEventListener("touchstart", menuStart)
+      menu.removeEventListener("touchend",   menuEnd)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!user || PUBLIC_ROUTES.includes(pathname)) return null
 
@@ -95,17 +139,13 @@ export default function BottomNav() {
 
       {/* Slide-up menu */}
       <div
+        ref={menuRef}
         className="md:hidden fixed bottom-[68px] left-0 right-0 z-[80] rounded-t-3xl transition-transform duration-300 ease-out"
         style={{
           background: "#0d0d0d",
           borderTop: "1px solid var(--border-default)",
           transform: menuOpen ? "translateY(0)" : "translateY(100%)",
           pointerEvents: menuOpen ? "auto" : "none",
-        }}
-        onTouchStart={e => { touchStartY.current = e.touches[0].clientY }}
-        onTouchEnd={e => {
-          const delta = e.changedTouches[0].clientY - touchStartY.current
-          if (delta > 60) setMenuOpen(false) // swipe down → ferme
         }}>
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-2">
@@ -168,18 +208,15 @@ export default function BottomNav() {
       </div>
 
       {/* Bottom tab bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[70]"
+      <nav
+        ref={navRef}
+        className="md:hidden fixed bottom-0 left-0 right-0 z-[70]"
         style={{
           height: "var(--bottomnav-h)",
           background: "rgba(5,5,5,0.97)",
           backdropFilter: "blur(24px)",
           WebkitBackdropFilter: "blur(24px)",
           borderTop: "1px solid rgba(255,255,255,0.06)",
-        }}
-        onTouchStart={e => { touchStartY.current = e.touches[0].clientY }}
-        onTouchEnd={e => {
-          const delta = e.changedTouches[0].clientY - touchStartY.current
-          if (delta < -30) { haptic("light"); setMenuOpen(true) } // swipe up → ouvre
         }}>
         <div className="flex items-center justify-around px-2 pt-2 pb-safe h-full">
           {TABS.map(tab => {
