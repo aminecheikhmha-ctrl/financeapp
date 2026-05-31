@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import {
   LayoutDashboard, TrendingUp, Briefcase, BookOpen,
@@ -40,6 +40,7 @@ export default function BottomNav() {
   const [username,    setUsername]    = useState<string | null>(null)
   const [avatarColor, setAvatarColor] = useState("#22c55e")
   const [avatarUrl,   setAvatarUrl]   = useState<string | null>(null)
+  const touchStartY = useRef(0)
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -99,6 +100,12 @@ export default function BottomNav() {
           background: "#0d0d0d",
           borderTop: "1px solid var(--border-default)",
           transform: menuOpen ? "translateY(0)" : "translateY(100%)",
+          pointerEvents: menuOpen ? "auto" : "none",
+        }}
+        onTouchStart={e => { touchStartY.current = e.touches[0].clientY }}
+        onTouchEnd={e => {
+          const delta = e.changedTouches[0].clientY - touchStartY.current
+          if (delta > 60) setMenuOpen(false) // swipe down → ferme
         }}>
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-2">
@@ -168,6 +175,11 @@ export default function BottomNav() {
           backdropFilter: "blur(24px)",
           WebkitBackdropFilter: "blur(24px)",
           borderTop: "1px solid rgba(255,255,255,0.06)",
+        }}
+        onTouchStart={e => { touchStartY.current = e.touches[0].clientY }}
+        onTouchEnd={e => {
+          const delta = e.changedTouches[0].clientY - touchStartY.current
+          if (delta < -30) { haptic("light"); setMenuOpen(true) } // swipe up → ouvre
         }}>
         <div className="flex items-center justify-around px-2 pt-2 pb-safe h-full">
           {TABS.map(tab => {
