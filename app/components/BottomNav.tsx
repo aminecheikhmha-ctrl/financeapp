@@ -86,7 +86,7 @@ export default function BottomNav() {
       {/* Slide-up backdrop */}
       {menuOpen && (
         <div
-          className="md:hidden fixed inset-0 z-[55] bg-black/60"
+          className="md:hidden fixed inset-0 z-[75] bg-black/60"
           style={{ backdropFilter: "blur(4px)" }}
           onClick={() => setMenuOpen(false)}
         />
@@ -94,7 +94,7 @@ export default function BottomNav() {
 
       {/* Slide-up menu */}
       <div
-        className="md:hidden fixed bottom-[68px] left-0 right-0 z-[60] rounded-t-3xl transition-transform duration-300 ease-out"
+        className="md:hidden fixed bottom-[68px] left-0 right-0 z-[80] rounded-t-3xl transition-transform duration-300 ease-out"
         style={{
           background: "#0d0d0d",
           borderTop: "1px solid var(--border-default)",
@@ -161,7 +161,7 @@ export default function BottomNav() {
       </div>
 
       {/* Bottom tab bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50"
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[70]"
         style={{
           height: "var(--bottomnav-h)",
           background: "rgba(5,5,5,0.97)",

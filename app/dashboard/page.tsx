@@ -2039,7 +2039,7 @@ function DashboardContent() {
         <div className="md:hidden fixed inset-0 bg-black/60 z-40" onClick={() => setShowMobileOrder(false)} />
       )}
       <div className={`md:hidden fixed inset-x-0 bottom-0 z-50 transition-transform duration-300 ${
-        showMobileOrder ? "translate-y-0" : "translate-y-full"
+        showMobileOrder ? "translate-y-0 pointer-events-auto" : "translate-y-full pointer-events-none"
       }`}
         style={{
           background: "#0d0d0d",
