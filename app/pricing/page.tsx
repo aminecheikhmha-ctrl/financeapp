@@ -132,10 +132,12 @@ export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null)
   const [currentPlan, setCurrentPlan] = useState("free")
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) return
+      setIsLoggedIn(true)
       const { data: profile } = await supabase
         .from("user_profiles")
         .select("plan")
@@ -146,7 +148,7 @@ export default function PricingPage() {
   }, [])
 
   async function handleSubscribe(plan: typeof PLANS[0]) {
-    if (plan.key === "free") { router.push("/signup"); return }
+    if (plan.key === "free") { router.push(isLoggedIn ? "/dashboard" : "/signup"); return }
     if (currentPlan === plan.key) return
     setLoading(plan.key)
     try {
@@ -175,14 +177,24 @@ export default function PricingPage() {
       <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
         <TradexLogo size={28} showText textSize="sm" />
         <div className="flex gap-3">
-          <a href="/login" className="px-4 py-2 rounded-lg text-sm text-white/50 hover:text-white transition">
-            Se connecter
-          </a>
-          <a href="/dashboard"
-            className="px-4 py-2 rounded-lg text-sm font-bold text-black transition hover:opacity-90"
-            style={{ background: "#22c55e" }}>
-            Essayer gratuitement
-          </a>
+          {isLoggedIn ? (
+            <a href="/dashboard"
+              className="px-4 py-2 rounded-lg text-sm font-bold text-black transition hover:opacity-90"
+              style={{ background: "#22c55e" }}>
+              ← Dashboard
+            </a>
+          ) : (
+            <>
+              <a href="/login" className="px-4 py-2 rounded-lg text-sm text-white/50 hover:text-white transition">
+                Se connecter
+              </a>
+              <a href="/signup"
+                className="px-4 py-2 rounded-lg text-sm font-bold text-black transition hover:opacity-90"
+                style={{ background: "#22c55e" }}>
+                Essayer gratuitement
+              </a>
+            </>
+          )}
         </div>
       </div>
 
@@ -411,18 +423,37 @@ export default function PricingPage() {
 
       {/* Final CTA */}
       <div className="border-t border-white/5 py-20 px-6 text-center">
-        <h2 className="text-4xl font-black text-white mb-4">
-          Commence aujourd&apos;hui,<br />gratuitement
-        </h2>
-        <p className="text-white/40 mb-8 max-w-md mx-auto">
-          Rejoins des milliers de traders qui utilisent Tradex pour progresser chaque jour.
-        </p>
-        <a href="/signup"
-          className="inline-flex items-center gap-2 px-10 py-5 rounded-2xl text-lg font-black text-black transition-all hover:scale-[1.03]"
-          style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", boxShadow: "0 0 50px rgba(34,197,94,0.25)" }}>
-          Créer mon compte gratuit →
-        </a>
-        <p className="text-xs text-white/20 mt-4">✓ Sans carte de crédit · ✓ Sans engagement · ✓ $100k fictifs offerts</p>
+        {isLoggedIn ? (
+          <>
+            <h2 className="text-4xl font-black text-white mb-4">
+              Prêt à passer<br />au niveau supérieur ?
+            </h2>
+            <p className="text-white/40 mb-8 max-w-md mx-auto">
+              Choisis ton plan ci-dessus et débloque toutes les fonctionnalités Pro ou Premium en quelques secondes.
+            </p>
+            <a href="/dashboard"
+              className="inline-flex items-center gap-2 px-10 py-5 rounded-2xl text-lg font-black text-black transition-all hover:scale-[1.03]"
+              style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", boxShadow: "0 0 50px rgba(34,197,94,0.25)" }}>
+              Retour au dashboard →
+            </a>
+            <p className="text-xs text-white/20 mt-4">✓ Annulation à tout moment · ✓ Paiement sécurisé Stripe</p>
+          </>
+        ) : (
+          <>
+            <h2 className="text-4xl font-black text-white mb-4">
+              Commence aujourd&apos;hui,<br />gratuitement
+            </h2>
+            <p className="text-white/40 mb-8 max-w-md mx-auto">
+              Rejoins des milliers de traders qui utilisent Tradex pour progresser chaque jour.
+            </p>
+            <a href="/signup"
+              className="inline-flex items-center gap-2 px-10 py-5 rounded-2xl text-lg font-black text-black transition-all hover:scale-[1.03]"
+              style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", boxShadow: "0 0 50px rgba(34,197,94,0.25)" }}>
+              Créer mon compte gratuit →
+            </a>
+            <p className="text-xs text-white/20 mt-4">✓ Sans carte de crédit · ✓ Sans engagement · ✓ $100k fictifs offerts</p>
+          </>
+        )}
       </div>
 
       {/* Footer */}
