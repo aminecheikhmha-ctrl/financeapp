@@ -63,8 +63,9 @@ export default function AdminPage() {
   const [tk, setTk] = useState("")
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<"overview"|"users"|"forum"|"broadcast"|"signaux"|"alertes"|"events"|"moderation">("overview")
+  const [activeTab, setActiveTab] = useState<"overview"|"users"|"forum"|"broadcast"|"signaux"|"alertes"|"events"|"moderation"|"ia_credits">("overview")
   const [moderationLogs, setModerationLogs] = useState<any[]>([])
+  const [aiUsage, setAiUsage] = useState<{ users: any[]; totals: any } | null>(null)
 
   // Tab-specific data
   const [forumPosts, setForumPosts] = useState<any[]>([])
@@ -132,6 +133,10 @@ export default function AdminPage() {
       const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
       const { data } = await sb.from("moderation_logs").select("*").order("created_at", { ascending: false }).limit(100)
       setModerationLogs(data ?? [])
+    }
+    if (tab === "ia_credits") {
+      const r = await fetch("/api/admin/ai-usage", { headers: { Authorization: `Bearer ${token}` } })
+      if (r.ok) setAiUsage(await r.json())
     }
   }, [tabLoaded])
 
@@ -262,6 +267,7 @@ export default function AdminPage() {
     { id: "alertes",    icon: "🔔", label: "Alertes" },
     { id: "events",      icon: "⚡", label: "Événements" },
     { id: "moderation",  icon: "🛡️", label: "Modération" },
+    { id: "ia_credits",  icon: "🤖", label: "IA Credits" },
   ] as const
 
   return (
@@ -811,6 +817,109 @@ export default function AdminPage() {
                       </button>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════ IA CREDITS ═══════════════════════ */}
+        {activeTab === "ia_credits" && (
+          <div className="space-y-4">
+            {/* KPIs globaux */}
+            {aiUsage && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-[#111] border border-white/8 rounded-2xl p-4">
+                  <p className="text-gray-500 text-xs font-semibold uppercase tracking-widest mb-2">Total 30j</p>
+                  <p className="text-3xl font-black text-purple-400">{aiUsage.totals.total}</p>
+                  <p className="text-gray-600 text-xs mt-1">appels IA</p>
+                </div>
+                <div className="bg-[#111] border border-white/8 rounded-2xl p-4">
+                  <p className="text-gray-500 text-xs font-semibold uppercase tracking-widest mb-2">Aujourd&apos;hui</p>
+                  <p className="text-3xl font-black text-blue-400">{aiUsage.totals.today}</p>
+                  <p className="text-gray-600 text-xs mt-1">appels</p>
+                </div>
+                <div className="bg-[#111] border border-white/8 rounded-2xl p-4">
+                  <p className="text-gray-500 text-xs font-semibold uppercase tracking-widest mb-2">Cette semaine</p>
+                  <p className="text-3xl font-black text-green-400">{aiUsage.totals.this_week}</p>
+                  <p className="text-gray-600 text-xs mt-1">appels</p>
+                </div>
+                <div className="bg-[#111] border border-white/8 rounded-2xl p-4">
+                  <p className="text-gray-500 text-xs font-semibold uppercase tracking-widest mb-2">Utilisateurs actifs</p>
+                  <p className="text-3xl font-black text-yellow-400">{aiUsage.users.length}</p>
+                  <p className="text-gray-600 text-xs mt-1">ont utilisé l&apos;IA</p>
+                </div>
+              </div>
+            )}
+
+            {/* Répartition par feature */}
+            {aiUsage && (
+              <div className="bg-[#111] border border-white/8 rounded-2xl p-5">
+                <h3 className="text-white font-bold mb-4">Répartition par feature (30j)</h3>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  {[
+                    { key: "chat",               label: "💬 Assistant",  color: "bg-blue-500",   count: aiUsage.totals.chat },
+                    { key: "coach",              label: "🎯 Coach",      color: "bg-green-500",  count: aiUsage.totals.coach },
+                    { key: "trade_coach",        label: "📈 Trade Coach",color: "bg-yellow-500", count: aiUsage.totals.trade_coach },
+                    { key: "portfolio_analysis", label: "💼 Portfolio",  color: "bg-purple-500", count: aiUsage.totals.portfolio_analysis },
+                    { key: "moderation",         label: "🛡️ Modération", color: "bg-red-500",    count: aiUsage.totals.moderation },
+                  ].map(f => {
+                    const pct = aiUsage.totals.total > 0 ? Math.round((f.count / aiUsage.totals.total) * 100) : 0
+                    return (
+                      <div key={f.key} className="bg-white/3 rounded-xl p-3">
+                        <p className="text-xs text-gray-400 mb-1">{f.label}</p>
+                        <p className="text-xl font-black text-white">{f.count}</p>
+                        <div className="h-1 bg-white/5 rounded-full mt-2 overflow-hidden">
+                          <div className={`h-full ${f.color} rounded-full transition-all`} style={{ width: `${pct}%` }} />
+                        </div>
+                        <p className="text-[10px] text-gray-600 mt-1">{pct}%</p>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Tableau par utilisateur */}
+            <div className="bg-[#111] border border-white/8 rounded-2xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+                <div>
+                  <h2 className="text-white font-bold">Utilisation par utilisateur</h2>
+                  <p className="text-gray-600 text-xs mt-0.5">30 derniers jours · trié par volume</p>
+                </div>
+              </div>
+              {!tabLoaded["ia_credits"] ? <Spinner /> : !aiUsage || aiUsage.users.length === 0 ? (
+                <p className="text-gray-600 text-sm text-center py-10">Aucun appel IA enregistré</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-white/5">
+                        {["Utilisateur", "Plan", "Total", "💬 Chat", "🎯 Coach", "📈 Trade", "💼 Portfolio", "Dernier appel"].map(h => (
+                          <th key={h} className="text-left px-4 py-3 text-gray-500 text-xs font-semibold uppercase tracking-wide whitespace-nowrap">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {aiUsage.users.map((u: any) => (
+                        <tr key={u.user_id} className="hover:bg-white/3 transition-all">
+                          <td className="px-4 py-3">
+                            <p className="text-gray-200 text-xs font-medium truncate max-w-[160px]">{u.email}</p>
+                            {u.username && <p className="text-gray-600 text-[10px]">{u.username}</p>}
+                          </td>
+                          <td className="px-4 py-3"><PlanBadge plan={u.plan} /></td>
+                          <td className="px-4 py-3">
+                            <span className="text-purple-400 font-black text-sm">{u.total}</span>
+                          </td>
+                          <td className="px-4 py-3 text-blue-400 text-xs font-mono">{u.chat || "—"}</td>
+                          <td className="px-4 py-3 text-green-400 text-xs font-mono">{u.coach || "—"}</td>
+                          <td className="px-4 py-3 text-yellow-400 text-xs font-mono">{u.trade_coach || "—"}</td>
+                          <td className="px-4 py-3 text-purple-300 text-xs font-mono">{u.portfolio_analysis || "—"}</td>
+                          <td className="px-4 py-3 text-gray-600 text-xs">{timeAgo(u.last_used)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import Groq from "groq-sdk"
 import { createClient } from "@supabase/supabase-js"
 import { rateLimit, getClientIP } from "@/lib/rate-limit"
+import { logAIUsage } from "@/lib/ai-logger"
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
@@ -54,6 +55,7 @@ export async function POST(req: NextRequest) {
     })
 
     const reply = completion.choices[0]?.message?.content ?? "Je n'ai pas pu générer une réponse."
+    void logAIUsage(user.id, "coach")
     return NextResponse.json({ reply })
   } catch (err) {
     console.error("Coach error:", err)

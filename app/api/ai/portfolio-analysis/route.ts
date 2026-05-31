@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import Groq from "groq-sdk"
 import { createClient } from "@supabase/supabase-js"
+import { logAIUsage } from "@/lib/ai-logger"
 
 export const runtime = "nodejs"
 export const maxDuration = 30
@@ -97,6 +98,7 @@ Réponds UNIQUEMENT avec le JSON, pas de markdown.`,
     content: result,
     user_id: user.id,
   })
+  void logAIUsage(user.id, "portfolio_analysis")
 
   return NextResponse.json(result)
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import Groq from "groq-sdk"
+import { logAIUsage } from "@/lib/ai-logger"
 
 export const runtime = "nodejs"
 export const maxDuration = 30
@@ -168,6 +169,7 @@ Règles:
     { user_id: user.id, role: "assistant", content: responseText, page_context: page_context ?? null },
   ])
 
+  void logAIUsage(user.id, "chat")
   const suggestions = getSuggestions(page_context)
 
   return NextResponse.json({ response: responseText, suggestions })

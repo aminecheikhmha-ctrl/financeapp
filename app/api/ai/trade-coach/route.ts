@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import Groq from "groq-sdk"
 import { createClient } from "@supabase/supabase-js"
+import { logAIUsage } from "@/lib/ai-logger"
 
 export const runtime = "nodejs"
 export const maxDuration = 30
@@ -130,6 +131,7 @@ Retourne JSON strict:
     content: finalResult,
     user_id: user.id,
   })
+  void logAIUsage(user.id, "trade_coach")
 
   return NextResponse.json(finalResult)
 }
