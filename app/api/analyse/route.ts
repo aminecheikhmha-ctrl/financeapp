@@ -69,28 +69,28 @@ export async function POST(req: NextRequest) {
     const ma30 = recentCloses.reduce((a: number, b: number) => a + b, 0) / recentCloses.length
 
     // Prompt pour Groq
-    const prompt = `Tu es un analyste financier expert. Analyse cet actif de façon professionnelle et détaillée.
+    const prompt = `You are an expert financial analyst. Analyze this asset professionally and in detail.
 
-Données de marché pour ${ticker.toUpperCase()} :
-- Prix actuel : $${prix.toFixed(2)}
-- Variation du jour : ${change.toFixed(2)}%
-- Plus haut 52 semaines : $${high52.toFixed(2)}
-- Plus bas 52 semaines : $${low52.toFixed(2)}
-- Position dans la range 52s : ${high52 > low52 ? ((prix - low52) / (high52 - low52) * 100).toFixed(0) : "N/A"}%
-- Volume : ${volume.toLocaleString()}
-- Moyenne mobile 7j : $${ma7.toFixed(2)}
-- Moyenne mobile 30j : $${ma30.toFixed(2)}
-- Signal MM : ${ma7 > ma30 ? "Bullish (MM7 > MM30)" : "Bearish (MM7 < MM30)"}
+Market data for ${ticker.toUpperCase()} :
+- Current price: $${prix.toFixed(2)}
+- Daily change: ${change.toFixed(2)}%
+- 52-week high: $${high52.toFixed(2)}
+- 52-week low: $${low52.toFixed(2)}
+- Position in 52w range: ${high52 > low52 ? ((prix - low52) / (high52 - low52) * 100).toFixed(0) : "N/A"}%
+- Volume: ${volume.toLocaleString()}
+- 7d moving average: $${ma7.toFixed(2)}
+- 30d moving average: $${ma30.toFixed(2)}
+- MA signal: ${ma7 > ma30 ? "Bullish (MA7 > MA30)" : "Bearish (MA7 < MA30)"}
 
-Fournis une analyse structurée avec :
-1. Résumé de la situation actuelle
-2. Analyse technique (supports, résistances, tendance)
-3. Points forts et points faibles
-4. Niveau de risque (faible/modéré/élevé)
-5. Recommandation (acheter/attendre/vendre) avec justification
-6. Niveaux clés à surveiller
+Provide a structured analysis with:
+1. Summary of the current situation
+2. Technical analysis (support, resistance, trend)
+3. Strengths and weaknesses
+4. Risk level (low/moderate/high)
+5. Recommendation (buy/wait/sell) with justification
+6. Key levels to watch
 
-Sois précis, professionnel et concis. Réponds en français.`
+Be precise, professional and concise.`
 
     const completion = await groq.chat.completions.create({
       messages: [{ role: "user", content: prompt }],

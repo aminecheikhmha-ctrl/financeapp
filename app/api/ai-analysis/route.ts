@@ -196,9 +196,9 @@ Contexte actualités récentes (${newsData.articlesCount} articles) :
           {
             role: "system",
             content:
-              "Tu es un analyste financier quantitatif expert. Tu réponds toujours en français, " +
-              "avec des valeurs précises des indicateurs. Tu identifies les divergences et la confluence des signaux. " +
-              "Tu structures ton analyse en sections claires.",
+              "You are an expert quantitative financial analyst. Always respond in English, " +
+              "with precise indicator values. Identify divergences and signal confluence. " +
+              "Structure your analysis in clear sections.",
           },
           {
             role: "user",

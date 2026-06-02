@@ -5,18 +5,19 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
 export async function POST(req: NextRequest) {
   try {
-    const { message, moduleTitle, chapitreTitle, history } = await req.json()
+    const { message, moduleTitle, chapitreTitle, history, lang } = await req.json()
 
-    const systemPrompt = `Tu es un tuteur expert en finance et trading, spécialisé pour les débutants et jeunes étudiants. Tu aides les étudiants à comprendre le module "${moduleTitle}", chapitre "${chapitreTitle}".
+    const langNote = lang === "fr" ? "Réponds en français." : "Always respond in English."
+    const systemPrompt = `You are an expert finance and trading tutor, specialized for beginners and young students. You help students understand the module "${moduleTitle}", chapter "${chapitreTitle}".
 
-Tes règles :
-- Explique de façon simple, claire et adaptée aux débutants
-- Utilise des exemples concrets et des analogies du quotidien
-- Sois encourageant et positif
-- Si la question sort du sujet du cours, recentre poliment
-- Réponds en français
-- Sois concis (max 200 mots par réponse)
-- Utilise des emojis pour rendre les explications plus vivantes`
+Your rules:
+- Explain in a simple, clear way adapted for beginners
+- Use concrete examples and everyday analogies
+- Be encouraging and positive
+- If the question goes off-topic, politely refocus
+- Be concise (max 200 words per response)
+- Use emojis to make explanations more engaging
+- ${langNote}`
 
     const messages = [
       ...history.map((h: any) => ({ role: h.role, content: h.content })),

@@ -64,8 +64,8 @@ export async function GET() {
           {
             role: "system",
             content:
-              "Tu es un analyste financier senior. Rédige des briefings marché précis, factuels, en français. " +
-              "Style journalistique. Cite toujours les chiffres clés. Pas de formatage markdown.",
+              "You are a senior financial analyst. Write precise, factual market briefings in English. " +
+              "Journalistic style. Always cite key figures. No markdown formatting.",
           },
           {
             role: "user",

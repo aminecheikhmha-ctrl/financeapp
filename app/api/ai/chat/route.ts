@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import Groq from "groq-sdk"
 import { logAIUsage } from "@/lib/ai-logger"
+import { langInstruction } from "@/lib/ai-lang"
 
 export const runtime = "nodejs"
 export const maxDuration = 30
@@ -70,7 +71,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { message, page_context } = await req.json()
+  const { message, page_context, lang } = await req.json()
   if (!message || typeof message !== "string") {
     return NextResponse.json({ error: "Missing message" }, { status: 400 })
   }
@@ -115,22 +116,22 @@ export async function POST(req: NextRequest) {
     ? recentOrders.map((o: any) => `${o.side} ${o.symbol} à ${o.price}`).join(", ")
     : "aucun"
 
-  const systemPrompt = `Tu es l'assistant IA de Tradex, un expert en trading et finance de marché.
-Tu as accès au contexte complet de l'utilisateur.
+  const systemPrompt = `You are Tradex's AI assistant, an expert in trading and market finance.
+You have access to the user's full context.
 
-Utilisateur: ${username}
-Niveau: ${level}
-Portfolio actuel: ${portfolioStr}
-Derniers trades: ${ordersStr}
-Page actuelle: ${page_context ?? "dashboard"}
+User: ${username}
+Level: ${level}
+Current portfolio: ${portfolioStr}
+Recent trades: ${ordersStr}
+Current page: ${page_context ?? "dashboard"}
 
-Règles:
-- Réponds en français, de façon concise et experte
-- Si on te demande "comment se porte mon portfolio", utilise les données ci-dessus
-- Pour les questions sur des actifs spécifiques, donne une analyse factuelle
-- Suggère des fonctionnalités de l'app quand c'est pertinent (ex: "Tu peux voir ça dans /analyses")
-- Max 150 mots par réponse sauf si on demande une explication détaillée
-- Sois proactif et engage selon la page: si l'user est sur /signaux, parle des signaux actifs`
+Rules:
+- Be concise and expert (max 150 words unless a detailed explanation is requested)
+- If asked "how is my portfolio doing", use the data above
+- For questions about specific assets, give factual analysis
+- Suggest app features when relevant (e.g. "You can see this in /analyses")
+- Be proactive based on the current page: if on /signals, talk about active signals
+- ${langInstruction(lang)}`
 
   const historyMessages = (chatHistory ?? []).map((h: any) => ({
     role: h.role as "user" | "assistant",

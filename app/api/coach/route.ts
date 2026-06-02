@@ -3,6 +3,7 @@ import Groq from "groq-sdk"
 import { createClient } from "@supabase/supabase-js"
 import { rateLimit, getClientIP } from "@/lib/rate-limit"
 import { logAIUsage } from "@/lib/ai-logger"
+import { langInstruction } from "@/lib/ai-lang"
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
@@ -10,7 +11,7 @@ export async function POST(req: NextRequest) {
   const ip = getClientIP(req)
   const { success } = rateLimit(`coach:${ip}`, 20, 60 * 1000)
   if (!success) {
-    return NextResponse.json({ error: "Trop de requêtes. Attends un moment." }, { status: 429 })
+    return NextResponse.json({ error: "Too many requests. Please wait a moment." }, { status: 429 })
   }
 
   const token = req.headers.get("authorization")?.replace("Bearer ", "")
@@ -25,9 +26,9 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   try {
-    const { message, history = [] } = await req.json()
+    const { message, history = [], lang } = await req.json()
     if (!message || typeof message !== "string") {
-      return NextResponse.json({ error: "Message requis" }, { status: 400 })
+      return NextResponse.json({ error: "Message required" }, { status: 400 })
     }
 
     const historyMessages = (history as { role: string; content: string }[])
@@ -42,23 +43,20 @@ export async function POST(req: NextRequest) {
       messages: [
         {
           role: "system",
-          content: `Tu es un coach de trading professionnel, bienveillant et pédagogique. Tu aides les traders débutants et intermédiaires à progresser dans le paper trading (trading simulé). Tu réponds en français, de façon claire et concise (3-5 phrases maximum sauf si une explication plus longue est nécessaire). Tu donnes des conseils actionnables et pratiques. Tu ne fais pas de recommandations d'investissement réels. Si on te pose une question hors trading, rappelle poliment ton rôle.`,
+          content: `You are a professional, caring and educational trading coach. You help beginner and intermediate traders improve in paper trading (simulated trading). You answer clearly and concisely (3-5 sentences maximum unless a longer explanation is needed). You give actionable, practical advice. You do not make real investment recommendations. If asked something outside trading, politely remind the user of your role. ${langInstruction(lang)}`,
         },
         ...historyMessages,
-        {
-          role: "user",
-          content: message,
-        },
+        { role: "user", content: message },
       ],
       max_tokens: 400,
       temperature: 0.7,
     })
 
-    const reply = completion.choices[0]?.message?.content ?? "Je n'ai pas pu générer une réponse."
+    const reply = completion.choices[0]?.message?.content ?? "I couldn't generate a response."
     void logAIUsage(user.id, "coach")
     return NextResponse.json({ reply })
   } catch (err) {
     console.error("Coach error:", err)
-    return NextResponse.json({ error: "Erreur de génération" }, { status: 500 })
+    return NextResponse.json({ error: "Generation error" }, { status: 500 })
   }
 }

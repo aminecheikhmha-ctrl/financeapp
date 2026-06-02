@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import Groq from "groq-sdk"
 import { createClient } from "@supabase/supabase-js"
+import { langInstruction } from "@/lib/ai-lang"
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
@@ -17,14 +18,14 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   try {
-    const { winRate, profitFactor, avgWin, avgLoss, totalTrades, topSymbols } = await req.json()
+    const { winRate, profitFactor, avgWin, avgLoss, totalTrades, topSymbols, lang } = await req.json()
 
     const completion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
       messages: [
         {
           role: "system",
-          content: "Tu es un coach de trading professionnel. Analyse les performances d'un trader et donne des conseils personnalisés, bienveillants et actionnables. Réponds en français, en 3-4 phrases maximum. Sois précis avec les chiffres fournis.",
+          content: `You are a professional trading coach. Analyze a trader's performance and give personalized, caring and actionable advice. Answer in 3-4 sentences maximum. Be precise with the numbers provided. ${langInstruction(lang)}`,
         },
         {
           role: "user",

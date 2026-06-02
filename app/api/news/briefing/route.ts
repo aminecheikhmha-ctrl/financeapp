@@ -90,8 +90,8 @@ export async function GET(req: NextRequest) {
       messages: [
         {
           role: "user",
-          content: `Tu es un stratégiste de marché. Génère un briefing matinal concis en français.
-Retourne UNIQUEMENT du JSON (pas de markdown, pas de backticks) :
+          content: `You are a market strategist. Generate a concise morning briefing in English.
+Return ONLY JSON (no markdown, no backticks):
 {"date":"${today}","bullets":["point1","point2","point3"],"asia_summary":"...","watch_today":["item1","item2"],"trade_idea":"..."}
 
 News récentes :

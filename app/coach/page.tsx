@@ -58,7 +58,7 @@ function MessageBubble({ msg }: { msg: Message }) {
 
 export default function CoachPage() {
   const router = useRouter()
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const [user, setUser] = useState<any>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
@@ -99,6 +99,7 @@ export default function CoachPage() {
         body: JSON.stringify({
           message: text.trim(),
           history: messages.slice(-8),
+          lang,
         }),
       })
       const json = await res.json()

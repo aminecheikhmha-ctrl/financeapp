@@ -68,24 +68,24 @@ Données techniques :
 - Bollinger position : ${ind?.bb_position?.toFixed(1) ?? "N/A"}%
 - Variation 24h : ${ind?.change_24h?.toFixed(2) ?? "N/A"}%
 
-Rédige en français une analyse structurée avec ces sections (utilise ### pour les titres) :
+Write a structured analysis in English with these sections (use ### for headings):
 
-### 1. Contexte de marché
-Explique la situation actuelle de l'actif, sa tendance, et le contexte macro.
+### 1. Market Context
+Explain the current situation of the asset, its trend, and the macro context.
 
-### 2. Pourquoi ce signal maintenant
-Détaille les indicateurs qui déclenchent le signal et leur signification.
+### 2. Why This Signal Now
+Detail the indicators triggering the signal and their significance.
 
-### 3. Gestion du risque
-Explique la stratégie TP/SL, le ratio risque/récompense, et le sizing recommandé.
+### 3. Risk Management
+Explain the TP/SL strategy, the risk/reward ratio, and recommended sizing.
 
-### 4. Scénarios alternatifs
-Décris ce qui invaliderait ce signal et les niveaux à surveiller.
+### 4. Alternative Scenarios
+Describe what would invalidate this signal and the levels to watch.
 
-### 5. Catalyseurs à surveiller
-Liste les événements (résultats, macro, news sectorielle) qui pourraient accélérer ou invalider le mouvement.
+### 5. Catalysts to Watch
+List events (earnings, macro, sector news) that could accelerate or invalidate the move.
 
-Sois précis, cite les chiffres, reste factuel. Maximum 400 mots.`
+Be precise, cite numbers, stay factual. Maximum 400 words.`
 
   try {
     const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {

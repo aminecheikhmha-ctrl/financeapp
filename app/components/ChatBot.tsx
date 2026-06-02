@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { usePathname } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { useLanguage } from "@/lib/i18n/context"
 
 const EXCLUDED_PATHS = ["/login", "/signup", "/onboarding", "/"]
 
@@ -52,6 +53,7 @@ function getPanelPos(corner: Corner): React.CSSProperties {
 
 function ChatBotInner() {
   const pathname = usePathname()
+  const { lang } = useLanguage()
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([])
   const [input, setInput] = useState("")
@@ -184,7 +186,7 @@ function ChatBotInner() {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ message: text, page_context: pathname }),
+        body: JSON.stringify({ message: text, page_context: pathname, lang }),
       })
       const json = await res.json()
       setMessages(prev => [

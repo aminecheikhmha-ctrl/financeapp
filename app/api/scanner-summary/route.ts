@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     `${h.symbol} (${h.name}): ${h.pattern} | Signal ${h.signal} | Score ${h.score} | RSI ${h.rsi} | Var ${h.change > 0 ? "+" : ""}${h.change}% | Confluence ${h.confluence}%`
   ).join("\n")
 
-  const prompt = `Tu es un analyste financier expert. Voici les patterns détectés par notre scanner technique:\n\n${lines}\n\nRédige une synthèse analytique concise (3-4 phrases max) en français. Identifie les tendances dominantes, les setup les plus intéressants et donne une conclusion actionnable pour un trader. Sois précis et professionnel.`
+  const prompt = `You are an expert financial analyst. Here are the patterns detected by our technical scanner:\n\n${lines}\n\nWrite a concise analytical summary (3-4 sentences max). Identify the dominant trends, the most interesting setups and give an actionable conclusion for a trader. Be precise and professional.`
 
   try {
     const completion = await groq.chat.completions.create({
