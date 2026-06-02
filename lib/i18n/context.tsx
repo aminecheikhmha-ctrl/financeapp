@@ -17,19 +17,31 @@ const I18nContext = createContext<I18nContextType>({
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>("en")
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    const saved = localStorage.getItem("lang") as Lang | null
-    if (saved === "en" || saved === "fr") setLangState(saved)
+    setMounted(true)
+    try {
+      const saved = localStorage.getItem("lang") as Lang | null
+      if (saved === "en" || saved === "fr") setLangState(saved)
+    } catch {
+      // localStorage not available
+    }
   }, [])
 
   function setLang(l: Lang) {
     setLangState(l)
-    localStorage.setItem("lang", l)
+    try {
+      localStorage.setItem("lang", l)
+    } catch {}
   }
 
+  // Always render with consistent state to avoid hydration mismatch
+  // Use "en" on first render (matches server), switch after mount
+  const effectiveLang = mounted ? lang : "en"
+
   return (
-    <I18nContext.Provider value={{ lang, setLang, t: translations[lang] }}>
+    <I18nContext.Provider value={{ lang: effectiveLang, setLang, t: translations[effectiveLang] }}>
       {children}
     </I18nContext.Provider>
   )
