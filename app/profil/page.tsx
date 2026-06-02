@@ -96,7 +96,7 @@ const CATEGORY_TABS: { key: AchievementCategory | "all"; label: string }[] = [
   { key: "learning",  label: "Formation" },
   { key: "community", label: "Forum"     },
   { key: "social",    label: "Social"    },
-  { key: "streak",    label: "Assiduité" },
+  { key: "streak",    label: "Consistency" },
 ]
 
 // ── Referral ──────────────────────────────────────────────────────────────────
@@ -129,7 +129,7 @@ function ReferralSection() {
           {ref.url}
         </div>
         <button onClick={copy} className="px-3 py-2.5 rounded-xl bg-green-500 hover:bg-green-400 text-black font-bold text-xs transition flex-shrink-0">
-          {copied ? "✓ Copié" : "Copier"}
+          {copied ? "✓ Copied" : "Copy"}
         </button>
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -447,7 +447,7 @@ export default function ProfilPage() {
           <div className="flex items-center justify-center gap-6 mb-5">
             {[
               { value: `🔥 ${profile?.streak_days ?? 0}`, label: "streak" },
-              { value: unlockedIds.length,                 label: "succès" },
+              { value: unlockedIds.length,                 label: "achievements" },
               { value: completedCourses.length,            label: "cours"  },
               { value: rawOrders.filter(o => o.side === "buy").length, label: "trades" },
             ].map(s => (

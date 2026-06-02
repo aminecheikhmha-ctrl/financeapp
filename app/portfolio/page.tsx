@@ -197,8 +197,8 @@ function JournalTab({ closedTrades, token }: { closedTrades: ClosedTrade[]; toke
     return (
       <div className="text-center py-16">
         <p className="text-4xl mb-3">📓</p>
-        <p className="text-white/40 text-base font-bold mb-1">Aucun trade clôturé</p>
-        <p className="text-white/25 text-sm">Le journal se remplit après chaque vente</p>
+        <p className="text-white/40 text-base font-bold mb-1">No closed trades</p>
+        <p className="text-white/25 text-sm">The journal fills up after each sale</p>
       </div>
     )
   }
@@ -206,7 +206,7 @@ function JournalTab({ closedTrades, token }: { closedTrades: ClosedTrade[]; toke
   return (
     <div className="space-y-3 mb-6">
       <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-2">
-        {sorted.length} trade{sorted.length !== 1 ? "s" : ""} à analyser
+        {sorted.length} trade{sorted.length !== 1 ? "s" : ""} to review
       </p>
       {sorted.map(trade => {
         const id    = tradeId(trade)
@@ -227,8 +227,8 @@ function JournalTab({ closedTrades, token }: { closedTrades: ClosedTrade[]; toke
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-white">{trade.symbol.replace("-USD","")}</p>
                 <p className="text-[10px] text-white/30">
-                  {new Date(trade.closed_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
-                  {" · "}{trade.qty} parts
+                  {new Date(trade.closed_at).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}
+                  {" · "}{trade.qty} shares
                 </p>
               </div>
               <div className="text-right flex-shrink-0">
@@ -299,7 +299,7 @@ function JournalTab({ closedTrades, token }: { closedTrades: ClosedTrade[]; toke
 
               {/* Save indicator */}
               {isSav && (
-                <p className="text-[10px] text-green-400/60 text-right">Enregistrement...</p>
+                <p className="text-[10px] text-green-400/60 text-right">Saving...</p>
               )}
             </div>
           </div>
@@ -413,7 +413,7 @@ export default function PortfolioPage() {
         avgWin:       parseFloat(avgWin.toFixed(2)),
         avgLoss:      parseFloat(avgLoss.toFixed(2)),
         profitFactor,
-        totalTrades:  closed.length,   // trades fermés uniquement
+        totalTrades:  closed.length,   // closed trades only
         bestTrade:  sortedClosed[0] ? { symbol: sortedClosed[0].symbol, pnl: sortedClosed[0].pnl, pnl_pct: sortedClosed[0].pnl_pct } : null,
         worstTrade: sortedClosed[sortedClosed.length - 1]?.pnl < 0
           ? { symbol: sortedClosed[sortedClosed.length - 1].symbol, pnl: sortedClosed[sortedClosed.length - 1].pnl, pnl_pct: sortedClosed[sortedClosed.length - 1].pnl_pct }
@@ -531,7 +531,7 @@ export default function PortfolioPage() {
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white/50 hover:text-white transition"
               style={{ border: "1px solid rgba(255,255,255,0.10)" }}>
               <Download size={13} />
-              Rapport
+              Report
             </button>
           </div>
         </div>
@@ -542,21 +542,21 @@ export default function PortfolioPage() {
             {
               label: t.portfolio.totalPl,
               value: `${(stats?.dayPnl ?? 0) >= 0 ? "+" : ""}$${(stats?.dayPnl ?? 0).toFixed(2)}`,
-              sub: `${positions.length} position${positions.length !== 1 ? "s" : ""} ouvert${positions.length !== 1 ? "es" : "e"}`,
+              sub: `${positions.length} open position${positions.length !== 1 ? "s" : ""}`,
               color: (stats?.dayPnl ?? 0) >= 0 ? "#4ade80" : "#f87171",
               icon: (stats?.dayPnl ?? 0) >= 0 ? "📈" : "📉",
             },
             {
               label: t.portfolio.cashAvailable,
               value: `$${(account?.cash ?? 0).toFixed(2)}`,
-              sub: stats ? `${(((account?.cash ?? 0) / stats.totalValue) * 100).toFixed(1)}% du portfolio` : "—",
+              sub: stats ? `${(((account?.cash ?? 0) / stats.totalValue) * 100).toFixed(1)}% of portfolio` : "—",
               color: "#60a5fa",
               icon: "💵",
             },
             {
               label: t.portfolio.invested,
               value: `$${(stats?.totalInvested ?? 0).toFixed(2)}`,
-              sub: `${orders.filter(o => o.side === "buy").length} achat${orders.filter(o => o.side === "buy").length !== 1 ? "s" : ""} au total`,
+              sub: `${orders.filter(o => o.side === "buy").length} buy order${orders.filter(o => o.side === "buy").length !== 1 ? "s" : ""} total`,
               color: "#a78bfa",
               icon: "💼",
             },
@@ -615,7 +615,7 @@ export default function PortfolioPage() {
                   tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} domain={["auto","auto"]} />
                 <Tooltip
                   contentStyle={{ background: "#111", border: "1px solid #222", borderRadius: 10, fontSize: 11 }}
-                  formatter={(v: any) => [`$${Number(v).toLocaleString()}`, "Valeur"]}
+                  formatter={(v: any) => [`$${Number(v).toLocaleString()}`, "Value"]}
                   labelStyle={{ color: "#666" }}
                 />
                 <Area type="monotone" dataKey="value" stroke="#22c55e" strokeWidth={2}
@@ -626,20 +626,20 @@ export default function PortfolioPage() {
             <div className="h-40 flex items-center justify-center">
               <div className="text-center">
                 <p className="text-3xl mb-2">📊</p>
-                <p className="text-white/30 text-sm">Place ton premier trade pour voir ton historique</p>
+                <p className="text-white/30 text-sm">Place your first trade to see your history</p>
                 <button onClick={() => router.push("/dashboard")}
                   className="mt-3 px-4 py-2 rounded-xl text-xs font-bold text-green-400 border border-green-500/20 hover:bg-green-500/10 transition">
-                  Aller au Dashboard →
+                  Go to Dashboard →
                 </button>
               </div>
             </div>
           )}
         </div>
 
-        {/* Donut répartition */}
+        {/* Donut allocation */}
         <div className="rounded-2xl p-5"
           style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
-          <p className="text-sm font-bold text-white mb-3">Répartition</p>
+          <p className="text-sm font-bold text-white mb-3">Allocation</p>
           {donutData.length > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={130}>
@@ -674,7 +674,7 @@ export default function PortfolioPage() {
             </>
           ) : (
             <div className="h-32 flex items-center justify-center">
-              <p className="text-white/25 text-sm text-center">Aucune position ouverte</p>
+              <p className="text-white/25 text-sm text-center">No open positions</p>
             </div>
           )}
         </div>
@@ -687,7 +687,7 @@ export default function PortfolioPage() {
             style={{ background: "rgba(245,158,11,0.04)", border: "1px solid rgba(245,158,11,0.15)" }}>
             <div className="px-5 py-3 border-b border-yellow-500/10">
               <p className="text-[10px] text-yellow-400/60 uppercase tracking-widest font-bold">
-                ⏳ {pendingOrders.length} ordre{pendingOrders.length > 1 ? "s" : ""} en attente d'exécution
+                ⏳ {pendingOrders.length} order{pendingOrders.length > 1 ? "s" : ""} pending execution
               </p>
             </div>
             {pendingOrders.map(order => (
@@ -696,10 +696,10 @@ export default function PortfolioPage() {
                 <span className="text-base">⏳</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-white">
-                    {order.side === "buy" ? "Achat" : "Vente"} {order.qty} {order.symbol.replace("-USD","")}
+                    {order.side === "buy" ? "Buy" : "Sell"} {order.qty} {order.symbol.replace("-USD","")}
                   </p>
                   <p className="text-[10px] text-white/30">
-                    Réf. ${order.price.toFixed(2)} · Planifié {new Date(order.created_at).toLocaleDateString("fr-FR")}
+                    Ref. ${order.price.toFixed(2)} · Scheduled {new Date(order.created_at).toLocaleDateString("en-US")}
                   </p>
                 </div>
                 <span className="text-xs font-bold text-yellow-400">${(order.qty * order.price).toFixed(0)}</span>
@@ -741,11 +741,11 @@ export default function PortfolioPage() {
             <div className="text-center py-16">
               <p className="text-4xl mb-3">📊</p>
               <p className="text-white/40 text-base font-bold mb-1">{t.portfolio.noPositions}</p>
-              <p className="text-white/25 text-sm mb-4">Achète ton premier actif pour commencer</p>
+              <p className="text-white/25 text-sm mb-4">Buy your first asset to get started</p>
               <button onClick={() => router.push("/dashboard")}
                 className="px-6 py-2.5 rounded-xl text-sm font-black text-black"
                 style={{ background: "#22c55e" }}>
-                Aller au Dashboard →
+                Go to Dashboard →
               </button>
             </div>
           ) : (
@@ -754,7 +754,7 @@ export default function PortfolioPage() {
               {/* Table header */}
               <div className="hidden md:grid grid-cols-[1fr_80px_100px_100px_100px_100px] gap-4 px-5 py-3 border-b border-white/5"
                 style={{ background: "rgba(255,255,255,0.02)" }}>
-                {["Actif","Qty","Prix moy.","Actuel","P&L",""].map(h => (
+                {["Asset","Qty","Avg. Price","Current","P&L",""].map(h => (
                   <p key={h} className="text-[9px] text-white/20 uppercase tracking-widest font-bold">{h}</p>
                 ))}
               </div>
@@ -804,7 +804,7 @@ export default function PortfolioPage() {
                       </button>
                       <button onClick={() => closePosition(pos.symbol, pos.qty)}
                         className="px-2.5 py-1 rounded-lg text-[10px] font-bold text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition">
-                        Fermer
+                        Close
                       </button>
                     </div>
                   </div>
@@ -821,8 +821,8 @@ export default function PortfolioPage() {
             <div className="flex gap-2 mb-4">
               {[
                 { key: "date",   label: "Date" },
-                { key: "pnl",    label: "Valeur" },
-                { key: "symbol", label: "Actif" },
+                { key: "pnl",    label: "Value" },
+                { key: "symbol", label: "Asset" },
               ].map(s => (
                 <button key={s.key} onClick={() => setSortOrders(s.key as any)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
@@ -831,7 +831,7 @@ export default function PortfolioPage() {
                   {s.label}
                 </button>
               ))}
-              <span className="ml-auto text-xs text-white/25 self-center">{orders.length} ordres</span>
+              <span className="ml-auto text-xs text-white/25 self-center">{orders.length} orders</span>
             </div>
 
             <div className="rounded-2xl overflow-hidden"
@@ -865,17 +865,17 @@ export default function PortfolioPage() {
                                   background: isBuy ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
                                   color: isBuy ? "#4ade80" : "#f87171",
                                 }}>
-                                {isBuy ? "ACHAT" : "VENTE"}
+                                {isBuy ? "BUY" : "SELL"}
                               </span>
                             </div>
                             <p className="text-[10px] text-white/30">
-                              {order.qty} parts · ${order.price.toFixed(2)}
+                              {order.qty} shares · ${order.price.toFixed(2)}
                               {order.tp ? ` · TP $${order.tp.toFixed(2)}` : ""}
                               {order.sl ? ` · SL $${order.sl.toFixed(2)}` : ""}
                             </p>
                           </div>
                           <p className="text-[10px] text-white/25 hidden md:block">
-                            {new Date(order.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                            {new Date(order.created_at).toLocaleDateString("en-US", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                           </p>
                           <div className="text-right flex-shrink-0">
                             <p className="text-sm font-bold text-white tabular-nums">${order.total.toFixed(2)}</p>
@@ -935,19 +935,19 @@ export default function PortfolioPage() {
               ) : (
                 <div className="h-40 flex items-center justify-center">
                   <p className="text-white/25 text-sm">
-                    {perfHistory.length <= 1 ? "Place des trades pour voir ton historique" : "Aucun trade sur cette période"}
+                    {perfHistory.length <= 1 ? "Place trades to see your history" : "No trades in this period"}
                   </p>
                 </div>
               )}
             </div>
 
-            {/* Trades fermés */}
+            {/* Closed trades */}
             <div className="rounded-2xl overflow-hidden"
               style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
               <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between">
-                <p className="text-sm font-bold text-white">Trades fermés</p>
+                <p className="text-sm font-bold text-white">Closed trades</p>
                 <span className="text-[10px] text-white/25 font-bold">
-                  {closedTrades.length} trade{closedTrades.length !== 1 ? "s" : ""} · P&L réalisé{" "}
+                  {closedTrades.length} trade{closedTrades.length !== 1 ? "s" : ""} · Realized P&L{" "}
                   <span className={closedTrades.reduce((s, t) => s + t.pnl, 0) >= 0 ? "text-green-400" : "text-red-400"}>
                     {closedTrades.reduce((s, t) => s + t.pnl, 0) >= 0 ? "+" : ""}
                     ${closedTrades.reduce((s, t) => s + t.pnl, 0).toFixed(2)}
@@ -956,14 +956,14 @@ export default function PortfolioPage() {
               </div>
               {closedTrades.length === 0 ? (
                 <div className="text-center py-10">
-                  <p className="text-white/25 text-sm">Aucun trade fermé</p>
+                  <p className="text-white/25 text-sm">No closed trades</p>
                 </div>
               ) : (
                 <div className="divide-y divide-white/[0.04]">
                   {/* Table header */}
                   <div className="hidden md:grid grid-cols-[1fr_80px_100px_100px_100px_130px] gap-3 px-5 py-2.5"
                     style={{ background: "rgba(255,255,255,0.02)" }}>
-                    {["Actif","Qty","Achat","Vente","P&L","Date fermeture"].map(h => (
+                    {["Asset","Qty","Buy","Sell","P&L","Close date"].map(h => (
                       <p key={h} className="text-[9px] text-white/20 uppercase tracking-widest font-bold">{h}</p>
                     ))}
                   </div>
@@ -982,7 +982,7 @@ export default function PortfolioPage() {
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-bold text-white">{trade.symbol.replace("-USD","")}</p>
-                            <p className="text-[9px] text-white/25">Fermé {won ? "✅ gain" : "❌ perte"}</p>
+                            <p className="text-[9px] text-white/25">Closed {won ? "✅ gain" : "❌ loss"}</p>
                           </div>
                         </div>
                         {/* Mobile: P&L inline */}
@@ -1007,7 +1007,7 @@ export default function PortfolioPage() {
                           </p>
                         </div>
                         <p className="hidden md:block text-[10px] text-white/25">
-                          {new Date(trade.closed_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                          {new Date(trade.closed_at).toLocaleDateString("en-US", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                         </p>
                       </div>
                     )
@@ -1029,12 +1029,12 @@ export default function PortfolioPage() {
             {/* Stats grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {[
-                { label: "Win Rate", value: `${stats.winRate.toFixed(1)}%`, color: stats.winRate >= 50 ? "#4ade80" : "#f87171", desc: "% de positions gagnantes" },
-                { label: "Profit Factor", value: isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : "∞", color: stats.profitFactor >= 1.5 ? "#4ade80" : "#f87171", desc: "Gains / Pertes" },
-                { label: "Gain moyen", value: `+$${stats.avgWin.toFixed(2)}`, color: "#4ade80", desc: "Par position gagnante" },
-                { label: "Perte moyenne", value: `-$${Math.abs(stats.avgLoss).toFixed(2)}`, color: "#f87171", desc: "Par position perdante" },
-                { label: "Trades fermés", value: String(stats.totalTrades), color: "#60a5fa", desc: "Paires achat/vente" },
-                { label: "P&L total", value: `${stats.totalPnl >= 0 ? "+" : ""}$${stats.totalPnl.toFixed(2)}`, color: stats.totalPnl >= 0 ? "#4ade80" : "#f87171", desc: "Depuis le début" },
+                { label: "Win Rate", value: `${stats.winRate.toFixed(1)}%`, color: stats.winRate >= 50 ? "#4ade80" : "#f87171", desc: "% of winning positions" },
+                { label: "Profit Factor", value: isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : "∞", color: stats.profitFactor >= 1.5 ? "#4ade80" : "#f87171", desc: "Gains / Losses" },
+                { label: "Avg. gain", value: `+$${stats.avgWin.toFixed(2)}`, color: "#4ade80", desc: "Per winning position" },
+                { label: "Avg. loss", value: `-$${Math.abs(stats.avgLoss).toFixed(2)}`, color: "#f87171", desc: "Per losing position" },
+                { label: "Closed trades", value: String(stats.totalTrades), color: "#60a5fa", desc: "Buy/sell pairs" },
+                { label: "Total P&L", value: `${stats.totalPnl >= 0 ? "+" : ""}$${stats.totalPnl.toFixed(2)}`, color: stats.totalPnl >= 0 ? "#4ade80" : "#f87171", desc: "Since the beginning" },
               ].map(stat => (
                 <div key={stat.label} className="rounded-2xl p-4"
                   style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
@@ -1050,7 +1050,7 @@ export default function PortfolioPage() {
               {stats.bestTrade && (
                 <div className="rounded-2xl p-4"
                   style={{ background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.15)" }}>
-                  <p className="text-[10px] text-green-400/60 uppercase tracking-widest mb-2">🏆 Meilleure position</p>
+                  <p className="text-[10px] text-green-400/60 uppercase tracking-widest mb-2">🏆 Best position</p>
                   <p className="text-lg font-black text-white">{stats.bestTrade.symbol.replace("-USD","")}</p>
                   <p className="text-2xl font-black text-green-400">+${stats.bestTrade.pnl.toFixed(2)}</p>
                   <p className="text-sm text-green-400/60">+{stats.bestTrade.pnl_pct.toFixed(2)}%</p>
@@ -1059,7 +1059,7 @@ export default function PortfolioPage() {
               {stats.worstTrade && (
                 <div className="rounded-2xl p-4"
                   style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.15)" }}>
-                  <p className="text-[10px] text-red-400/60 uppercase tracking-widest mb-2">📉 Position à surveiller</p>
+                  <p className="text-[10px] text-red-400/60 uppercase tracking-widest mb-2">📉 Position to watch</p>
                   <p className="text-lg font-black text-white">{stats.worstTrade.symbol.replace("-USD","")}</p>
                   <p className="text-2xl font-black text-red-400">${stats.worstTrade.pnl.toFixed(2)}</p>
                   <p className="text-sm text-red-400/60">{stats.worstTrade.pnl_pct.toFixed(2)}%</p>
@@ -1070,19 +1070,19 @@ export default function PortfolioPage() {
             {/* AI coaching */}
             <div className="rounded-2xl p-5"
               style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
-              <p className="text-sm font-bold text-white mb-3">🧠 Analyse de ta performance</p>
+              <p className="text-sm font-bold text-white mb-3">🧠 Performance analysis</p>
               <div className="space-y-2 text-sm text-white/50 leading-relaxed">
                 {stats.winRate >= 50
-                  ? <p>✅ Ton win rate de {stats.winRate.toFixed(1)}% est bon — plus de la moitié de tes positions sont gagnantes.</p>
-                  : <p>⚠️ Ton win rate de {stats.winRate.toFixed(1)}% est perfectible. Concentre-toi sur des setups à haute confluence.</p>
+                  ? <p>✅ Your win rate of {stats.winRate.toFixed(1)}% is good — more than half of your positions are winners.</p>
+                  : <p>⚠️ Your win rate of {stats.winRate.toFixed(1)}% has room to improve. Focus on high-confluence setups.</p>
                 }
                 {stats.profitFactor >= 1.5
-                  ? <p>✅ Ton profit factor de {isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : "∞"} est excellent — tes gains surpassent tes pertes.</p>
-                  : <p>💡 Vise un profit factor {">"}1.5 en laissant courir tes gagnants plus longtemps.</p>
+                  ? <p>✅ Your profit factor of {isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : "∞"} is excellent — your gains outweigh your losses.</p>
+                  : <p>💡 Aim for a profit factor {">"}1.5 by letting your winners run longer.</p>
                 }
                 {positions.length === 0
-                  ? <p>📊 Ouvre des positions pour voir tes statistiques se remplir.</p>
-                  : <p>📊 {positions.length} position{positions.length !== 1 ? "s" : ""} ouverte{positions.length !== 1 ? "s" : ""} en ce moment. Surveille tes stops !</p>
+                  ? <p>📊 Open positions to see your statistics fill up.</p>
+                  : <p>📊 {positions.length} open position{positions.length !== 1 ? "s" : ""} right now. Watch your stops!</p>
                 }
               </div>
             </div>

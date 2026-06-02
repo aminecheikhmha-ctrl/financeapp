@@ -32,23 +32,23 @@ const ASSET_TYPES = [
   { key: "crypto",      icon: "₿",  desc: "Bitcoin, Ethereum..."     },
   { key: "etf",         icon: "📦", desc: "S&P 500, Nasdaq..."       },
   { key: "forex",       icon: "💱", desc: "EUR/USD, GBP/USD..."      },
-  { key: "commodities", icon: "🥇", desc: "Or, pétrole..."           },
+  { key: "commodities", icon: "🥇", desc: "Gold, oil..."             },
 ]
 
 const ASSET_LABEL_KEYS: Record<string, string> = {
-  stocks: "Actions",
+  stocks: "Stocks",
   crypto: "Cryptos",
   etf: "ETF / Indices",
   forex: "Forex",
-  commodities: "Matières premières",
+  commodities: "Commodities",
 }
 
 const CAPITAL_RANGES = [
-  { key: "discover", label: "Je découvre",       desc: "Mode démo uniquement",      icon: "👀" },
-  { key: "small",    label: "< 1 000€",          desc: "Petit portefeuille",        icon: "💶" },
-  { key: "medium",   label: "1 000 — 10 000€",   desc: "Portefeuille moyen",        icon: "💰" },
-  { key: "large",    label: "10 000 — 50 000€",  desc: "Portefeuille avancé",       icon: "💎" },
-  { key: "pro",      label: "> 50 000€",         desc: "Portefeuille professionnel", icon: "🏦" },
+  { key: "discover", label: "Just exploring",      desc: "Demo mode only",            icon: "👀" },
+  { key: "small",    label: "< €1,000",           desc: "Small portfolio",           icon: "💶" },
+  { key: "medium",   label: "€1,000 — €10,000",   desc: "Medium portfolio",          icon: "💰" },
+  { key: "large",    label: "€10,000 — €50,000",  desc: "Advanced portfolio",        icon: "💎" },
+  { key: "pro",      label: "> €50,000",          desc: "Professional portfolio",    icon: "🏦" },
 ]
 
 export default function OnboardingPage() {
@@ -211,12 +211,12 @@ export default function OnboardingPage() {
                 {/* Username */}
                 <div className="mb-6 text-left">
                   <p className="text-[10px] text-white/30 uppercase tracking-widest mb-2 font-bold">
-                    Ton pseudo de trader
+                    Your trader username
                   </p>
                   <input
                     value={selections.username}
                     onChange={e => setSelections(s => ({ ...s, username: e.target.value }))}
-                    placeholder="MonPseudo123"
+                    placeholder="MyUsername123"
                     maxLength={20}
                     className="w-full text-center text-lg font-bold px-4 py-3 rounded-xl outline-none text-white transition focus:border-green-500/50"
                     style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}
@@ -226,10 +226,10 @@ export default function OnboardingPage() {
                 {/* Features */}
                 <div className="grid grid-cols-2 gap-3 mb-8">
                   {[
-                    { icon: "📡", text: "Signaux IA temps réel"  },
-                    { icon: "🎓", text: "Académie interactive"   },
-                    { icon: "💼", text: "$100k fictifs offerts"  },
-                    { icon: "🤖", text: "Tuteur IA personnel"    },
+                    { icon: "📡", text: "Real-time AI signals"   },
+                    { icon: "🎓", text: "Interactive academy"    },
+                    { icon: "💼", text: "$100k virtual funds"    },
+                    { icon: "🤖", text: "Personal AI tutor"      },
                   ].map(f => (
                     <div key={f.text} className="flex items-center gap-2.5 p-3 rounded-xl text-left"
                       style={{ background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.12)" }}>
@@ -421,7 +421,7 @@ export default function OnboardingPage() {
                   <p className="text-[10px] text-green-400/60 uppercase tracking-widest font-bold mb-3">{t.onboarding.languageLabel}</p>
                   <div className="space-y-2">
                     {[
-                      { label: "Pseudo",  value: selections.username },
+                      { label: "Username",  value: selections.username },
                       { label: t.onboarding.stepLevel,  value: LEVELS.find(l => l.key === selections.level)?.labelKey ? t.onboarding.levels[LEVELS.find(l => l.key === selections.level)!.labelKey] : "" },
                       { label: t.onboarding.stepStyle,  value: selections.assets.map(a => ASSET_LABEL_KEYS[a]).join(", ") },
                       { label: t.onboarding.stepRisk,   value: CAPITAL_RANGES.find(c => c.key === selections.capital)?.label },

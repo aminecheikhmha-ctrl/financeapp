@@ -11,12 +11,12 @@ interface Message {
 }
 
 const SUGGESTED = [
-  "Comment améliorer mon win rate ?",
-  "Explique-moi la gestion du risque",
-  "Quand couper une position perdante ?",
-  "Différence entre supports et résistances",
-  "Comment analyser un graphique en chandeliers ?",
-  "Qu'est-ce que le ratio risque/récompense ?",
+  "How to improve my win rate?",
+  "Explain risk management to me",
+  "When should I cut a losing position?",
+  "Difference between support and resistance",
+  "How to analyze a candlestick chart?",
+  "What is the risk/reward ratio?",
 ]
 
 function LoadingDots() {
@@ -102,10 +102,10 @@ export default function CoachPage() {
         }),
       })
       const json = await res.json()
-      const reply = json.reply ?? "Désolé, je n'ai pas pu répondre."
+      const reply = json.reply ?? "Sorry, I couldn't generate a response."
       setMessages(prev => [...prev, { role: "assistant", content: reply }])
     } catch {
-      setMessages(prev => [...prev, { role: "assistant", content: "Une erreur est survenue. Réessaie dans un instant." }])
+      setMessages(prev => [...prev, { role: "assistant", content: "An error occurred. Please try again in a moment." }])
     }
     setLoading(false)
   }

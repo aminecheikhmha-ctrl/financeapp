@@ -4,34 +4,34 @@ import { MessageSquare, Mail, BookOpen, ChevronRight } from "lucide-react"
 import TradexLogo from "@/app/components/TradexLogo"
 
 const SUPPORT_TOPICS = [
-  { icon: "🔑", title: "Connexion / Compte", desc: "Problème de login, mot de passe oublié, email de confirmation" },
-  { icon: "💳", title: "Paiement / Abonnement", desc: "Facturation, annulation, remboursement" },
-  { icon: "📡", title: "Signaux IA", desc: "Comment fonctionnent les signaux, confluence, indicateurs" },
-  { icon: "💼", title: "Paper Trading", desc: "Ordres, positions, P&L, TP/SL" },
-  { icon: "🎓", title: "Académie", desc: "Cours, quiz, certificats, progression" },
-  { icon: "🐛", title: "Bug / Problème technique", desc: "Une fonctionnalité ne marche pas" },
+  { icon: "🔑", title: "Login / Account", desc: "Login issue, forgotten password, confirmation email" },
+  { icon: "💳", title: "Payment / Subscription", desc: "Billing, cancellation, refund" },
+  { icon: "📡", title: "AI Signals", desc: "How signals work, confluence, indicators" },
+  { icon: "💼", title: "Paper Trading", desc: "Orders, positions, P&L, TP/SL" },
+  { icon: "🎓", title: "Academy", desc: "Courses, quizzes, certificates, progress" },
+  { icon: "🐛", title: "Bug / Technical issue", desc: "A feature is not working" },
 ]
 
 const FAQ_SUPPORT = [
   {
-    q: "Je n'ai pas reçu mon email de confirmation",
-    a: "Vérifie tes spams. Si tu ne le trouves pas, va sur la page de connexion et clique 'Renvoyer l'email de confirmation'.",
+    q: "I didn't receive my confirmation email",
+    a: "Check your spam folder. If you can't find it, go to the login page and click 'Resend confirmation email'.",
   },
   {
-    q: "Comment annuler mon abonnement ?",
-    a: "Va dans Paramètres → Abonnement → Annuler. L'accès reste actif jusqu'à la fin de la période payée.",
+    q: "How do I cancel my subscription?",
+    a: "Go to Settings → Subscription → Cancel. Access remains active until the end of the paid period.",
   },
   {
-    q: "Mes signaux ne s'affichent pas",
-    a: "Les signaux sont recalculés toutes les heures. Si le problème persiste, rafraîchis la page ou vide le cache du navigateur.",
+    q: "My signals are not showing",
+    a: "Signals are recalculated every hour. If the issue persists, refresh the page or clear your browser cache.",
   },
   {
-    q: "Comment réinitialiser mon portfolio ?",
-    a: "Paramètres → Trading → Réinitialiser le portfolio. Cette action est irréversible.",
+    q: "How do I reset my portfolio?",
+    a: "Settings → Trading → Reset portfolio. This action is irreversible.",
   },
   {
-    q: "L'app est-elle disponible sur iPhone/Android ?",
-    a: "Tradex est une PWA installable. Sur iPhone : ouvre dans Safari → Partager → Sur l'écran d'accueil. Sur Android : menu → Installer l'app.",
+    q: "Is the app available on iPhone/Android?",
+    a: "Tradex is an installable PWA. On iPhone: open in Safari → Share → Add to Home Screen. On Android: menu → Install app.",
   },
 ]
 
@@ -70,8 +70,8 @@ export default function SupportPage() {
 
       {/* Hero */}
       <div className="text-center px-6 py-12">
-        <h1 className="text-3xl font-black text-white mb-2">Centre d&apos;aide Tradex</h1>
-        <p className="text-white/40">Comment pouvons-nous t&apos;aider ?</p>
+        <h1 className="text-3xl font-black text-white mb-2">Tradex Help Center</h1>
+        <p className="text-white/40">How can we help you?</p>
       </div>
 
       <div className="max-w-4xl mx-auto px-6 pb-16">
@@ -81,25 +81,25 @@ export default function SupportPage() {
           {[
             {
               icon: <MessageSquare size={24} className="text-green-400" />,
-              title: "Coach IA",
-              desc: "Répond à tes questions de trading 24h/7j",
-              cta: "Ouvrir le Coach",
+              title: "AI Coach",
+              desc: "Answers your trading questions 24/7",
+              cta: "Open Coach",
               href: "/coach",
               color: "#22c55e",
             },
             {
               icon: <BookOpen size={24} className="text-blue-400" />,
               title: "Documentation",
-              desc: "Guides et tutoriels pour chaque fonctionnalité",
-              cta: "Voir les guides",
+              desc: "Guides and tutorials for every feature",
+              cta: "View guides",
               href: "/apprendre",
               color: "#60a5fa",
             },
             {
               icon: <Mail size={24} className="text-purple-400" />,
               title: "Email support",
-              desc: "Réponse sous 24h · support@tradex.io",
-              cta: "Envoyer un email",
+              desc: "Response within 24h · support@tradex.io",
+              cta: "Send an email",
               href: "mailto:support@tradex.io",
               color: "#a78bfa",
             },
@@ -119,7 +119,7 @@ export default function SupportPage() {
 
         {/* FAQ */}
         <div className="mb-12">
-          <h2 className="text-xl font-black text-white mb-6">Questions fréquentes</h2>
+          <h2 className="text-xl font-black text-white mb-6">Frequently asked questions</h2>
           <div className="space-y-2">
             {FAQ_SUPPORT.map((faq, i) => (
               <div key={i}
@@ -146,19 +146,19 @@ export default function SupportPage() {
 
         {/* Contact form */}
         <div className="rounded-2xl p-6" style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
-          <h2 className="text-xl font-black text-white mb-6">Envoyer un message</h2>
+          <h2 className="text-xl font-black text-white mb-6">Send a message</h2>
 
           {sent ? (
             <div className="text-center py-8">
               <p className="text-4xl mb-3">✅</p>
-              <p className="font-bold text-white mb-1">Message envoyé !</p>
-              <p className="text-white/40 text-sm">Nous te répondrons sous 24h à l&apos;adresse fournie.</p>
+              <p className="font-bold text-white mb-1">Message sent!</p>
+              <p className="text-white/40 text-sm">We&apos;ll reply within 24h to the address provided.</p>
             </div>
           ) : (
             <div className="space-y-4">
               {/* Topic */}
               <div>
-                <p className="text-[10px] text-white/30 uppercase tracking-widest mb-2">Sujet</p>
+                <p className="text-[10px] text-white/30 uppercase tracking-widest mb-2">Subject</p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {SUPPORT_TOPICS.map(topic => (
                     <button key={topic.title}
@@ -177,7 +177,7 @@ export default function SupportPage() {
 
               {/* Email */}
               <div>
-                <p className="text-[10px] text-white/30 uppercase tracking-widest mb-2">Ton email</p>
+                <p className="text-[10px] text-white/30 uppercase tracking-widest mb-2">Your email</p>
                 <input
                   value={email}
                   onChange={e => setEmail(e.target.value)}
@@ -193,7 +193,7 @@ export default function SupportPage() {
                 <textarea
                   value={message}
                   onChange={e => setMessage(e.target.value)}
-                  placeholder="Décris ton problème en détail..."
+                  placeholder="Describe your issue in detail..."
                   rows={5}
                   className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-white/20 outline-none resize-none"
                   style={{
@@ -209,7 +209,7 @@ export default function SupportPage() {
                 disabled={!message || !email || sending}
                 className="w-full py-3 rounded-xl font-black text-sm text-black disabled:opacity-40 transition-all hover:scale-[1.01]"
                 style={{ background: "#22c55e" }}>
-                {sending ? "⏳ Envoi en cours..." : "📩 Envoyer"}
+                {sending ? "⏳ Sending..." : "📩 Send"}
               </button>
             </div>
           )}

@@ -164,15 +164,15 @@ function DashboardContent() {
           .then(r => r.json())
           .then(j => {
             if (j.profile) setUserProfile(j.profile)
-            if (j.profile?.level === "débutant") setActiveTab("ia")
-            if (j.profile?.level === "avancé") setActiveTab("technique")
+            if (j.profile?.level === "beginner") setActiveTab("ia")
+            if (j.profile?.level === "advanced") setActiveTab("technique")
             // Auto-switch tab based on lesson context
             if (lessonParam) {
               if (["rsi_calculation","spot_rsi","macd_explained","bollinger_bands","identify_support","support_resistance"].includes(lessonParam)) setActiveTab("technique")
               else if (lessonParam === "news" || lessonParam === "news_calculation") setActiveTab("news")
             }
             // Show tour for beginners who haven't completed it
-            if (j.profile?.level === "débutant" && localStorage.getItem("tour_dashboard_v2") !== "1") {
+            if (j.profile?.level === "beginner" && localStorage.getItem("tour_dashboard_v2") !== "1") {
               setShowTour(true)
             }
           })
@@ -197,7 +197,7 @@ function DashboardContent() {
           if (sorted.length > 0) {
             const latest = sorted[sorted.length - 1]
             const drawdown = ((100000 - (latest.portfolio_value ?? 100000)) / 100000) * 100
-            if (drawdown > 10) alerts.push(`⚠️ Ton portfolio a baissé de ${drawdown.toFixed(1)}% — revois ta stratégie`)
+            if (drawdown > 10) alerts.push(`⚠️ Your portfolio dropped ${drawdown.toFixed(1)}% — review your strategy`)
           }
           setPerfAlerts(alerts)
         }).catch(() => {})
@@ -345,13 +345,13 @@ function DashboardContent() {
         const { haptic } = await import("@/lib/capacitor")
         await haptic("success")
         const isPending = data.status === "pending"
-        const sideLabel = side === "buy" ? "Acheté" : side === "short" ? "Shorté" : "Vendu"
+        const sideLabel = side === "buy" ? "Bought" : side === "short" ? "Shorted" : "Sold"
         setOrderMsg(isPending
-          ? `⏳ Ordre planifié — exécution à l'ouverture`
-          : `✅ ${sideLabel} à $${data.price.toFixed(2)}`)
+          ? `⏳ Order scheduled — execution at market open`
+          : `✅ ${sideLabel} at $${data.price.toFixed(2)}`)
         toast.success(isPending
-          ? "Ordre planifié ✓ — exécution à l'ouverture du marché"
-          : `Ordre exécuté ✓ — ${sideLabel} à $${data.price.toFixed(2)}`)
+          ? "Order scheduled ✓ — execution at market open"
+          : `Order executed ✓ — ${sideLabel} at $${data.price.toFixed(2)}`)
         if (side === "buy" && (orderTp || orderSl)) {
           await fetch("/api/trading/positions", {
             method: "PATCH",
@@ -372,15 +372,15 @@ function DashboardContent() {
       } else {
         const { haptic } = await import("@/lib/capacitor")
         await haptic("error")
-        const errMsg = data.error ?? "Erreur"
+        const errMsg = data.error ?? "Error"
         setOrderMsg(`❌ ${errMsg}`)
-        toast.error(`Erreur : ${errMsg}`)
+        toast.error(`Error: ${errMsg}`)
       }
     } catch {
       const { haptic } = await import("@/lib/capacitor")
       await haptic("error")
-      setOrderMsg("❌ Erreur réseau")
-      toast.error("Erreur réseau")
+      setOrderMsg("❌ Network error")
+      toast.error("Network error")
     }
     setOrderLoading(false)
   }
@@ -397,7 +397,7 @@ function DashboardContent() {
         stop_loss: slValue ? parseFloat(slValue) : null,
       })
     })
-    toast.success("Alerte créée ✓")
+    toast.success("Alert created ✓")
     setTpSlModal(false)
     loadPosition()
   }
@@ -422,9 +422,9 @@ function DashboardContent() {
         })
       })
       const data = await res.json()
-      setAiAnalysis(data.analysis ?? "Analyse indisponible.")
+      setAiAnalysis(data.analysis ?? "Analysis unavailable.")
     } catch {
-      setAiAnalysis("Erreur lors de la génération. Réessaie.")
+      setAiAnalysis("Error generating analysis. Please try again.")
     }
     setLoadingAi(false)
   }
@@ -536,9 +536,9 @@ function DashboardContent() {
     : watchlist
 
   const showBanner = userProfile && !bannerDismissed && (
-    userProfile.level === "débutant" ||
+    userProfile.level === "beginner" ||
     userProfile.preferred_assets?.includes("crypto") ||
-    userProfile.risk_tolerance === "élevé"
+    userProfile.risk_tolerance === "high"
   )
 
   return (
@@ -561,20 +561,20 @@ function DashboardContent() {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
                 </span>
-                <span className="text-[10px] text-green-400 font-black tracking-wider">MODE DÉMO</span>
+                <span className="text-[10px] text-green-400 font-black tracking-wider">DEMO MODE</span>
               </div>
               <div>
-                <p className="text-sm font-bold text-white">Tu explores Tradex avec de vraies données de marché</p>
-                <p className="text-[11px] text-white/40">Graphes live · Signaux IA · $100,000 fictifs · Crée un compte pour trader</p>
+                <p className="text-sm font-bold text-white">You are exploring Tradex with real market data</p>
+                <p className="text-[11px] text-white/40">Live charts · AI signals · $100,000 virtual · Create an account to trade</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <a href="/" className="px-3 py-2 rounded-xl text-sm font-semibold text-white/40 hover:text-white/70 transition flex items-center gap-1.5">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                Accueil
+                Home
               </a>
-              <a href="/login" className="px-4 py-2 rounded-xl text-sm font-semibold text-white/60 hover:text-white transition border border-white/10">Se connecter</a>
-              <a href="/signup" className="px-4 py-2 rounded-xl text-sm font-black text-black" style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}>Créer un compte gratuit →</a>
+              <a href="/login" className="px-4 py-2 rounded-xl text-sm font-semibold text-white/60 hover:text-white transition border border-white/10">Sign in</a>
+              <a href="/signup" className="px-4 py-2 rounded-xl text-sm font-black text-black" style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}>Create a free account →</a>
             </div>
           </div>
         </div>
@@ -585,15 +585,15 @@ function DashboardContent() {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="w-full max-w-sm rounded-3xl p-7 text-center" style={{ background: "#0d0d0d", border: "1px solid rgba(34,197,94,0.2)" }}>
             <div className="w-16 h-16 rounded-2xl mx-auto mb-5 flex items-center justify-center text-3xl" style={{ background: "rgba(34,197,94,0.1)" }}>🚀</div>
-            <h2 className="text-xl font-black text-white mb-2">Prêt à trader pour de vrai ?</h2>
-            <p className="text-sm text-white/40 leading-relaxed mb-6">Crée ton compte gratuit en 30 secondes et commence avec <strong className="text-green-400">$100,000 fictifs</strong>.</p>
+            <h2 className="text-xl font-black text-white mb-2">Ready to trade for real?</h2>
+            <p className="text-sm text-white/40 leading-relaxed mb-6">Create your free account in 30 seconds and start with <strong className="text-green-400">$100,000 virtual</strong>.</p>
             <div className="space-y-2 mb-6 text-left">
-              {["✅ Paper trading sans risque","✅ 3 signaux IA gratuits par jour","✅ Académie complète niveau débutant","✅ Tuteur IA personnel"].map(f => (
+              {["✅ Risk-free paper trading","✅ 3 free AI signals per day","✅ Full beginner academy","✅ Personal AI tutor"].map(f => (
                 <p key={f} className="text-xs text-white/60">{f}</p>
               ))}
             </div>
-            <a href="/signup" className="block w-full py-3.5 rounded-2xl font-black text-sm text-black mb-3" style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}>Créer mon compte gratuit →</a>
-            <button onClick={() => setShowSignupModal(false)} className="text-xs text-white/25 hover:text-white/50 transition">Continuer en mode démo</button>
+            <a href="/signup" className="block w-full py-3.5 rounded-2xl font-black text-sm text-black mb-3" style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}>Create my free account →</a>
+            <button onClick={() => setShowSignupModal(false)} className="text-xs text-white/25 hover:text-white/50 transition">Continue in demo mode</button>
           </div>
         </div>
       )}
@@ -602,9 +602,9 @@ function DashboardContent() {
       {userProfile && (
         <div className="px-5 pt-4 pb-0">
           <p className="text-[12px] text-white/30 font-medium">
-            {userProfile.level === "débutant" && "Tableau de bord simplifié · mode débutant"}
-            {userProfile.level === "intermédiaire" && "Tableau de bord · niveau intermédiaire"}
-            {userProfile.level === "avancé" && "Tableau de bord avancé"}
+            {userProfile.level === "beginner" && "Simplified dashboard · beginner mode"}
+            {userProfile.level === "intermediate" && "Dashboard · intermediate level"}
+            {userProfile.level === "advanced" && "Advanced dashboard"}
           </p>
         </div>
       )}
@@ -613,26 +613,26 @@ function DashboardContent() {
       {showBanner && (
         <div className="border-b border-green-500/20 bg-green-500/5 px-5 py-2.5 flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-3 flex-1 flex-wrap">
-            {userProfile.level === "débutant" && (
+            {userProfile.level === "beginner" && (
               <a href="/apprendre/bases-trading" className="text-sm text-green-400 hover:text-green-300 transition font-semibold">
-                📚 Recommandé pour toi : <span className="underline underline-offset-2">Les bases du trading</span>
+                📚 Recommended for you: <span className="underline underline-offset-2">Trading basics</span>
               </a>
             )}
             {userProfile.preferred_assets?.includes("crypto") && (
               <span className="text-xs px-2 py-1 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 font-bold">
-                ₿ Crypto ajoutée à ta watchlist
+                ₿ Crypto added to your watchlist
               </span>
             )}
-            {userProfile.risk_tolerance === "élevé" && (
+            {userProfile.risk_tolerance === "high" && (
               <span className="text-xs px-2 py-1 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 font-bold">
-                🔥 Signaux forts activés
+                🔥 Strong signals enabled
               </span>
             )}
           </div>
           <button
             onClick={() => setBannerDismissed(true)}
             className="text-gray-600 hover:text-white transition text-xs flex-shrink-0"
-            title="Fermer"
+            title="Close"
           >
             ✕
           </button>
@@ -689,13 +689,13 @@ function DashboardContent() {
             <input id="search-input" type="text" value={search} onChange={handleSearchChange}
               onFocus={() => search && setShowSearch(true)}
               onBlur={() => setTimeout(() => setShowSearch(false), 200)}
-              placeholder="+ Ajouter"
+              placeholder="+ Add"
               className="w-24 px-3 py-1.5 rounded-lg bg-transparent border border-transparent hover:border-white/10 focus:border-white/20 focus:bg-white/4 text-white/40 focus:text-white placeholder-white/25 text-xs outline-none transition" />
             {showSearch && (
               <div className="absolute top-full mt-1 left-0 w-64 rounded-xl overflow-hidden z-50 shadow-2xl" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)" }}>
                 {searchResults.length === 0 ? (
                   <div className="px-4 py-3 text-xs text-white/30 flex items-center gap-2">
-                    <div className="w-3 h-3 border border-white/20 border-t-white/60 rounded-full animate-spin" />Recherche...
+                    <div className="w-3 h-3 border border-white/20 border-t-white/60 rounded-full animate-spin" />Searching...
                   </div>
                 ) : searchResults.map((r) => (
                   <button key={r.symbol} onClick={() => addToWatchlist(r.symbol)}
@@ -704,7 +704,7 @@ function DashboardContent() {
                       <p className="text-white font-semibold text-xs">{r.symbol}</p>
                       <p className="text-white/30 text-[10px] truncate max-w-[160px]">{r.name}</p>
                     </div>
-                    <span className="text-green-400 text-[10px] font-semibold">+ Ajouter</span>
+                    <span className="text-green-400 text-[10px] font-semibold">+ Add</span>
                   </button>
                 ))}
               </div>
@@ -744,7 +744,7 @@ function DashboardContent() {
               style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}
               onClick={() => router.push("/coach")}
             >
-              {userProfile?.level === "débutant" ? (
+              {userProfile?.level === "beginner" ? (
                 <>
                   <span className="text-base">🧠</span>
                   <span className={`text-sm font-semibold ${
@@ -752,17 +752,17 @@ function DashboardContent() {
                     marketRegime.regime === "risk_off" ? "text-red-400" : "text-yellow-400"
                   }`}>
                     {marketRegime.regime === "risk_on"
-                      ? "Les marchés sont en bonne forme aujourd'hui 📈"
+                      ? "Markets are in good shape today 📈"
                       : marketRegime.regime === "risk_off"
-                      ? "Les marchés sont en baisse aujourd'hui 📉"
-                      : "Les marchés sont indécis aujourd'hui ↔️"}
+                      ? "Markets are down today 📉"
+                      : "Markets are undecided today ↔️"}
                   </span>
-                  <span className="text-green-400 text-xs ml-auto">Voir l'analyse →</span>
+                  <span className="text-green-400 text-xs ml-auto">View analysis →</span>
                 </>
               ) : (
                 <>
                   <span className="text-base">🧠</span>
-                  <span className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Intelligence du marché</span>
+                  <span className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Market intelligence</span>
                   <span className={`px-2 py-0.5 rounded-lg text-xs font-black ${
                     marketRegime.regime === "risk_on" ? "bg-green-500/15 text-green-400 border border-green-500/25" :
                     marketRegime.regime === "risk_off" ? "bg-red-500/15 text-red-400 border border-red-500/25" :
@@ -772,7 +772,7 @@ function DashboardContent() {
                   </span>
                   <span className="text-gray-500 text-xs">VIX: <span className="text-white font-bold">{marketRegime.vix_level}</span></span>
                   <span className="text-gray-600 text-xs hidden sm:block truncate flex-1">{marketRegime.commentary}</span>
-                  <span className="text-green-400 text-xs ml-auto hidden sm:block">Voir Coach →</span>
+                  <span className="text-green-400 text-xs ml-auto hidden sm:block">View Coach →</span>
                 </>
               )}
             </div>
@@ -791,7 +791,7 @@ function DashboardContent() {
                     : lessonParam === "macd_explained"
                     ? `Observe le MACD de ${ticker.replace("-USD","")} dans l'onglet Indicateurs.`
                     : lessonParam === "identify_support" || lessonParam === "support_resistance"
-                    ? `Le support/résistance de ${ticker.replace("-USD","")} est visible dans l'onglet Signaux.`
+                    ? `Support/resistance for ${ticker.replace("-USD","")} is visible in the Signals tab.`
                     : `Applique ce que tu viens d'apprendre sur ${ticker.replace("-USD","")}.`}
                 </p>
               </div>
@@ -822,7 +822,7 @@ function DashboardContent() {
                     <p className="text-[10px] text-white/20 mt-0.5">
                       {ticker.includes("USD") ? "Crypto · 24h/7j" :
                        ticker === "SPY" || ticker === "QQQ" ? "ETF · NYSE" :
-                       "NYSE/NASDAQ · 9h30-16h ET"}
+                       "NYSE/NASDAQ · 9:30am-4pm ET"}
                     </p>
                   </div>
                 </div>
@@ -850,9 +850,9 @@ function DashboardContent() {
                   <div className="hidden lg:flex items-center gap-4 px-4 py-2 rounded-xl"
                     style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
                     {[
-                      { label: "Ouv.",  value: activeData.previousClose?.toFixed(2) ?? "—" },
-                      { label: "Haut",  value: activeData.high?.toFixed(2) ?? "—", color: "#4ade80" },
-                      { label: "Bas",   value: activeData.low?.toFixed(2)  ?? "—", color: "#f87171" },
+                      { label: "Open",  value: activeData.previousClose?.toFixed(2) ?? "—" },
+                      { label: "High",  value: activeData.high?.toFixed(2) ?? "—", color: "#4ade80" },
+                      { label: "Low",   value: activeData.low?.toFixed(2)  ?? "—", color: "#f87171" },
                       { label: "Vol.",  value: formatVolume(activeData.volume) },
                     ].map(stat => (
                       <div key={stat.label} className="text-center">
@@ -868,7 +868,7 @@ function DashboardContent() {
                     <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold ${
                       tpReached ? "bg-green-500/15 text-green-400 border border-green-500/30" : "bg-red-500/15 text-red-400 border border-red-500/30"
                     }`}>
-                      {tpReached ? "🎯 Take Profit atteint !" : "⚠️ Stop Loss atteint !"}
+                      {tpReached ? "🎯 Take Profit reached!" : "⚠️ Stop Loss reached!"}
                     </div>
                   )}
                 </div>
@@ -886,10 +886,10 @@ function DashboardContent() {
 
           {/* Chart */}
           <div data-tour="chart" className="border border-white/[0.05]">
-            {userProfile?.level === "débutant" && (
+            {userProfile?.level === "beginner" && (
               <div className="mx-4 mt-3 px-3 py-2 rounded-lg bg-blue-500/5 border border-blue-500/10 text-xs text-blue-400 flex items-center gap-2">
                 <span>💡</span>
-                <span>Les barres <strong>vertes</strong> signifient que le prix a monté, les <strong>rouges</strong> qu'il a baissé.</span>
+                <span><strong>Green</strong> bars mean the price went up, <strong>red</strong> bars mean it went down.</span>
               </div>
             )}
             <TradingChart
@@ -930,7 +930,7 @@ function DashboardContent() {
               })}
               {(userProfile?.xp ?? 0) < 1500 && (
                 <div className="flex items-center gap-1 px-3 py-2.5 text-[10px] text-gray-700 border-b-2 border-transparent">
-                  🔒 Indicateurs <span className="text-[9px] ml-1 px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500/60 border border-yellow-500/15">Niveau Trader requis</span>
+                  🔒 Indicators <span className="text-[9px] ml-1 px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500/60 border border-yellow-500/15">Trader level required</span>
                 </div>
               )}
             </div>
@@ -945,12 +945,12 @@ function DashboardContent() {
                         <div className="bg-green-500/5 border border-green-500/10 rounded-lg p-3">
                           <p className="text-[9px] text-green-500/60 uppercase tracking-widest mb-1">Support</p>
                           <p className="text-lg font-black text-green-400">${chartData.support}</p>
-                          {activeData && <p className="text-[10px] text-gray-600 mt-0.5">+{((activeData.price - chartData.support) / chartData.support * 100).toFixed(1)}% au-dessus</p>}
+                          {activeData && <p className="text-[10px] text-gray-600 mt-0.5">+{((activeData.price - chartData.support) / chartData.support * 100).toFixed(1)}% above</p>}
                         </div>
                         <div className="bg-red-500/5 border border-red-500/10 rounded-lg p-3">
-                          <p className="text-[9px] text-red-500/60 uppercase tracking-widest mb-1">Résistance</p>
+                          <p className="text-[9px] text-red-500/60 uppercase tracking-widest mb-1">Resistance</p>
                           <p className="text-lg font-black text-red-400">${chartData.resistance}</p>
-                          {activeData && <p className="text-[10px] text-gray-600 mt-0.5">-{((chartData.resistance - activeData.price) / activeData.price * 100).toFixed(1)}% en dessous</p>}
+                          {activeData && <p className="text-[10px] text-gray-600 mt-0.5">-{((chartData.resistance - activeData.price) / activeData.price * 100).toFixed(1)}% below</p>}
                         </div>
                       </div>
                       {chartData.signals?.length > 0 ? (
@@ -973,8 +973,8 @@ function DashboardContent() {
                     </>
                   ) : (
                     <div className="text-center py-6">
-                      <p className="text-gray-600 text-xs mb-2">Données indisponibles</p>
-                      <button onClick={loadChart} className="text-[10px] px-3 py-1.5 rounded-lg bg-white/5 text-gray-500 hover:text-white transition">↻ Recharger</button>
+                      <p className="text-gray-600 text-xs mb-2">Data unavailable</p>
+                      <button onClick={loadChart} className="text-[10px] px-3 py-1.5 rounded-lg bg-white/5 text-gray-500 hover:text-white transition">↻ Reload</button>
                     </div>
                   )}
                 </div>
@@ -988,12 +988,12 @@ function DashboardContent() {
                       {loadingChart ? (
                         <div className="flex items-center justify-center gap-2 text-gray-600 text-xs">
                           <div className="w-3.5 h-3.5 border-2 border-gray-600 border-t-white rounded-full animate-spin" />
-                          Calcul des indicateurs...
+                          Calculating indicators...
                         </div>
                       ) : (
                         <>
-                          <p className="text-gray-600 text-xs mb-3">Aucune donnée disponible pour calculer les indicateurs.</p>
-                          <button onClick={loadChart} className="text-[10px] px-3 py-1.5 rounded-lg bg-white/5 text-gray-500 hover:text-white transition">↻ Charger les données</button>
+                          <p className="text-gray-600 text-xs mb-3">No data available to calculate indicators.</p>
+                          <button onClick={loadChart} className="text-[10px] px-3 py-1.5 rounded-lg bg-white/5 text-gray-500 hover:text-white transition">↻ Load data</button>
                         </>
                       )}
                     </div>
@@ -1062,15 +1062,15 @@ function DashboardContent() {
                   {
                     label: "RSI (14)",
                     value: rsiVal !== null ? rsiVal.toFixed(1) : "—",
-                    signal: rsiVal !== null ? (rsiVal > 70 ? "Suracheté" : rsiVal < 30 ? "Survendu" : "Neutre") : "—",
+                    signal: rsiVal !== null ? (rsiVal > 70 ? "Overbought" : rsiVal < 30 ? "Oversold" : "Neutral") : "—",
                     color: rsiVal !== null ? (rsiVal > 70 ? "#f87171" : rsiVal < 30 ? "#4ade80" : "#9ca3af") : "#9ca3af",
                     bar: rsiVal !== null ? rsiVal : null, barMax: 100,
-                    desc: `Oscillateur de momentum`,
+                    desc: `Momentum oscillator`,
                   },
                   {
                     label: "MACD",
                     value: macdVal !== null ? (macdVal >= 0 ? `+${macdVal}` : `${macdVal}`) : "—",
-                    signal: macdVal !== null ? (macdVal > 0 ? "Haussier" : "Baissier") : "—",
+                    signal: macdVal !== null ? (macdVal > 0 ? "Bullish" : "Bearish") : "—",
                     color: macdVal !== null ? (macdVal > 0 ? "#4ade80" : "#f87171") : "#9ca3af",
                     bar: null, barMax: 100,
                     desc: `EMA12 − EMA26`,
@@ -1078,15 +1078,15 @@ function DashboardContent() {
                   {
                     label: "Stochastic %K",
                     value: stochK !== null ? stochK.toFixed(1) : "—",
-                    signal: stochK !== null ? (stochK > 80 ? "Suracheté" : stochK < 20 ? "Survendu" : "Neutre") : "—",
+                    signal: stochK !== null ? (stochK > 80 ? "Overbought" : stochK < 20 ? "Oversold" : "Neutral") : "—",
                     color: stochK !== null ? (stochK > 80 ? "#f87171" : stochK < 20 ? "#4ade80" : "#9ca3af") : "#9ca3af",
                     bar: stochK, barMax: 100,
-                    desc: `Oscillateur (14)`,
+                    desc: `Oscillator (14)`,
                   },
                   {
                     label: "Bollinger",
                     value: bbUpper !== null ? `±${((bbUpper - bbLower!) / 2).toFixed(2)}` : "—",
-                    signal: bbUpper !== null ? (price >= bbUpper ? "En zone haute" : price <= bbLower! ? "En zone basse" : "Dans les bandes") : "—",
+                    signal: bbUpper !== null ? (price >= bbUpper ? "Upper band" : price <= bbLower! ? "Lower band" : "Within bands") : "—",
                     color: bbUpper !== null ? (price >= bbUpper ? "#f87171" : price <= bbLower! ? "#4ade80" : "#9ca3af") : "#9ca3af",
                     bar: null, barMax: 100,
                     desc: bbUpper !== null ? `${bbLower?.toFixed(0)} – ${bbUpper?.toFixed(0)}` : "MM20 ±2σ",
@@ -1094,15 +1094,15 @@ function DashboardContent() {
                   {
                     label: "EMA 9 / 21",
                     value: ema9Val !== null && ema21Val !== null ? `${ema9Val > ema21Val ? "↑" : "↓"}` : "—",
-                    signal: ema9Val !== null && ema21Val !== null ? (ema9Val > ema21Val ? "Haussier" : "Baissier") : "—",
+                    signal: ema9Val !== null && ema21Val !== null ? (ema9Val > ema21Val ? "Bullish" : "Bearish") : "—",
                     color: ema9Val !== null && ema21Val !== null ? (ema9Val > ema21Val ? "#4ade80" : "#f87171") : "#9ca3af",
                     bar: null, barMax: 100,
-                    desc: ema9Val !== null ? `EMA9: ${ema9Val} · EMA21: ${ema21Val}` : "Croisement EMA",
+                    desc: ema9Val !== null ? `EMA9: ${ema9Val} · EMA21: ${ema21Val}` : "EMA crossover",
                   },
                   {
                     label: "ATR (14)",
                     value: atrVal !== null ? `$${atrVal}` : "—",
-                    signal: atrVal !== null && price > 0 ? `${((atrVal / price) * 100).toFixed(1)}% volatilité` : "—",
+                    signal: atrVal !== null && price > 0 ? `${((atrVal / price) * 100).toFixed(1)}% volatility` : "—",
                     color: "#a78bfa",
                     bar: null, barMax: 100,
                     desc: "Average True Range",
@@ -1138,9 +1138,9 @@ function DashboardContent() {
                             background: price > ema50Val ? "rgba(74,222,128,0.1)" : "rgba(248,113,113,0.1)",
                             color: price > ema50Val ? "#4ade80" : "#f87171"
                           }}>
-                            Prix {price > ema50Val ? "au-dessus" : "en-dessous"} — {price > ema50Val ? "Tendance haussière" : "Tendance baissière"}
+                            Price {price > ema50Val ? "above" : "below"} — {price > ema50Val ? "Uptrend" : "Downtrend"}
                           </span>
-                          <p className="text-[9px] text-gray-700 mt-1">Moyenne mobile 50 périodes</p>
+                          <p className="text-[9px] text-gray-700 mt-1">50-period moving average</p>
                         </div>
                       </div>
                     )}
@@ -1159,9 +1159,9 @@ function DashboardContent() {
                   </div>
                   {!newsData && !loadingNews && (
                     <div className="p-6 text-center">
-                      <p className="text-gray-600 text-xs mb-3">Analyse les dernières actualités et le sentiment du marché pour {ticker.replace("-USD", "")}</p>
+                      <p className="text-gray-600 text-xs mb-3">Analyze the latest news and market sentiment for {ticker.replace("-USD", "")}</p>
                       <button onClick={fetchNewsData} className="px-4 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-sm text-blue-400 hover:bg-blue-500/20 transition">
-                        📰 Charger les actualités
+                        📰 Load news
                       </button>
                     </div>
                   )}
@@ -1183,7 +1183,7 @@ function DashboardContent() {
                         return (
                           <div className="rounded-xl p-3 space-y-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
                             <div className="flex items-center justify-between">
-                              <span className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Sentiment général</span>
+                              <span className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Overall sentiment</span>
                               <span className="text-[10px] font-black px-2 py-0.5 rounded-full" style={{ background: `${color}18`, color }}>{label}</span>
                             </div>
                             <div className="relative h-2 rounded-full overflow-hidden bg-white/5">
@@ -1191,16 +1191,16 @@ function DashboardContent() {
                               <div className="absolute top-0 h-full w-0.5 bg-white/30" style={{ left: "50%" }} />
                             </div>
                             <div className="flex justify-between text-[9px] text-gray-600">
-                              <span>Très négatif</span>
+                              <span>Very negative</span>
                               <span className="font-bold text-white">{score > 0 ? "+" : ""}{score}</span>
-                              <span>Très positif</span>
+                              <span>Very positive</span>
                             </div>
                             {newsData.sentiment.summary && (
                               <p className="text-[11px] text-gray-400 leading-relaxed border-t border-white/5 pt-2">{newsData.sentiment.summary}</p>
                             )}
                             <div className="grid grid-cols-2 gap-2 pt-1">
                               <div>
-                                <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-1">Impact probable</p>
+                                <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-1">Likely impact</p>
                                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                                   newsData.sentiment.impact_on_price === "haussier" ? "bg-green-500/10 text-green-400" :
                                   newsData.sentiment.impact_on_price === "baissier" ? "bg-red-500/10 text-red-400" :
@@ -1208,13 +1208,13 @@ function DashboardContent() {
                                 }`}>{newsData.sentiment.impact_on_price}</span>
                               </div>
                               <div>
-                                <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-1">Confiance</p>
+                                <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-1">Confidence</p>
                                 <span className="text-[10px] font-bold text-white">{newsData.sentiment.confidence}%</span>
                               </div>
                             </div>
                             {newsData.sentiment.key_themes?.length > 0 && (
                               <div>
-                                <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-1.5">Thèmes clés</p>
+                                <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-1.5">Key themes</p>
                                 <div className="flex flex-wrap gap-1">
                                   {newsData.sentiment.key_themes.map((t: string, i: number) => (
                                     <span key={i} className="text-[9px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/15">{t}</span>
@@ -1235,7 +1235,7 @@ function DashboardContent() {
                             <div className="flex items-center justify-between">
                               <span className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Reddit Buzz</span>
                               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${sentColor}18`, color: sentColor }}>
-                                {buzz.dominant_sentiment === "bullish" ? "🐂 Bullish" : buzz.dominant_sentiment === "bearish" ? "🐻 Bearish" : "😐 Neutre"}
+                                {buzz.dominant_sentiment === "bullish" ? "🐂 Bullish" : buzz.dominant_sentiment === "bearish" ? "🐻 Bearish" : "😐 Neutral"}
                               </span>
                             </div>
                             <div className="flex items-center gap-3">
@@ -1253,11 +1253,11 @@ function DashboardContent() {
                               </div>
                               <div>
                                 <p className="text-sm font-black text-white">{buzz.avg_score}</p>
-                                <p className="text-[9px] text-gray-600">Score moyen</p>
+                                <p className="text-[9px] text-gray-600">Avg score</p>
                               </div>
                               <div>
                                 <p className="text-sm font-black text-orange-400">{buzz.viral_posts?.length ?? 0}</p>
-                                <p className="text-[9px] text-gray-600">Posts viraux</p>
+                                <p className="text-[9px] text-gray-600">Viral posts</p>
                               </div>
                             </div>
                             {buzz.subreddits?.length > 0 && (
@@ -1282,7 +1282,7 @@ function DashboardContent() {
                       {/* News list */}
                       {newsData.articles.length > 0 && (
                         <div className="space-y-1.5">
-                          <p className="text-[9px] text-gray-600 uppercase tracking-widest">Dernières actualités ({newsData.articles.length})</p>
+                          <p className="text-[9px] text-gray-600 uppercase tracking-widest">Latest news ({newsData.articles.length})</p>
                           {newsData.articles.map((article: any, i: number) => {
                             const ago = Math.round((Date.now() - new Date(article.published_at).getTime()) / 60000)
                             return (
@@ -1309,7 +1309,7 @@ function DashboardContent() {
                         </div>
                       )}
                       {newsData.articles.length === 0 && (
-                        <p className="text-gray-700 text-xs text-center py-4">Aucune actualité récente trouvée pour {ticker.replace("-USD", "")}</p>
+                        <p className="text-gray-700 text-xs text-center py-4">No recent news found for {ticker.replace("-USD", "")}</p>
                       )}
                     </div>
                   )}
@@ -1327,7 +1327,7 @@ function DashboardContent() {
                     </button>
                     <button onClick={fetchPrediction} disabled={loadingPrediction}
                       className="flex-1 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20 text-xs text-green-400 hover:bg-green-500/20 transition disabled:opacity-40">
-                      {loadingPrediction ? "⏳ Calcul..." : "🎯 Prédire le prix"}
+                      {loadingPrediction ? "⏳ Calculating..." : "🎯 Predict price"}
                     </button>
                   </div>
 
@@ -1344,7 +1344,7 @@ function DashboardContent() {
                       const now = activeData?.price ?? hist[hist.length - 1]?.close ?? 0
                       const curveData = [
                         ...hist.map((b: any) => ({ label: b.date, historique: b.close, prediction: null as number | null })),
-                        { label: "Auj.", historique: now, prediction: now },
+                        { label: "Today", historique: now, prediction: now },
                         { label: "+7j", historique: null as number | null, prediction: Number(prediction.target_7d) },
                         { label: "+30j", historique: null as number | null, prediction: Number(prediction.target_30d) },
                       ]
@@ -1356,17 +1356,17 @@ function DashboardContent() {
                             <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                               prediction.trend === "bullish" ? "bg-green-500/15 text-green-400" :
                               prediction.trend === "bearish" ? "bg-red-500/15 text-red-400" : "bg-yellow-500/15 text-yellow-400"
-                            }`}>{prediction.trend === "bullish" ? "↑ Haussier" : prediction.trend === "bearish" ? "↓ Baissier" : "→ Neutre"}</span>
+                            }`}>{prediction.trend === "bullish" ? "↑ Bullish" : prediction.trend === "bearish" ? "↓ Bearish" : "→ Neutral"}</span>
                             <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                               prediction.recommendation === "ACHETER" ? "bg-green-500/10 text-green-400" :
                               prediction.recommendation === "VENDRE" ? "bg-red-500/10 text-red-400" : "bg-yellow-500/10 text-yellow-400"
                             }`}>{prediction.recommendation}</span>
-                            <span className="text-[10px] text-gray-500 ml-1">Confiance <span className="text-white font-semibold">{prediction.confidence}%</span></span>
+                            <span className="text-[10px] text-gray-500 ml-1">Confidence <span className="text-white font-semibold">{prediction.confidence}%</span></span>
                           </div>
 
                           {/* Prediction curve chart */}
                           <div>
-                            <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-1.5">Courbe de prédiction</p>
+                            <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-1.5">Prediction curve</p>
                             <ResponsiveContainer width="100%" height={250}>
                               <AreaChart data={curveData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
                                 <defs>
@@ -1384,7 +1384,7 @@ function DashboardContent() {
                                 <Tooltip
                                   contentStyle={{ background: "#111", border: "1px solid #222", borderRadius: 8, fontSize: 10 }}
                                   labelStyle={{ color: "#666" }}
-                                  formatter={(v: any, name: any) => [`$${Number(v).toFixed(2)}`, name === "historique" ? "Historique" : "Prédiction"]}
+                                  formatter={(v: any, name: any) => [`$${Number(v).toFixed(2)}`, name === "historique" ? "Historical" : "Prediction"]}
                                 />
                                 <Area type="monotone" dataKey="historique" stroke="#6b7280" strokeWidth={1.5} fill="url(#gradHist)" dot={false} connectNulls={false} />
                                 <Area type="monotone" dataKey="prediction" stroke={isUp ? "#4ade80" : "#f87171"} strokeWidth={2} strokeDasharray="5 3" fill="url(#gradPred)" dot={{ fill: isUp ? "#4ade80" : "#f87171", r: 3, strokeWidth: 0 }} connectNulls />
@@ -1395,8 +1395,8 @@ function DashboardContent() {
                           {/* Targets */}
                           <div className="grid grid-cols-3 gap-1.5">
                             {[
-                              { label: "Cible 7j", value: `$${prediction.target_7d}`, color: "text-green-400" },
-                              { label: "Cible 30j", value: `$${prediction.target_30d}`, color: "text-blue-400" },
+                              { label: "Target 7d", value: `$${prediction.target_7d}`, color: "text-green-400" },
+                              { label: "Target 30d", value: `$${prediction.target_30d}`, color: "text-blue-400" },
                               { label: "Stop Loss", value: `$${prediction.stop_loss}`, color: "text-red-400" },
                             ].map(t => (
                               <div key={t.label} className="bg-white/[0.03] border border-white/5 rounded-lg p-2">
@@ -1438,7 +1438,7 @@ function DashboardContent() {
                     )}
 
                     {!prediction && !aiAnalysis && !loadingAi && !loadingPrediction && (
-                      <p className="text-gray-700 text-xs text-center py-6">Clique sur "Prédire le prix" pour voir la projection IA</p>
+                      <p className="text-gray-700 text-xs text-center py-6">Click "Predict price" to see the AI projection</p>
                     )}
                   </div>
                 </div>
@@ -1457,7 +1457,7 @@ function DashboardContent() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[9px] text-gray-600 uppercase tracking-widest">
-                    {userProfile?.level === "débutant" ? "Capital virtuel" : "Cash"}
+                    {userProfile?.level === "beginner" ? "Virtual capital" : "Cash"}
                   </p>
                   <p className="text-lg font-black text-white tabular-nums">
                     {account ? `$${account.cash.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
@@ -1510,15 +1510,15 @@ function DashboardContent() {
                     </div>
                     <div className="grid grid-cols-2 gap-2 mb-2">
                       <div>
-                        <p className="text-[9px] text-gray-600 uppercase tracking-widest">Quantité</p>
+                        <p className="text-[9px] text-gray-600 uppercase tracking-widest">Quantity</p>
                         <p className="text-sm font-bold text-white mt-0.5">{position.qty}</p>
                       </div>
                       <div>
-                        <p className="text-[9px] text-gray-600 uppercase tracking-widest">Moy. achat</p>
+                        <p className="text-[9px] text-gray-600 uppercase tracking-widest">Avg. cost</p>
                         <p className="text-sm font-bold text-white mt-0.5">${position.avg_price.toFixed(2)}</p>
                       </div>
                       <div>
-                        <p className="text-[9px] text-gray-600 uppercase tracking-widest">Valeur</p>
+                        <p className="text-[9px] text-gray-600 uppercase tracking-widest">Value</p>
                         <p className="text-sm font-bold text-white mt-0.5">{activeData ? `$${(activeData.price * position.qty).toFixed(2)}` : "—"}</p>
                       </div>
                       <div>
@@ -1572,8 +1572,8 @@ function DashboardContent() {
                     {position && position.qty > 0
                       ? `${t.dashboard.sellBtn} ${position.qty} shares`
                       : position && position.qty < 0
-                        ? `🔄 Racheter (Short ${Math.abs(position.qty)})`
-                        : `📉 Shorter ${ticker.replace("-USD", "")}`}
+                        ? `🔄 Cover (Short ${Math.abs(position.qty)})`
+                        : `📉 Short ${ticker.replace("-USD", "")}`}
                   </button>
                 </div>
 
@@ -1590,13 +1590,13 @@ function DashboardContent() {
                 {/* Market stats */}
                 {activeData && (
                   <div className="px-4 py-3 border-b border-white/[0.05]">
-                    <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-2">Marché · {ticker.replace("-USD", "")}</p>
+                    <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-2">Market · {ticker.replace("-USD", "")}</p>
                     <div className="space-y-1.5">
                       {[
-                        { l: "Variation 24h", v: `${up ? "+" : ""}${activeData.change.toFixed(2)}%`, c: up ? "text-green-400" : "text-red-400" },
-                        { l: "Haut du jour",  v: activeData.high ? `$${activeData.high.toFixed(2)}` : "—" },
-                        { l: "Bas du jour",   v: activeData.low  ? `$${activeData.low.toFixed(2)}`  : "—" },
-                        { l: "Clôture préc.", v: activeData.previousClose ? `$${activeData.previousClose.toFixed(2)}` : "—" },
+                        { l: "24h Change", v: `${up ? "+" : ""}${activeData.change.toFixed(2)}%`, c: up ? "text-green-400" : "text-red-400" },
+                        { l: "Day High",   v: activeData.high ? `$${activeData.high.toFixed(2)}` : "—" },
+                        { l: "Day Low",    v: activeData.low  ? `$${activeData.low.toFixed(2)}`  : "—" },
+                        { l: "Prev. Close", v: activeData.previousClose ? `$${activeData.previousClose.toFixed(2)}` : "—" },
                         { l: "Market Cap",    v: fmt(activeData.marketCap) },
                         { l: "Volume",        v: fmt(activeData.volume, "") },
                       ].map(k => (
@@ -1631,7 +1631,7 @@ function DashboardContent() {
               <div className="flex flex-col gap-0">
                 {/* Order history */}
                 <div className="px-4 py-3 border-b border-white/[0.05]">
-                  <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-2">Mes ordres · {ticker.replace("-USD", "")}</p>
+                  <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-2">My orders · {ticker.replace("-USD", "")}</p>
                   {orderHistory.length === 0 ? (
                     <p className="text-[10px] text-gray-700 py-2">{t.dashboard.noOrders}</p>
                   ) : (
@@ -1646,7 +1646,7 @@ function DashboardContent() {
                             </span>
                             <div>
                               <p className={`text-[10px] font-bold ${o.type === "buy" ? "text-green-400" : "text-red-400"}`}>
-                                {o.type === "buy" ? "Achat" : "Vente"} ×{o.qty}
+                                {o.type === "buy" ? "Buy" : "Sell"} ×{o.qty}
                               </p>
                               <p className="text-[9px] text-gray-600">{o.date}</p>
                             </div>
@@ -1675,14 +1675,14 @@ function DashboardContent() {
                 <div className="px-4 pt-3 pb-3">
                   <button onClick={() => setAnalyticsOpen(!analyticsOpen)}
                     className="w-full flex items-center justify-between px-3 py-2.5 bg-[#111] border border-white/5 rounded-xl hover:bg-white/3 transition">
-                    <span className="text-white font-bold text-xs">📊 Analytics 30 jours</span>
+                    <span className="text-white font-bold text-xs">📊 Analytics 30 days</span>
                     <span className="text-gray-600 text-[10px]">{analyticsOpen ? "▲" : "▼"}</span>
                   </button>
                   {analyticsOpen && perfSnapshots.length === 0 && (
                     <div className="mt-1.5 bg-[#111] border border-white/5 rounded-xl p-4 text-center space-y-1">
                       <p className="text-2xl">📈</p>
-                      <p className="text-white text-xs font-semibold">Pas encore de données</p>
-                      <p className="text-gray-600 text-[10px]">Les stats apparaîtront après tes premiers trades.</p>
+                      <p className="text-white text-xs font-semibold">No data yet</p>
+                      <p className="text-gray-600 text-[10px]">Stats will appear after your first trades.</p>
                     </div>
                   )}
                   {analyticsOpen && perfSnapshots.length > 0 && (() => {
@@ -1702,7 +1702,7 @@ function DashboardContent() {
                             <p className={`text-base font-black ${weekPnl >= 0 ? "text-green-400" : "text-red-400"}`}>
                               {weekPnl >= 0 ? "+" : ""}${Math.abs(weekPnl).toFixed(0)}
                             </p>
-                            <p className="text-gray-600 text-[9px]">Cette sem.</p>
+                            <p className="text-gray-600 text-[9px]">This week</p>
                           </div>
                           <div className="text-center">
                             <p className={`text-base font-black ${weekPnl >= lastWeekPnl ? "text-green-400" : "text-red-400"}`}>
@@ -1712,7 +1712,7 @@ function DashboardContent() {
                           </div>
                           <div className="text-center">
                             <p className="text-base font-black text-orange-400">🔥 {streak}</p>
-                            <p className="text-gray-600 text-[9px]">Jours prof.</p>
+                            <p className="text-gray-600 text-[9px]">Profit days</p>
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-0.5">
@@ -1722,7 +1722,7 @@ function DashboardContent() {
                           ))}
                         </div>
                         <a href="/reports" className="block text-center text-[10px] text-green-400 font-bold hover:text-green-300 transition">
-                          Rapport complet →
+                          Full report →
                         </a>
                       </div>
                     )
@@ -1732,7 +1732,7 @@ function DashboardContent() {
                 {/* Weekly Challenges */}
                 {challenges.length > 0 && (
                   <div className="px-4 pb-3 border-t border-white/[0.05] pt-3">
-                    <h3 className="text-white font-bold text-xs mb-2">🎯 Défis de la semaine</h3>
+                    <h3 className="text-white font-bold text-xs mb-2">🎯 Weekly challenges</h3>
                     <div className="space-y-2">
                       {challenges.map((c: any) => (
                         <div key={c.id} className={`rounded-xl p-2.5 border flex items-center gap-2 ${c.completed ? "bg-green-500/5 border-green-500/20" : "bg-[#111] border-white/5"}`}>
@@ -1799,11 +1799,11 @@ function DashboardContent() {
                 <div>
                   <p className="text-xs font-bold text-yellow-400 mb-0.5">Market closed — Deferred order</p>
                   <p className="text-[11px] text-white/40 leading-relaxed">
-                    {mktStatus.message}. Ton ordre sera placé automatiquement à la prochaine ouverture au prix du marché.
+                    {mktStatus.message}. Your order will be placed automatically at the next market open at the market price.
                   </p>
                   {mktStatus.nextOpen && (
                     <p className="text-[10px] text-yellow-400/60 mt-1">
-                      Exécution prévue : {mktStatus.nextOpen.toLocaleDateString("fr-FR", { weekday: "long", hour: "2-digit", minute: "2-digit" })} ET
+                      Expected execution: {mktStatus.nextOpen.toLocaleDateString("en-US", { weekday: "long", hour: "2-digit", minute: "2-digit" })} ET
                     </p>
                   )}
                 </div>
@@ -1814,11 +1814,11 @@ function DashboardContent() {
             <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3 mb-4 flex justify-between items-center">
               <div>
                 <p className="text-[9px] text-gray-600 uppercase tracking-widest">
-                  {isPending ? "Dernier prix connu" : "Prix actuel"}
+                  {isPending ? "Last known price" : "Current price"}
                 </p>
                 <p className="text-lg font-black text-white">${activeData?.price.toFixed(2)}</p>
                 {isPending && (
-                  <p className="text-[10px] text-yellow-400/60 mt-0.5">⚠️ Prix d'exécution peut différer</p>
+                  <p className="text-[10px] text-yellow-400/60 mt-0.5">⚠️ Execution price may differ</p>
                 )}
               </div>
               <div className="text-right">
@@ -1851,7 +1851,7 @@ function DashboardContent() {
               <div>
                 {orderMode === "qty" ? (
                   <>
-                    <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5 block">Quantité</label>
+                    <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5 block">Quantity</label>
                     <div className="flex gap-1.5">
                       <input type="number" value={orderQty} onChange={(e) => setOrderQty(e.target.value)}
                         min="0.001" step="0.001"
@@ -1866,7 +1866,7 @@ function DashboardContent() {
                   </>
                 ) : (
                   <>
-                    <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5 block">Montant ($)</label>
+                    <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5 block">Amount ($)</label>
                     <div className="flex gap-1.5">
                       <input type="number" value={orderCapital} onChange={(e) => {
                         setOrderCapital(e.target.value)
@@ -1892,7 +1892,7 @@ function DashboardContent() {
                 )}
                 <div className="flex justify-between mt-1.5 px-0.5">
                   <span className="text-[10px] text-gray-600">
-                    {orderMode === "capital" ? `≈ ${parseFloat(orderQty || "0").toFixed(4)} unités` : "Total estimé"}
+                    {orderMode === "capital" ? `≈ ${parseFloat(orderQty || "0").toFixed(4)} units` : "Estimated total"}
                   </span>
                   <span className="text-[10px] font-bold text-white">${((activeData?.price ?? 0) * parseFloat(orderQty || "0")).toFixed(2)}</span>
                 </div>
@@ -1949,8 +1949,8 @@ function DashboardContent() {
                   {orderLoading && (
                     <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   )}
-                  {orderLoading ? "En cours..." : isPending
-                    ? `⏳ Planifier ${orderModal === "buy" ? "l'achat" : orderModal === "short" ? "le short" : "la vente"}`
+                  {orderLoading ? "Processing..." : isPending
+                    ? `⏳ Schedule ${orderModal === "buy" ? "buy" : orderModal === "short" ? "short" : "sell"}`
                     : orderModal === "buy" ? `🟢 ${t.dashboard.confirm}` : orderModal === "short" ? `📉 ${t.dashboard.confirm}` : `🔴 ${t.dashboard.confirm}`
                   }
                 </button>
@@ -1972,8 +1972,8 @@ function DashboardContent() {
           <div className="bg-[#111] border border-white/10 rounded-t-2xl sm:rounded-2xl p-5 w-full max-w-[95vw] sm:max-w-sm shadow-2xl mx-auto">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-base font-black">Modifier TP / SL</p>
-                <p className="text-[10px] text-gray-500">{ticker.replace("-USD", "")} · Prix actuel ${activeData?.price.toFixed(2)}</p>
+                <p className="text-base font-black">Edit TP / SL</p>
+                <p className="text-[10px] text-gray-500">{ticker.replace("-USD", "")} · Current price ${activeData?.price.toFixed(2)}</p>
               </div>
               <button onClick={() => setTpSlModal(false)} className="text-gray-600 hover:text-white text-lg">×</button>
             </div>
@@ -2005,8 +2005,8 @@ function DashboardContent() {
             </div>
             <div className="flex gap-2">
               <button onClick={() => setTpSlModal(false)}
-                className="px-4 py-2.5 rounded-xl border border-white/10 text-gray-500 hover:text-white transition text-sm">Annuler</button>
-              <button onClick={saveTpSl} className="flex-1 py-2.5 rounded-xl bg-white text-black text-sm font-black hover:bg-gray-100 transition flex items-center justify-center gap-2">Sauvegarder</button>
+                className="px-4 py-2.5 rounded-xl border border-white/10 text-gray-500 hover:text-white transition text-sm">Cancel</button>
+              <button onClick={saveTpSl} className="flex-1 py-2.5 rounded-xl bg-white text-black text-sm font-black hover:bg-gray-100 transition flex items-center justify-center gap-2">Save</button>
             </div>
           </div>
         </div>
@@ -2071,7 +2071,7 @@ function DashboardContent() {
           </div>
           <MarketStatusBar symbol={ticker} showDetail />
           <div>
-            <label className="text-[10px] text-white/30 uppercase tracking-widest mb-2 block">Quantité</label>
+            <label className="text-[10px] text-white/30 uppercase tracking-widest mb-2 block">Quantity</label>
             <div className="flex gap-1.5">
               <input type="number" value={orderQty} onChange={e => setOrderQty(e.target.value)} min="0.001" step="0.001"
                 className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm font-bold focus:outline-none focus:border-white/20" />
@@ -2083,7 +2083,7 @@ function DashboardContent() {
               ))}
             </div>
             <div className="flex justify-between mt-1.5 px-0.5">
-              <span className="text-[10px] text-white/30">Total estimé</span>
+              <span className="text-[10px] text-white/30">Estimated total</span>
               <span className="text-[10px] font-bold text-white">${((activeData?.price ?? 0) * parseFloat(orderQty || "0")).toFixed(2)}</span>
             </div>
           </div>

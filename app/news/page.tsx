@@ -37,20 +37,20 @@ type TapeItem    = { symbol: string; price: number; change: number }
 // ─── Theme definitions ─────────────────────────────────────────────────────────
 
 const THEMES = [
-  { key: "all",          label: "Toutes les actualités",  icon: "🌐" },
+  { key: "all",          label: "All news",               icon: "🌐" },
   { key: "breaking",     label: "Breaking News",          icon: "🔴" },
   { key: "macro",        label: "Macro & Fed",            icon: "🏦" },
-  { key: "stocks",       label: "Marchés & Actions",      icon: "📈" },
+  { key: "stocks",       label: "Markets & Stocks",       icon: "📈" },
   { key: "crypto",       label: "Crypto & Web3",          icon: "₿"  },
-  { key: "tech",         label: "Technologie & IA",       icon: "🤖" },
-  { key: "energy",       label: "Énergie & Pétrole",      icon: "⚡" },
-  { key: "commodities",  label: "Matières premières",     icon: "🥇" },
-  { key: "earnings",     label: "Résultats",              icon: "📊" },
-  { key: "geopolitique", label: "Géopolitique",           icon: "🌍" },
+  { key: "tech",         label: "Technology & AI",        icon: "🤖" },
+  { key: "energy",       label: "Energy & Oil",           icon: "⚡" },
+  { key: "commodities",  label: "Commodities",            icon: "🥇" },
+  { key: "earnings",     label: "Earnings",               icon: "📊" },
+  { key: "geopolitique", label: "Geopolitics",            icon: "🌍" },
   { key: "ipo",          label: "IPO & M&A",              icon: "🚀" },
-  { key: "forex",        label: "Forex & Devises",        icon: "💱" },
-  { key: "regulation",   label: "Régulation & SEC",       icon: "⚖️" },
-  { key: "dividends",    label: "Dividendes",             icon: "💰" },
+  { key: "forex",        label: "Forex & Currencies",     icon: "💱" },
+  { key: "regulation",   label: "Regulation & SEC",       icon: "⚖️" },
+  { key: "dividends",    label: "Dividends",              icon: "💰" },
   { key: "reddit",       label: "Reddit & Social",        icon: "📱" },
 ] as const
 
@@ -81,7 +81,7 @@ const PULSE_SYMS   = [
   { symbol: "SPY",    label: "S&P 500"   },
   { symbol: "QQQ",    label: "Nasdaq 100" },
   { symbol: "%5EVIX", label: "VIX"       },
-  { symbol: "GLD",    label: "Or"        },
+  { symbol: "GLD",    label: "Gold"      },
   { symbol: "BTC-USD",label: "Bitcoin"   },
 ]
 
@@ -89,10 +89,10 @@ const PULSE_SYMS   = [
 
 function timeAgo(iso: string): string {
   const ago = Math.round((Date.now() - new Date(iso).getTime()) / 60000)
-  if (ago < 1)    return "à l'instant"
+  if (ago < 1)    return "just now"
   if (ago < 60)   return `${ago}m`
   if (ago < 1440) return `${Math.round(ago / 60)}h`
-  return `${Math.round(ago / 1440)}j`
+  return `${Math.round(ago / 1440)}d`
 }
 
 function sourceStyle(source: string): { bg: string; color: string } {
@@ -175,7 +175,7 @@ function FearGreedGaugeMini({ data }: { data: FearGreed | null }) {
 function NewsCard({ article, featured = false }: { article: Article; featured?: boolean }) {
   const score     = article.sentiment_score ?? 0
   const sentColor = score > 20 ? "#22c55e" : score < -20 ? "#ef4444" : "#f59e0b"
-  const sentLabel = score > 20 ? "🟢 Positif" : score < -20 ? "🔴 Négatif" : "🟡 Neutre"
+  const sentLabel = score > 20 ? "🟢 Positive" : score < -20 ? "🔴 Negative" : "🟡 Neutral"
   const { bg: srcBg, color: srcColor } = sourceStyle(article.source)
   const isBreaking = article.is_breaking || article.breaking
 
@@ -245,7 +245,7 @@ function NewsCard({ article, featured = false }: { article: Article; featured?: 
           <div className="flex-1 h-0.5 rounded-full overflow-hidden bg-white/5">
             <div className="h-full rounded-full" style={{ width: `${((score + 100) / 200) * 100}%`, background: sentColor }} />
           </div>
-          <span className="text-[9px] text-white/20 group-hover:text-white/40 transition flex-shrink-0">Lire ↗</span>
+          <span className="text-[9px] text-white/20 group-hover:text-white/40 transition flex-shrink-0">Read ↗</span>
         </div>
       </div>
     </a>
@@ -270,7 +270,7 @@ function HeroCard({ article }: { article: Article }) {
         <div className="flex items-center gap-2.5 mb-3 flex-wrap">
           <span className="text-[9px] font-black px-2.5 py-0.5 rounded-full"
             style={{ background: "rgba(34,197,94,0.12)", color: "#4ade80", border: "1px solid rgba(34,197,94,0.25)" }}>
-            ⭐ À la une
+            ⭐ Top story
           </span>
           <span className="text-[9px] font-bold px-2 py-0.5 rounded-md" style={{ background: srcBg, color: srcColor }}>
             {article.source.slice(0, 24)}
@@ -304,10 +304,10 @@ function HeroCard({ article }: { article: Article }) {
           <div className="flex items-center gap-2 ml-auto">
             {score !== 0 && (
               <span className="text-[9px] font-semibold" style={{ color: sentColor }}>
-                {score > 20 ? "🟢 Positif" : score < -20 ? "🔴 Négatif" : "🟡 Neutre"}
+                {score > 20 ? "🟢 Positive" : score < -20 ? "🔴 Negative" : "🟡 Neutral"}
               </span>
             )}
-            <span className="text-[9px] text-white/25 group-hover:text-white/50 transition">Lire l&apos;article ↗</span>
+            <span className="text-[9px] text-white/25 group-hover:text-white/50 transition">Read article ↗</span>
           </div>
         </div>
       </div>
@@ -537,7 +537,7 @@ export default function NewsPage() {
               <input
                 value={searchQuery}
                 onChange={e => { setSearchQuery(e.target.value); if (e.target.value) setActiveTheme("all") }}
-                placeholder="Actif, thème, source…"
+                placeholder="Asset, theme, source…"
                 className="w-full h-8 pl-8 pr-7 rounded-xl text-xs text-white outline-none"
                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
                 onFocus={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.18)")}
@@ -618,11 +618,11 @@ export default function NewsPage() {
           {/* Search header */}
           {searchQuery && (
             <div className="flex items-center gap-2 mb-4">
-              <span className="text-sm font-black text-white">Résultats pour &ldquo;{searchQuery}&rdquo;</span>
+              <span className="text-sm font-black text-white">Results for &ldquo;{searchQuery}&rdquo;</span>
               <span className="text-[10px] text-white/25">{filteredArticles.length} articles</span>
               <button onClick={() => setSearchQuery("")}
                 className="ml-auto text-[9px] text-white/25 hover:text-white transition">
-                ← Effacer
+                ← Clear
               </button>
             </div>
           )}
@@ -679,11 +679,11 @@ export default function NewsPage() {
             <FearGreedGaugeMini data={fearGreed} />
             {fearGreed && (
               <p className="text-[10px] leading-relaxed mt-2" style={{ color: "rgba(255,255,255,0.22)" }}>
-                {fearGreed.score <= 25 ? "Marchés en peur — opportunité historique" :
-                 fearGreed.score <= 45 ? "Sentiment prudent — surveiller les supports" :
-                 fearGreed.score <= 55 ? "Marchés équilibrés — pas de signal fort" :
-                 fearGreed.score <= 75 ? "Optimisme présent — rester vigilant" :
-                 "Euphorie — risque de correction élevé"}
+                {fearGreed.score <= 25 ? "Markets in fear — historic opportunity" :
+                 fearGreed.score <= 45 ? "Cautious sentiment — watch supports" :
+                 fearGreed.score <= 55 ? "Balanced markets — no strong signal" :
+                 fearGreed.score <= 75 ? "Optimism present — stay vigilant" :
+                 "Euphoria — high correction risk"}
               </p>
             )}
           </div>

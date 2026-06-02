@@ -108,12 +108,12 @@ function ReferralSection() {
         <button onClick={() => { navigator.clipboard.writeText(ref.url); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
           className="h-10 px-4 text-xs font-black text-black rounded-xl flex-shrink-0 transition"
           style={{ background: "#22c55e" }}>
-          {copied ? "✓ Copié" : "Copier"}
+          {copied ? "✓ Copied" : "Copy"}
         </button>
       </div>
       <div className="flex gap-6">
-        <div><p className="text-xl font-black text-white">{ref.stats.total}</p><p className="text-white/30 text-xs">Parrainés</p></div>
-        <div><p className="text-xl font-black text-green-400">{ref.stats.converted}</p><p className="text-white/30 text-xs">Convertis</p></div>
+        <div><p className="text-xl font-black text-white">{ref.stats.total}</p><p className="text-white/30 text-xs">Referred</p></div>
+        <div><p className="text-xl font-black text-green-400">{ref.stats.converted}</p><p className="text-white/30 text-xs">Converted</p></div>
       </div>
     </div>
   )
@@ -206,7 +206,7 @@ export default function ParametresPage() {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
       body: JSON.stringify({ username: editUsername, avatar_color: editColor }),
     })
-    setProfileMsg("✅ Sauvegardé")
+    setProfileMsg("✅ Saved")
     setSavingProfile(false)
     setTimeout(() => setProfileMsg(""), 2500)
   }
@@ -308,14 +308,14 @@ export default function ParametresPage() {
             <div>
               <h2 className="text-base font-black text-white mb-5">💼 {t.settings.tabs.preferences}</h2>
               <Card>
-                <SettingRow label="Actif par défaut" desc="Actif affiché à l'ouverture du dashboard">
+                <SettingRow label="Default asset" desc="Asset shown when the dashboard opens">
                   <input value={settings.default_symbol}
                     onChange={e => updateSetting("default_symbol", e.target.value.toUpperCase())}
                     className="w-20 h-8 text-center text-xs font-bold rounded-lg outline-none text-white"
                     style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)" }}
                     maxLength={8} />
                 </SettingRow>
-                <SettingRow label={`Risque par trade : ${settings.risk_per_trade}%`} desc="Pourcentage du capital risqué par défaut">
+                <SettingRow label={`Risk per trade: ${settings.risk_per_trade}%`} desc="Default percentage of capital at risk">
                   <div className="flex items-center gap-2">
                     <input type="range" min={0.5} max={10} step={0.5}
                       value={settings.risk_per_trade}
@@ -331,15 +331,15 @@ export default function ParametresPage() {
 
               <div className="rounded-2xl p-5"
                 style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.12)" }}>
-                <p className="text-sm font-black text-white mb-1">🔄 Réinitialiser le portfolio</p>
-                <p className="text-xs text-white/40 mb-3">Remet ton capital fictif à $100 000 et supprime tous les ordres. Irréversible.</p>
+                <p className="text-sm font-black text-white mb-1">🔄 Reset portfolio</p>
+                <p className="text-xs text-white/40 mb-3">Resets your virtual capital to $100,000 and deletes all orders. Irreversible.</p>
                 <button onClick={() => {
-                  if (!confirm("Réinitialiser ton portfolio à $100 000 ? Tous tes ordres seront supprimés.")) return
+                  if (!confirm("Reset your portfolio to $100,000? All your orders will be deleted.")) return
                   supabase.from("trading_accounts").update({ cash: 100000 }).eq("user_id", user.id)
                   supabase.from("orders").delete().eq("user_id", user.id)
                 }}
                   className="px-4 py-2 rounded-xl text-xs font-bold text-red-400 border border-red-500/20 hover:bg-red-500/10 transition">
-                  Réinitialiser → $100 000
+                  Reset → $100,000
                 </button>
               </div>
             </div>
@@ -357,10 +357,10 @@ export default function ParametresPage() {
 
               <div className="rounded-2xl p-5 mb-4"
                 style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-3">Données personnelles</p>
+                <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-3">Personal data</p>
                 <div className="space-y-0">
                   <button className="flex items-center justify-between w-full py-3 text-sm text-white/50 hover:text-white transition border-b border-white/[0.04]">
-                    <span>Télécharger mes données</span>
+                    <span>Download my data</span>
                     <ChevronRight size={14} />
                   </button>
                   <button onClick={() => setDeleteConfirm(true)}
@@ -447,9 +447,9 @@ export default function ParametresPage() {
                 <div className="px-5 divide-y divide-white/[0.04]">
                   {[
                     { label: "Email",          value: user?.email },
-                    { label: "Compte créé",    value: user?.created_at ? new Date(user.created_at).toLocaleDateString("fr-FR") : "—" },
-                    { label: "Plan actuel",    value: plan.charAt(0).toUpperCase() + plan.slice(1) },
-                    { label: "Connexion via",  value: user?.app_metadata?.provider ?? "email" },
+                    { label: "Account created", value: user?.created_at ? new Date(user.created_at).toLocaleDateString("en-US") : "—" },
+                    { label: "Current plan",   value: plan.charAt(0).toUpperCase() + plan.slice(1) },
+                    { label: "Login via",      value: user?.app_metadata?.provider ?? "email" },
                   ].map(item => (
                     <div key={item.label} className="flex justify-between items-center py-4">
                       <span className="text-sm text-white/40">{item.label}</span>
@@ -467,10 +467,10 @@ export default function ParametresPage() {
                   const { error } = await supabase.auth.resetPasswordForEmail(user?.email, {
                     redirectTo: `${window.location.origin}/reset-password`
                   })
-                  if (!error) alert("Email envoyé ! Vérifie ta boîte mail.")
+                  if (!error) alert("Email sent! Check your inbox.")
                 }}
                   className="px-4 py-2 rounded-xl text-xs font-bold text-white/50 hover:text-white border border-white/10 hover:border-white/20 transition">
-                  📧 Envoyer le lien de réinitialisation
+                  📧 Send reset link
                 </button>
               </div>
 
@@ -497,14 +497,14 @@ export default function ParametresPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-black text-white">
-                      Plan {plan === "free" ? "Gratuit" : plan === "pro" ? "Pro ⭐" : "Premium 💎"}
+                      Plan {plan === "free" ? "Free" : plan === "pro" ? "Pro ⭐" : "Premium 💎"}
                     </p>
                     <p className="text-xs text-white/40 mt-0.5">
                       {plan === "free"
-                        ? "3 signaux/jour · Cours débutant"
+                        ? "3 signals/day · Beginner courses"
                         : plan === "pro"
-                          ? "Signaux illimités · Screener · Alertes"
-                          : "Tout Pro + API + Support prioritaire"}
+                          ? "Unlimited signals · Screener · Alerts"
+                          : "All Pro + API + Priority support"}
                     </p>
                   </div>
                   {plan === "free" && (
@@ -531,10 +531,10 @@ export default function ParametresPage() {
               {plan === "free" && (
                 <div className="space-y-3">
                   {[
-                    { name: "Pro ⭐", price: "19€/mois", color: "#22c55e",
-                      features: ["Signaux illimités", "Screener 160+ actifs", "Alertes illimitées", "Tous les cours", "Backtest"] },
-                    { name: "Premium 💎", price: "49€/mois", color: "#fbbf24",
-                      features: ["Tout Pro inclus", "API publique", "Rapport IA hebdo", "Support prioritaire"] },
+                    { name: "Pro ⭐", price: "19€/month", color: "#22c55e",
+                      features: ["Unlimited signals", "160+ asset screener", "Unlimited alerts", "All courses", "Backtest"] },
+                    { name: "Premium 💎", price: "49€/month", color: "#fbbf24",
+                      features: ["All Pro included", "Public API", "Weekly AI report", "Priority support"] },
                   ].map(p => (
                     <div key={p.name} className="rounded-2xl p-4"
                       style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>

@@ -14,9 +14,9 @@ type ProgressMap = Record<string, Set<number>>
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 function getLevelLabel(level: string) {
-  if (level === "débutant")      return "Débutant"
-  if (level === "intermédiaire") return "Intermédiaire"
-  return "Avancé"
+  if (level === "débutant")      return "Beginner"
+  if (level === "intermédiaire") return "Intermediate"
+  return "Advanced"
 }
 
 function getCourseProgress(course: Course, progress: ProgressMap) {
@@ -152,7 +152,7 @@ function CourseCard({ course, progress, onClick, plan, onUpgrade, index }: {
           {isStarted && (
             <span className="text-[10px] font-black px-2 py-1 rounded-lg"
               style={{ background: "rgba(250,204,21,0.1)", color: "#facc15", border: "1px solid rgba(250,204,21,0.2)" }}>
-              En cours
+              In progress
             </span>
           )}
         </div>
@@ -163,19 +163,19 @@ function CourseCard({ course, progress, onClick, plan, onUpgrade, index }: {
 
         {/* Tags */}
         <div className="flex flex-wrap gap-1.5 mb-4">
-          {hasVid      && <Tag>📹 Vidéos</Tag>}
+          {hasVid      && <Tag>📹 Videos</Tag>}
           {hasViz      && <Tag>✨ Animations</Tag>}
           {hasSandbox  && <Tag>🏦 Simulation</Tag>}
-          {hasInter    && <Tag>🎮 Interactif</Tag>}
+          {hasInter    && <Tag>🎮 Interactive</Tag>}
           {hasQuiz     && <Tag>🎯 Quiz</Tag>}
-          <Tag>🤖 IA Tuteur</Tag>
+          <Tag>🤖 AI Tutor</Tag>
         </div>
 
         {/* Meta */}
         <div className="flex items-center gap-3 text-[10px] mb-3" style={{ color: "#444" }}>
           <span>⏱ {course.duration}</span>
           <span>·</span>
-          <span>{course.chapters.length} chapitres</span>
+          <span>{course.chapters.length} chapters</span>
           <span>·</span>
           <span>{done}/{total} ✓</span>
         </div>
@@ -373,7 +373,7 @@ export default function Apprendre() {
           <div className="absolute inset-0 rounded-full border-2 border-green-400/20" />
           <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-green-400 animate-spin" />
         </div>
-        <p className="text-sm font-bold" style={{ color: "#555" }}>Chargement de l'académie…</p>
+        <p className="text-sm font-bold" style={{ color: "#555" }}>Loading academy…</p>
       </div>
     </div>
   )
@@ -396,23 +396,23 @@ export default function Apprendre() {
           <div className="relative z-10 flex flex-col md:flex-row gap-6 md:gap-10">
             {/* Left */}
             <div className="flex-1">
-              <p className="text-green-400 text-xs font-black uppercase tracking-widest mb-2">🎓 Académie Tradex</p>
+              <p className="text-green-400 text-xs font-black uppercase tracking-widest mb-2">🎓 Tradex Academy</p>
               <h1 className="text-3xl md:text-4xl font-black text-white mb-3 leading-tight">
-                Apprends à trader<br/>
-                <span className="text-green-400">comme un professionnel</span>
+                Learn to trade<br/>
+                <span className="text-green-400">like a professional</span>
               </h1>
               <p className="text-white/40 text-sm max-w-md leading-relaxed">
-                {COURSES.length} cours complets · Vidéos · Quiz interactifs · Simulations sur données réelles · Tuteur IA
+                {COURSES.length} complete courses · Videos · Interactive quizzes · Real-data simulations · AI tutor
               </p>
             </div>
 
             {/* Right: stats */}
             <div className="grid grid-cols-2 gap-3 md:w-64 flex-shrink-0">
               {[
-                { label: "Cours complétés", value: `${completedCourses}/${COURSES.length}`, color: "#4ade80" },
-                { label: "XP Total",        value: `⚡ ${totalXP.toLocaleString()}`, color: "#facc15" },
-                { label: "Progression",     value: `${globalPct}%`, color: "#60a5fa" },
-                { label: "Chapitres faits", value: `${completedChapters}/${TOTAL_CHAPTERS}`, color: "#f97316" },
+                { label: "Completed courses", value: `${completedCourses}/${COURSES.length}`, color: "#4ade80" },
+                { label: "Total XP",         value: `⚡ ${totalXP.toLocaleString()}`, color: "#facc15" },
+                { label: "Progress",         value: `${globalPct}%`, color: "#60a5fa" },
+                { label: "Chapters done",    value: `${completedChapters}/${TOTAL_CHAPTERS}`, color: "#f97316" },
               ].map((s, i) => (
                 <motion.div key={s.label}
                   initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
@@ -429,7 +429,7 @@ export default function Apprendre() {
           {/* Global progress bar */}
           <div className="relative z-10 mt-6">
             <div className="flex justify-between text-xs mb-2" style={{ color: "rgba(255,255,255,0.25)" }}>
-              <span>Progression globale</span>
+              <span>Overall progress</span>
               <span className="font-black text-green-400">{globalPct}%</span>
             </div>
             <div className="h-3 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
@@ -446,8 +446,8 @@ export default function Apprendre() {
         {/* ── BADGES ───────────────────────────────────────────────────────── */}
         <div className="flex gap-3 md:gap-4 mb-8 flex-wrap">
           {[
-            { label: "Débutant",      icon: "🌱", color: "#4ade80", unlocked: debutantDone },
-            { label: "Intermédiaire", icon: "📊", color: "#60a5fa", unlocked: intermDone   },
+            { label: "Beginner",      icon: "🌱", color: "#4ade80", unlocked: debutantDone },
+            { label: "Intermediate",  icon: "📊", color: "#60a5fa", unlocked: intermDone   },
             { label: "Expert",        icon: "🏆", color: "#a78bfa", unlocked: advancedDone },
           ].map((b, i) => (
             <motion.div key={b.label}
@@ -464,7 +464,7 @@ export default function Apprendre() {
               <div>
                 <p className="text-sm font-black text-white">{b.label}</p>
                 <p className="text-[10px] font-bold" style={{ color: b.unlocked ? b.color : "#444" }}>
-                  {b.unlocked ? "✓ Complété" : "À compléter"}
+                  {b.unlocked ? "✓ Completed" : "To complete"}
                 </p>
               </div>
             </motion.div>
@@ -489,14 +489,14 @@ export default function Apprendre() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <p className="text-white font-black text-base">Glossaire financier</p>
+                <p className="text-white font-black text-base">Financial glossary</p>
                 <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md"
                   style={{ background: "rgba(96,165,250,0.12)", color: "#60a5fa", border: "1px solid rgba(96,165,250,0.2)" }}>
                   50+ termes
                 </span>
               </div>
               <p className="text-[11px] leading-relaxed" style={{ color: "#444" }}>
-                Vocabulaire complet du trading & de l'investissement
+                Complete trading & investing vocabulary
               </p>
             </div>
             <span className="text-blue-400/40 text-lg flex-shrink-0">→</span>
@@ -518,11 +518,11 @@ export default function Apprendre() {
                 <p className="text-white font-black text-base">Flashcards</p>
                 <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md"
                   style={{ background: "rgba(167,139,250,0.12)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.2)" }}>
-                  Répétition espacée
+                  Spaced repetition
                 </span>
               </div>
               <p className="text-[11px] leading-relaxed" style={{ color: "#444" }}>
-                Mémorise tous les concepts clés de chaque cours
+                Memorize all key concepts from each course
               </p>
             </div>
             <span className="text-purple-400/40 text-lg flex-shrink-0">→</span>
@@ -552,7 +552,7 @@ export default function Apprendre() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
                 <p className="text-white font-black text-base">
-                  {streak} jour{streak > 1 ? "s" : ""} de suite !
+                  {streak} day{streak > 1 ? "s" : ""} in a row!
                 </p>
                 {streakBonus && (
                   <span className="text-[9px] font-black px-2 py-0.5 rounded-full animate-pulse"
@@ -563,8 +563,8 @@ export default function Apprendre() {
               </div>
               <p className="text-xs" style={{ color: "#555" }}>
                 {streak % 7 === 0 && streak > 0
-                  ? "Milestone semaine atteint !"
-                  : `${7 - (streak % 7)} jour${7 - (streak % 7) > 1 ? "s" : ""} avant le prochain bonus`}
+                  ? "Weekly milestone reached!"
+                  : `${7 - (streak % 7)} day${7 - (streak % 7) > 1 ? "s" : ""} until the next bonus`}
               </p>
               <div className="flex gap-1 mt-2">
                 {Array.from({ length: 7 }).map((_, i) => (
@@ -577,7 +577,7 @@ export default function Apprendre() {
               <p className="text-3xl font-black" style={{ color: streakBonus ? "#facc15" : "#f97316" }}>
                 {streak}
               </p>
-              <p className="text-[9px] uppercase tracking-widest" style={{ color: "#444" }}>jours</p>
+              <p className="text-[9px] uppercase tracking-widest" style={{ color: "#444" }}>days</p>
             </div>
           </motion.div>
         )}
@@ -603,19 +603,19 @@ export default function Apprendre() {
                   </div>
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-widest mb-0.5" style={{ color: lc.text }}>
-                      ▶ Continuer
+                      ▶ Continue
                     </p>
                     <p className="text-white font-black text-base">{inProgress.title}</p>
                     {nextChapter && (
                       <p className="text-[11px] mt-0.5" style={{ color: "#555" }}>
-                        Prochain : {nextChapter.title}
+                        Next: {nextChapter.title}
                       </p>
                     )}
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
                   <p className="text-2xl font-black" style={{ color: lc.text }}>{pct}%</p>
-                  <p className="text-[10px]" style={{ color: "#444" }}>{done}/{total} chapitres</p>
+                  <p className="text-[10px]" style={{ color: "#444" }}>{done}/{total} chapters</p>
                 </div>
               </div>
               <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
@@ -648,7 +648,7 @@ export default function Apprendre() {
               <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
                 style={{ background: "rgba(239,68,68,0.12)" }}>⚡</div>
               <div className="flex-1 min-w-0 pr-16">
-                <p className="text-white font-black text-lg mb-1">Défi du jour</p>
+                <p className="text-white font-black text-lg mb-1">Daily challenge</p>
                 {dailyChallenge ? (
                   <>
                     <div className="flex items-center gap-2 mb-2">
@@ -664,7 +664,7 @@ export default function Apprendre() {
                       {challengeDone ? (
                         <span className="text-xs font-bold px-3 py-1.5 rounded-xl"
                           style={{ background: "rgba(74,222,128,0.1)", color: "#4ade80", border: "1px solid rgba(74,222,128,0.2)" }}>
-                          ✅ Complété !
+                          ✅ Completed!
                         </span>
                       ) : (
                         <motion.button
@@ -672,7 +672,7 @@ export default function Apprendre() {
                           onClick={() => router.push(`/dashboard?symbol=${dailyChallenge.symbol}&lesson=${dailyChallenge.challenge_type}`)}
                           className="px-4 py-2 rounded-xl text-xs font-black transition-all"
                           style={{ background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "white" }}>
-                          Relever le défi →
+                          Take the challenge →
                         </motion.button>
                       )}
                     </div>
@@ -695,7 +695,7 @@ export default function Apprendre() {
             style={{ background: "#0d0d0d", border: "1px solid #1a1a1a" }}>
             <div className="flex items-center gap-2 mb-4">
               <span className="text-xl">🏆</span>
-              <p className="font-black text-white">Top apprenants</p>
+              <p className="font-black text-white">Top learners</p>
               <span className="ml-auto text-xs font-black" style={{ color: "#facc15" }}>⚡ {totalXP.toLocaleString()} XP</span>
             </div>
             {leaderboard.length > 0 ? (
@@ -751,7 +751,7 @@ export default function Apprendre() {
 
           {/* Type */}
           <div className="flex rounded-xl overflow-hidden flex-shrink-0" style={{ border: "1px solid #1a1a1a" }}>
-            {([["all","Tous"],["video","📹 Vidéo"],["interactive","🎮 Interactif"]] as const).map(([k,l]) => (
+            {([["all","All"],["video","📹 Video"],["interactive","🎮 Interactive"]] as const).map(([k,l]) => (
               <button key={k} onClick={() => setType(k as any)}
                 className="px-3 py-2 text-[10px] font-bold uppercase tracking-wide transition-colors"
                 style={{ background: typeFilter === k ? "#1a1a1a" : "transparent", color: typeFilter === k ? "#fff" : "#444" }}>
@@ -762,7 +762,7 @@ export default function Apprendre() {
 
           {/* Status */}
           <div className="flex rounded-xl overflow-hidden flex-shrink-0" style={{ border: "1px solid #1a1a1a" }}>
-            {([["all", t.signals.filters.all],["new","Nouveau"],["started",t.academy.continueCourse],["completed",`✅ ${t.academy.completed}`]] as [string, string][]).map(([k,l]) => (
+            {([["all", t.signals.filters.all],["new","New"],["started",t.academy.continueCourse],["completed",`✅ ${t.academy.completed}`]] as [string, string][]).map(([k,l]) => (
               <button key={k} onClick={() => setStatus(k as any)}
                 className="px-3 py-2 text-[10px] font-bold uppercase tracking-wide transition-colors"
                 style={{ background: statusFilter === k ? "#1a1a1a" : "transparent", color: statusFilter === k ? "#fff" : "#444" }}>
@@ -772,7 +772,7 @@ export default function Apprendre() {
           </div>
 
           <span className="ml-auto text-[11px] flex-shrink-0" style={{ color: "#333" }}>
-            {filtered.length} cours
+            {filtered.length} courses
           </span>
         </div>
 

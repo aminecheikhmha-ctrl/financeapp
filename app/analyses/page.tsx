@@ -30,28 +30,28 @@ type MarketRow = AssetData & { key: string }
 const REGIME_CONFIG: Record<MacroRegime, {
   label: string; emoji: string; color: string; bg: string
 }> = {
-  croissance_forte: { label: "Croissance",     emoji: "🚀", color: "#22c55e", bg: "rgba(34,197,94,0.08)"   },
-  fin_de_cycle:     { label: "Fin de cycle",   emoji: "🌤️", color: "#f59e0b", bg: "rgba(245,158,11,0.08)" },
-  ralentissement:   { label: "Ralentissement", emoji: "🌧️", color: "#f97316", bg: "rgba(249,115,22,0.08)" },
-  recession:        { label: "Récession",      emoji: "⛈️", color: "#ef4444", bg: "rgba(239,68,68,0.08)"  },
-  reprise:          { label: "Reprise",        emoji: "🌱", color: "#60a5fa", bg: "rgba(96,165,250,0.08)" },
+  croissance_forte: { label: "Growth",        emoji: "🚀", color: "#22c55e", bg: "rgba(34,197,94,0.08)"   },
+  fin_de_cycle:     { label: "Late Cycle",    emoji: "🌤️", color: "#f59e0b", bg: "rgba(245,158,11,0.08)" },
+  ralentissement:   { label: "Slowdown",      emoji: "🌧️", color: "#f97316", bg: "rgba(249,115,22,0.08)" },
+  recession:        { label: "Recession",     emoji: "⛈️", color: "#ef4444", bg: "rgba(239,68,68,0.08)"  },
+  reprise:          { label: "Recovery",      emoji: "🌱", color: "#60a5fa", bg: "rgba(96,165,250,0.08)" },
 }
 
 const NAV_SECTIONS = [
   { id: "snapshot",     icon: "🌡️", label: "Snapshot" },
-  { id: "marches",      icon: "📈", label: "Marchés" },
-  { id: "inflation",    icon: "🔥", label: "Inflation & Taux" },
-  { id: "obligations",  icon: "📜", label: "Obligations" },
-  { id: "devises",      icon: "💱", label: "Devises" },
-  { id: "matieres",     icon: "🥇", label: "Matières prem." },
+  { id: "marches",      icon: "📈", label: "Markets" },
+  { id: "inflation",    icon: "🔥", label: "Inflation & Rates" },
+  { id: "obligations",  icon: "📜", label: "Bonds" },
+  { id: "devises",      icon: "💱", label: "Currencies" },
+  { id: "matieres",     icon: "🥇", label: "Commodities" },
   { id: "crypto",       icon: "₿",  label: "Crypto" },
-  { id: "correlations", icon: "⚡", label: "Corrélations" },
-  { id: "geopolitique", icon: "🌍", label: "Géopolitique" },
-  { id: "calendrier",   icon: "📅", label: "Calendrier éco." },
+  { id: "correlations", icon: "⚡", label: "Correlations" },
+  { id: "geopolitique", icon: "🌍", label: "Geopolitics" },
+  { id: "calendrier",   icon: "📅", label: "Eco. Calendar" },
 ]
 
 const CORR_LABELS: Record<string, string> = {
-  SPY: "S&P 500", BTC: "Bitcoin", GLD: "Or", DXY: "Dollar", TLT: "Bonds", OIL: "Pétrole",
+  SPY: "S&P 500", BTC: "Bitcoin", GLD: "Gold", DXY: "Dollar", TLT: "Bonds", OIL: "Oil",
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -68,7 +68,7 @@ function computeRegime(vix: number, spyChange1m: number, yieldCurve: number | nu
 function fmtPrice(v: number | undefined, isYield = false): string {
   if (v == null) return "—"
   if (isYield) return `${v.toFixed(2)}%`
-  if (v > 10000) return `$${v.toLocaleString("fr-FR", { maximumFractionDigits: 0 })}`
+  if (v > 10000) return `$${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}`
   if (v > 100)   return `$${v.toFixed(2)}`
   if (v > 10)    return `$${v.toFixed(3)}`
   return `$${v.toFixed(4)}`
@@ -140,8 +140,8 @@ function MarketTable({ rows, isYield = false }: { rows: MarketRow[]; isYield?: b
       <table className="w-full min-w-[520px]">
         <thead>
           <tr style={{ background: "rgba(255,255,255,0.02)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-            <th className="px-4 py-2.5 text-left   text-[9px] text-white/25 uppercase tracking-widest font-bold">Actif</th>
-            <th className="px-4 py-2.5 text-right  text-[9px] text-white/25 uppercase tracking-widest font-bold">Prix</th>
+            <th className="px-4 py-2.5 text-left   text-[9px] text-white/25 uppercase tracking-widest font-bold">Asset</th>
+            <th className="px-4 py-2.5 text-right  text-[9px] text-white/25 uppercase tracking-widest font-bold">Price</th>
             {cols.map(c => (
               <th key={c.key} onClick={() => setSortBy(c.key)}
                 className={`px-3 py-2.5 text-right text-[9px] uppercase tracking-widest font-bold cursor-pointer transition-colors ${sortBy === c.key ? "text-white/60" : "text-white/25 hover:text-white/50"}`}>
@@ -149,7 +149,7 @@ function MarketTable({ rows, isYield = false }: { rows: MarketRow[]; isYield?: b
               </th>
             ))}
             <th className="px-3 py-2.5 text-right  text-[9px] text-white/25 uppercase tracking-widest font-bold">RSI</th>
-            <th className="px-4 py-2.5 text-left   text-[9px] text-white/25 uppercase tracking-widest font-bold w-16">Tend.</th>
+            <th className="px-4 py-2.5 text-left   text-[9px] text-white/25 uppercase tracking-widest font-bold w-16">Trend</th>
           </tr>
         </thead>
         <tbody>
@@ -417,9 +417,9 @@ export default function AnalysesPage() {
             style={{ borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
             <span className="live-dot" style={{ width: 6, height: 6 }} />
             <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.25)" }}>
-              {lastUpdate?.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) ?? "—"}
+              {lastUpdate?.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) ?? "—"}
             </span>
-            <button onClick={loadAllData} disabled={loading} title="Rafraîchir"
+            <button onClick={loadAllData} disabled={loading} title="Refresh"
               className={`text-white/25 hover:text-white transition disabled:opacity-40 text-sm ml-1 ${loading ? "animate-spin" : ""}`}>
               ↻
             </button>
@@ -450,9 +450,9 @@ export default function AnalysesPage() {
                   border: `1px solid ${regime ? REGIME_CONFIG[regime].color + "20" : "rgba(255,255,255,0.06)"}`,
                 }}>
                 <div>
-                  <p className="text-[9px] text-white/25 uppercase tracking-widest mb-3">Régime actuel</p>
+                  <p className="text-[9px] text-white/25 uppercase tracking-widest mb-3">Current Regime</p>
                   <p className="text-4xl mb-2">{regime ? REGIME_CONFIG[regime].emoji : "—"}</p>
-                  <p className="text-lg font-black text-white mb-1">{regime ? REGIME_CONFIG[regime].label : "Chargement…"}</p>
+                  <p className="text-lg font-black text-white mb-1">{regime ? REGIME_CONFIG[regime].label : "Loading…"}</p>
                 </div>
                 <div className="mt-4 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
                   <div className="grid grid-cols-2 gap-2 text-xs">
@@ -461,7 +461,7 @@ export default function AnalysesPage() {
                       <p className="font-black text-white">{vix.toFixed(1)}</p>
                     </div>
                     <div>
-                      <p className="text-white/25 mb-0.5">Spread 10Y-3M</p>
+                      <p className="text-white/25 mb-0.5">10Y-3M Spread</p>
                       <p className={`font-black ${(yieldCurve ?? 0) < 0 ? "text-red-400" : "text-green-400"}`}>
                         {yieldCurve != null ? `${yieldCurve >= 0 ? "+" : ""}${yieldCurve.toFixed(2)}%` : "—"}
                       </p>
@@ -476,7 +476,7 @@ export default function AnalysesPage() {
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-sm">🤖</span>
                   <p className="text-[10px] text-purple-400/60 uppercase tracking-widest font-bold">
-                    Briefing IA — Verdict du jour
+                    AI Briefing — Daily Verdict
                   </p>
                   <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full ml-auto"
                     style={{ background: "rgba(139,92,246,0.15)", color: "#a78bfa" }}>Groq</span>
@@ -492,7 +492,7 @@ export default function AnalysesPage() {
                 ) : (
                   <button onClick={() => regime && snapshot && generateBriefing(snapshot, regime)}
                     className="text-sm text-purple-400 hover:text-purple-300 transition">
-                    Générer le briefing du jour →
+                    Generate today&apos;s briefing →
                   </button>
                 )}
               </div>
@@ -514,7 +514,7 @@ export default function AnalysesPage() {
                   label:  "😨 VIX",
                   value:  vix.toFixed(1),
                   change: null,
-                  sub:    vix > 25 ? "🔴 Stress" : vix > 18 ? "🟡 Nerveux" : "🟢 Risk-on",
+                  sub:    vix > 25 ? "🔴 Stress" : vix > 18 ? "🟡 Nervous" : "🟢 Risk-on",
                   color:  vix > 25 ? "#f87171" : vix > 18 ? "#fbbf24" : "#4ade80",
                   bg:     vix > 25 ? "rgba(239,68,68,0.07)" : vix > 18 ? "rgba(251,191,36,0.07)" : "rgba(34,197,94,0.07)",
                   border: vix > 25 ? "rgba(239,68,68,0.15)" : vix > 18 ? "rgba(251,191,36,0.15)" : "rgba(34,197,94,0.15)",
@@ -523,13 +523,13 @@ export default function AnalysesPage() {
                   label:  "💸 Fed Rate",
                   value:  `${fedRate.toFixed(2)}%`,
                   change: null,
-                  sub:    fedRate > 4 ? "🔴 Restrictif" : fedRate > 2 ? "🟡 Neutre" : "🟢 Accommodant",
+                  sub:    fedRate > 4 ? "🔴 Restrictive" : fedRate > 2 ? "🟡 Neutral" : "🟢 Accommodative",
                   color:  fedRate > 4 ? "#f87171" : fedRate > 2 ? "#fbbf24" : "#4ade80",
                   bg:     fedRate > 4 ? "rgba(239,68,68,0.07)" : "rgba(251,191,36,0.07)",
                   border: fedRate > 4 ? "rgba(239,68,68,0.15)" : "rgba(251,191,36,0.15)",
                 },
                 {
-                  label:  "🥇 Or",
+                  label:  "🥇 Gold",
                   value:  snapshot?.gold?.price ? `$${snapshot.gold.price.toFixed(0)}` : "—",
                   change: snapshot?.gold?.change1d,
                   sub:    `1M ${snapshot?.commodities?.GLD?.change_1m != null ? `${snapshot.commodities.GLD.change_1m >= 0 ? "+" : ""}${snapshot.commodities.GLD.change_1m.toFixed(1)}%` : "—"}`,
@@ -544,7 +544,7 @@ export default function AnalysesPage() {
                   <p className="text-2xl font-black tabular-nums" style={{ color: kpi.color }}>{kpi.value}</p>
                   {kpi.change != null && (
                     <p className={`text-xs font-bold tabular-nums mt-0.5 ${kpi.change >= 0 ? "text-green-400" : "text-red-400"}`}>
-                      {kpi.change >= 0 ? "+" : ""}{kpi.change.toFixed(2)}% aujourd&apos;hui
+                      {kpi.change >= 0 ? "+" : ""}{kpi.change.toFixed(2)}% today
                     </p>
                   )}
                   <p className="text-[10px] text-white/30 mt-1">{kpi.sub}</p>
@@ -557,18 +557,18 @@ export default function AnalysesPage() {
               SECTION 2 — Marchés
           ───────────────────────────────────────── */}
           <section id="section-marches" className="scroll-mt-12">
-            <SectionHeader icon="📈" title="Marchés"
-              badge={lastUpdate?.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })} />
+            <SectionHeader icon="📈" title="Markets"
+              badge={lastUpdate?.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })} />
 
             <div data-tour="market-table">
             <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-2 px-0.5">
-              Indices — US & Monde
+              Indices — US & World
             </p>
             {loading ? <SkeletonTable /> : <MarketTable rows={toRows(snapshot?.indices)} />}
             </div>
 
             <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-2 mt-5 px-0.5">
-              Secteurs US (ETF)
+              US Sectors (ETF)
             </p>
             {loading ? <SkeletonTable /> : <MarketTable rows={toRows(snapshot?.sectors)} />}
           </section>
@@ -577,7 +577,7 @@ export default function AnalysesPage() {
               SECTION 3 — Inflation & Taux
           ───────────────────────────────────────── */}
           <section id="section-inflation" className="scroll-mt-12">
-            <SectionHeader icon="🔥" title="Inflation & Taux" badge="Fed + BCE" />
+            <SectionHeader icon="🔥" title="Inflation & Rates" badge="Fed + ECB" />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 
@@ -587,15 +587,15 @@ export default function AnalysesPage() {
                 <div className="px-5 py-3 flex items-center gap-2"
                   style={{ background: "rgba(255,255,255,0.02)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
                   <span>🇺🇸</span>
-                  <p className="text-xs font-black text-white">États-Unis — Federal Reserve</p>
+                  <p className="text-xs font-black text-white">United States — Federal Reserve</p>
                 </div>
                 <div>
                   {[
-                    { label: "CPI (Inflation)",    value: "3.2%",                           prev: "3.4%",  target: "2.0%", status: "elevated", trend: "down", note: "↘ En baisse, au-dessus cible Fed" },
-                    { label: "Core CPI",            value: "3.8%",                           prev: "3.9%",  target: "2.0%", status: "high",     trend: "down", note: "Collant — préoccupation principale" },
-                    { label: "PPI",                 value: "2.4%",                           prev: "2.7%",  target: "—",   status: "normal",   trend: "down", note: "Indicateur avancé inflation" },
-                    { label: "Fed Funds Rate",      value: `${fedRate.toFixed(2)}%`,         prev: "5.25%", target: "2.5%",status: "restrictive",trend:"flat", note: "Taux le plus haut depuis 2007" },
-                    { label: "Taux réel (Fed-CPI)", value: `${(fedRate - 3.2).toFixed(2)}%`, prev: "—",     target: "> 0%",status: "positive",  trend: "up",  note: "Positif = politique vraiment restrictive" },
+                    { label: "CPI (Inflation)",      value: "3.2%",                           prev: "3.4%",  target: "2.0%", status: "elevated",   trend: "down", note: "↘ Falling, above Fed target" },
+                    { label: "Core CPI",             value: "3.8%",                           prev: "3.9%",  target: "2.0%", status: "high",       trend: "down", note: "Sticky — main concern" },
+                    { label: "PPI",                  value: "2.4%",                           prev: "2.7%",  target: "—",   status: "normal",     trend: "down", note: "Leading inflation indicator" },
+                    { label: "Fed Funds Rate",       value: `${fedRate.toFixed(2)}%`,         prev: "5.25%", target: "2.5%",status: "restrictive", trend:"flat",  note: "Highest rate since 2007" },
+                    { label: "Real Rate (Fed-CPI)",  value: `${(fedRate - 3.2).toFixed(2)}%`, prev: "—",     target: "> 0%",status: "positive",   trend: "up",   note: "Positive = truly restrictive policy" },
                   ].map(row => {
                     const sColor: Record<string, string> = {
                       elevated: "#f59e0b", high: "#ef4444", normal: "#4ade80",
@@ -604,7 +604,7 @@ export default function AnalysesPage() {
                     const c     = sColor[row.status] ?? "#9ca3af"
                     const tIcon = row.trend === "up" ? "↑" : row.trend === "down" ? "↓" : "→"
                     const tColor= row.trend === "down" && row.label.includes("CPI") ? "#4ade80"
-                      : row.trend === "up" && row.label === "Taux réel (Fed-CPI)" ? "#4ade80"
+                      : row.trend === "up" && row.label === "Real Rate (Fed-CPI)" ? "#4ade80"
                       : row.trend === "up" ? "#f87171" : "#9ca3af"
                     return (
                       <div key={row.label} className="px-5 py-3 hover:bg-white/[0.01] transition"
@@ -625,9 +625,9 @@ export default function AnalysesPage() {
                             </div>
                             <div className="flex items-center gap-2 justify-end mt-0.5">
                               {row.prev !== "—" && (
-                                <span className="text-[9px] text-white/20">Préc. {row.prev}</span>
+                                <span className="text-[9px] text-white/20">Prev. {row.prev}</span>
                               )}
-                              <span className="text-[9px] font-bold text-white/25">Cible {row.target}</span>
+                              <span className="text-[9px] font-bold text-white/25">Target {row.target}</span>
                             </div>
                           </div>
                         </div>
@@ -654,19 +654,19 @@ export default function AnalysesPage() {
                 <div className="px-5 py-3 flex items-center gap-2"
                   style={{ background: "rgba(255,255,255,0.02)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
                   <span>🇪🇺</span>
-                  <p className="text-xs font-black text-white">Zone Euro — BCE</p>
+                  <p className="text-xs font-black text-white">Eurozone — ECB</p>
                 </div>
                 {[
-                  { label: "HICP (Inflation UE)",   value: "2.4%",  prev: "2.6%",  trend: "down", note: "Proche cible BCE"         },
-                  { label: "Core Inflation UE",      value: "2.7%",  prev: "2.9%",  trend: "down", note: "Baisse régulière"          },
-                  { label: "Taux BCE (Dépôt)",       value: "3.75%", prev: "4.00%", trend: "down", note: "Première baisse juin 2024" },
-                  { label: "PIB Zone Euro (T1)",     value: "+0.3%", prev: "0.0%",  trend: "up",   note: "Sortie de stagnation"      },
-                  { label: "Chômage UE",             value: "6.0%",  prev: "6.1%",  trend: "down", note: "Niveau historiquement bas" },
+                  { label: "HICP (EU Inflation)",    value: "2.4%",  prev: "2.6%",  trend: "down", note: "Near ECB target"           },
+                  { label: "Core Inflation EU",      value: "2.7%",  prev: "2.9%",  trend: "down", note: "Steady decline"            },
+                  { label: "ECB Rate (Deposit)",     value: "3.75%", prev: "4.00%", trend: "down", note: "First cut June 2024"       },
+                  { label: "Eurozone GDP (Q1)",      value: "+0.3%", prev: "0.0%",  trend: "up",   note: "Out of stagnation"         },
+                  { label: "EU Unemployment",        value: "6.0%",  prev: "6.1%",  trend: "down", note: "Historically low level"   },
                 ].map(row => {
                   const tIcon = row.trend === "up" ? "↑" : "↓"
                   const tColor = row.trend === "down" && row.label.includes("Inflation") ? "#4ade80"
-                    : row.trend === "down" && row.label.includes("Taux") ? "#4ade80"
-                    : row.trend === "down" && row.label.includes("Chômage") ? "#4ade80"
+                    : row.trend === "down" && row.label.includes("Rate") ? "#4ade80"
+                    : row.trend === "down" && row.label.includes("Unemployment") ? "#4ade80"
                     : row.trend === "up" ? "#4ade80" : "#9ca3af"
                   return (
                     <div key={row.label} className="px-5 py-3 hover:bg-white/[0.01] transition"
@@ -683,7 +683,7 @@ export default function AnalysesPage() {
                             <span className="text-[10px] font-bold" style={{ color: tColor }}>{tIcon}</span>
                             <span className="text-base font-black text-white">{row.value}</span>
                           </div>
-                          <p className="text-[9px] text-white/20 mt-0.5">Préc. {row.prev}</p>
+                          <p className="text-[9px] text-white/20 mt-0.5">Prev. {row.prev}</p>
                         </div>
                       </div>
                     </div>
@@ -697,11 +697,11 @@ export default function AnalysesPage() {
               style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.15)" }}>
               <span className="text-lg flex-shrink-0">⚠️</span>
               <p className="text-xs text-yellow-400/80">
-                <strong className="text-yellow-400">Watch :</strong> Le Core CPI américain reste collant à 3.8% —
-                la Fed ne baissera pas les taux avant un Core CPI proche de 2.5%.
-                Taux réel actuellement{" "}
-                <strong className="text-yellow-300">{fedRate > 3.2 ? "positif" : "négatif"} à +{(fedRate - 3.2).toFixed(2)}%</strong>,
-                la politique monétaire reste restricitve.
+                <strong className="text-yellow-400">Watch:</strong> US Core CPI remains sticky at 3.8% —
+                the Fed will not cut rates until Core CPI is close to 2.5%.
+                Real rate currently{" "}
+                <strong className="text-yellow-300">{fedRate > 3.2 ? "positive" : "negative"} at +{(fedRate - 3.2).toFixed(2)}%</strong>,
+                monetary policy remains restrictive.
               </p>
             </div>
           </section>
@@ -710,14 +710,14 @@ export default function AnalysesPage() {
               SECTION 4 — Obligations
           ───────────────────────────────────────── */}
           <section id="section-obligations" className="scroll-mt-12">
-            <SectionHeader icon="📜" title="Obligations" badge="Courbe des taux US" />
+            <SectionHeader icon="📜" title="Bonds" badge="US Yield Curve" />
 
             {/* Yield curve visual */}
             {snapshot?.bonds && (
               <div className="rounded-2xl p-5 mb-4"
                 style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
                 <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-4">
-                  Courbe US — {(yieldCurve ?? 0) < 0 ? "🔴 Inversée (signal récession)" : "🟢 Normale"}
+                  US Curve — {(yieldCurve ?? 0) < 0 ? "🔴 Inverted (recession signal)" : "🟢 Normal"}
                 </p>
                 <div className="flex items-end gap-4 h-20">
                   {[
@@ -750,13 +750,13 @@ export default function AnalysesPage() {
                 {yieldCurve != null && (
                   <div className="mt-4 pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
                     <p className="text-xs text-white/50">
-                      Spread 10Y − 3M :{" "}
+                      10Y − 3M Spread:{" "}
                       <span className={`font-black ${yieldCurve < 0 ? "text-red-400" : "text-green-400"}`}>
                         {yieldCurve >= 0 ? "+" : ""}{yieldCurve.toFixed(2)}%
                       </span>
                       {yieldCurve < 0 && (
                         <span className="text-red-400/60 ml-2 text-[10px]">
-                          — Courbe inversée · Signal historique récession 12-18 mois
+                          — Inverted curve · Historical recession signal 12-18 months
                         </span>
                       )}
                     </p>
@@ -772,7 +772,7 @@ export default function AnalysesPage() {
               SECTION 5 — Devises
           ───────────────────────────────────────── */}
           <section id="section-devises" className="scroll-mt-12">
-            <SectionHeader icon="💱" title="Devises" />
+            <SectionHeader icon="💱" title="Currencies" />
             {loading ? <SkeletonTable /> : <MarketTable rows={toRows(snapshot?.currencies)} />}
           </section>
 
@@ -780,7 +780,7 @@ export default function AnalysesPage() {
               SECTION 6 — Matières premières
           ───────────────────────────────────────── */}
           <section id="section-matieres" className="scroll-mt-12">
-            <SectionHeader icon="🥇" title="Matières premières" />
+            <SectionHeader icon="🥇" title="Commodities" />
             {loading ? <SkeletonTable /> : <MarketTable rows={toRows(snapshot?.commodities)} />}
           </section>
 
@@ -796,7 +796,7 @@ export default function AnalysesPage() {
               SECTION 8 — Corrélations
           ───────────────────────────────────────── */}
           <section id="section-correlations" className="scroll-mt-12">
-            <SectionHeader icon="⚡" title="Corrélations" badge="30 jours glissants" />
+            <SectionHeader icon="⚡" title="Correlations" badge="30-day rolling" />
 
             {/* Matrix */}
             <div className="rounded-2xl overflow-auto mb-4"
@@ -804,7 +804,7 @@ export default function AnalysesPage() {
               <table className="w-full min-w-[400px]">
                 <thead>
                   <tr style={{ background: "rgba(255,255,255,0.02)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                    <th className="px-4 py-3 text-left text-[9px] text-white/25 uppercase tracking-widest">30J</th>
+                    <th className="px-4 py-3 text-left text-[9px] text-white/25 uppercase tracking-widest">30D</th>
                     {(correlations?.symbols ?? []).map(s => (
                       <th key={s.key} className="px-3 py-3 text-center text-[9px] text-white/40 font-bold">
                         {s.key}
@@ -859,20 +859,20 @@ export default function AnalysesPage() {
               {[
                 {
                   icon:  "💵",
-                  title: "DXY fort → pression sur Or & BTC",
-                  desc:  `Corrélation DXY/Or : ${correlations?.matrix?.DXY?.GLD?.toFixed(2) ?? "-0.82"}`,
+                  title: "Strong DXY → pressure on Gold & BTC",
+                  desc:  `DXY/Gold correlation: ${correlations?.matrix?.DXY?.GLD?.toFixed(2) ?? "-0.82"}`,
                   color: "#f59e0b",
                 },
                 {
                   icon:  "📜",
-                  title: (yieldCurve ?? 0) < 0 ? "Courbe inversée → risque récession" : "Courbe saine",
-                  desc:  `Spread 10Y-3M : ${yieldCurve != null ? `${yieldCurve.toFixed(2)}%` : "—"}`,
+                  title: (yieldCurve ?? 0) < 0 ? "Inverted curve → recession risk" : "Healthy curve",
+                  desc:  `10Y-3M Spread: ${yieldCurve != null ? `${yieldCurve.toFixed(2)}%` : "—"}`,
                   color: (yieldCurve ?? 0) < 0 ? "#ef4444" : "#4ade80",
                 },
                 {
                   icon:  "😨",
-                  title: vix > 25 ? "VIX élevé → risk-off" : vix > 18 ? "VIX modéré" : "VIX bas → risk-on",
-                  desc:  `VIX actuel : ${vix.toFixed(1)}`,
+                  title: vix > 25 ? "High VIX → risk-off" : vix > 18 ? "Moderate VIX" : "Low VIX → risk-on",
+                  desc:  `Current VIX: ${vix.toFixed(1)}`,
                   color: vix > 25 ? "#ef4444" : vix > 18 ? "#fbbf24" : "#4ade80",
                 },
               ].map(alert => (
@@ -892,7 +892,7 @@ export default function AnalysesPage() {
               SECTION 9 — Géopolitique & News
           ───────────────────────────────────────── */}
           <section id="section-geopolitique" className="scroll-mt-12">
-            <SectionHeader icon="🌍" title="Géopolitique & News Macro" />
+            <SectionHeader icon="🌍" title="Geopolitics & Macro News" />
 
             {macroNews.length === 0 ? (
               <div className="space-y-2">
@@ -913,12 +913,12 @@ export default function AnalysesPage() {
                   )
                   const themeConf: Record<string, { color: string; label: string }> = {
                     fed:         { color: "#60a5fa", label: "🏦 FED" },
-                    bce:         { color: "#60a5fa", label: "🏦 BCE" },
+                    bce:         { color: "#60a5fa", label: "🏦 ECB" },
                     inflation:   { color: "#f59e0b", label: "🔥 Inflation" },
-                    recession:   { color: "#ef4444", label: "❄️ Récession" },
-                    geopolitique:{ color: "#a78bfa", label: "🌍 Géopol." },
-                    energie:     { color: "#f97316", label: "⚡ Énergie" },
-                    devises:     { color: "#22c55e", label: "💱 Devises" },
+                    recession:   { color: "#ef4444", label: "❄️ Recession" },
+                    geopolitique:{ color: "#a78bfa", label: "🌍 Geopolitics" },
+                    energie:     { color: "#f97316", label: "⚡ Energy" },
+                    devises:     { color: "#22c55e", label: "💱 Currencies" },
                     macro:       { color: "#9ca3af", label: "📊 Macro" },
                   }
                   const theme = themeConf[article.theme ?? article.category ?? "macro"] ?? themeConf.macro
@@ -951,30 +951,30 @@ export default function AnalysesPage() {
               SECTION 10 — Calendrier économique
           ───────────────────────────────────────── */}
           <section id="section-calendrier" className="scroll-mt-12 pb-8">
-            <SectionHeader icon="📅" title="Calendrier Économique" />
+            <SectionHeader icon="📅" title="Economic Calendar" />
 
             {[
               {
-                period: "Cette semaine",
+                period: "This week",
                 events: [
-                  { date: "Jeu 13 Juin", time: "14h30", flag: "🇺🇸", name: "CPI USA (Mai)",            impact: "critical", prev: "3.4%",  expected: "3.3%",  desc: "Indicateur d'inflation — impact direct décisions Fed" },
-                  { date: "Ven 14 Juin", time: "14h30", flag: "🇺🇸", name: "NFP (Emplois non-agri.)",  impact: "high",     prev: "175k",  expected: "185k",  desc: "Santé marché de l'emploi américain" },
+                  { date: "Thu Jun 13", time: "8:30 AM", flag: "🇺🇸", name: "US CPI (May)",              impact: "critical", prev: "3.4%",  expected: "3.3%",  desc: "Inflation indicator — direct impact on Fed decisions" },
+                  { date: "Fri Jun 14", time: "8:30 AM", flag: "🇺🇸", name: "NFP (Non-farm payrolls)",   impact: "high",     prev: "175k",  expected: "185k",  desc: "US labor market health" },
                 ],
               },
               {
-                period: "Semaine prochaine",
+                period: "Next week",
                 events: [
-                  { date: "Mar 18 Juin", time: "11h00", flag: "🇪🇺", name: "PIB Zone Euro (T1 final)", impact: "medium",   prev: "+0.3%", expected: "+0.3%", desc: "" },
-                  { date: "Jeu 20 Juin", time: "14h15", flag: "🇬🇧", name: "Décision BoE taux",        impact: "high",     prev: "5.25%", expected: "5.25%", desc: "Banque d'Angleterre — hold attendu" },
-                  { date: "Ven 21 Juin", time: "09h15", flag: "🇪🇺", name: "PMI Flash EU + US",        impact: "medium",   prev: "—",     expected: "—",     desc: "Activité éco. mfg + services" },
+                  { date: "Tue Jun 18", time: "5:00 AM", flag: "🇪🇺", name: "Eurozone GDP (Q1 final)",  impact: "medium",   prev: "+0.3%", expected: "+0.3%", desc: "" },
+                  { date: "Thu Jun 20", time: "8:15 AM", flag: "🇬🇧", name: "BoE Rate Decision",         impact: "high",     prev: "5.25%", expected: "5.25%", desc: "Bank of England — hold expected" },
+                  { date: "Fri Jun 21", time: "3:15 AM", flag: "🇪🇺", name: "Flash PMI EU + US",         impact: "medium",   prev: "—",     expected: "—",     desc: "Mfg + services eco. activity" },
                 ],
               },
             ].map(group => {
               const impactConf = {
-                critical: { color: "#ef4444", bg: "rgba(239,68,68,0.1)", label: "CRITIQUE", dot: "🔴" },
-                high:     { color: "#f97316", bg: "rgba(249,115,22,0.1)", label: "ÉLEVÉ",    dot: "🟠" },
-                medium:   { color: "#f59e0b", bg: "rgba(245,158,11,0.1)", label: "MOYEN",    dot: "🟡" },
-                low:      { color: "#9ca3af", bg: "rgba(156,163,175,0.1)", label: "FAIBLE",  dot: "⚪" },
+                critical: { color: "#ef4444", bg: "rgba(239,68,68,0.1)", label: "CRITICAL", dot: "🔴" },
+                high:     { color: "#f97316", bg: "rgba(249,115,22,0.1)", label: "HIGH",     dot: "🟠" },
+                medium:   { color: "#f59e0b", bg: "rgba(245,158,11,0.1)", label: "MEDIUM",   dot: "🟡" },
+                low:      { color: "#9ca3af", bg: "rgba(156,163,175,0.1)", label: "LOW",     dot: "⚪" },
               }
               return (
                 <div key={group.period} className="mb-5">
@@ -984,7 +984,7 @@ export default function AnalysesPage() {
                   <div className="space-y-2">
                     {group.events.map((ev, idx) => {
                       const ic = impactConf[ev.impact as keyof typeof impactConf] ?? impactConf.medium
-                      const isFirst = idx === 0 && group.period === "Cette semaine"
+                      const isFirst = idx === 0 && group.period === "This week"
                       return (
                         <div key={idx} className="flex items-center gap-3 md:gap-4 px-4 md:px-5 py-4 rounded-2xl flex-wrap"
                           style={{
@@ -994,7 +994,7 @@ export default function AnalysesPage() {
                           <span className="text-sm flex-shrink-0">{ic.dot}</span>
                           <div className="flex-shrink-0 w-28">
                             <p className="text-[11px] font-bold text-white/70">{ev.date}</p>
-                            <p className="text-[10px] text-white/30">{ev.time} Paris</p>
+                            <p className="text-[10px] text-white/30">{ev.time} ET</p>
                           </div>
                           <div className="flex items-center gap-2 flex-1 min-w-[140px]">
                             <span className="text-base flex-shrink-0">{ev.flag}</span>
@@ -1005,11 +1005,11 @@ export default function AnalysesPage() {
                           </div>
                           <div className="flex items-center gap-4 flex-shrink-0">
                             <div className="text-center">
-                              <p className="text-[9px] text-white/20 mb-0.5">Précédent</p>
+                              <p className="text-[9px] text-white/20 mb-0.5">Previous</p>
                               <p className="text-xs font-bold text-white/50">{ev.prev}</p>
                             </div>
                             <div className="text-center">
-                              <p className="text-[9px] text-white/20 mb-0.5">Attendu</p>
+                              <p className="text-[9px] text-white/20 mb-0.5">Expected</p>
                               <p className="text-xs font-bold text-white">{ev.expected}</p>
                             </div>
                           </div>

@@ -20,18 +20,18 @@ const PLANS = [
     stripePriceId: undefined as string | undefined,
     stripePriceIdAnnual: undefined as string | undefined,
     features: [
-      { text: "3 signaux IA par jour", included: true },
-      { text: "Dashboard avec graphes", included: true },
-      { text: "Paper trading ($100k fictifs)", included: true },
-      { text: "Cours débutant complets", included: true },
-      { text: "Forum communautaire", included: true },
-      { text: "Coach IA (5 questions/jour)", included: true },
-      { text: "Signaux illimités", included: false },
-      { text: "Screener 160+ actifs", included: false },
-      { text: "Alertes de prix illimitées", included: false },
-      { text: "Backtest de stratégies", included: false },
-      { text: "Rapports avancés", included: false },
-      { text: "API publique", included: false },
+      { text: "3 AI signals per day", included: true },
+      { text: "Dashboard with charts", included: true },
+      { text: "Paper trading ($100k virtual)", included: true },
+      { text: "Full beginner courses", included: true },
+      { text: "Community forum", included: true },
+      { text: "AI coach (5 questions/day)", included: true },
+      { text: "Unlimited signals", included: false },
+      { text: "160+ asset screener", included: false },
+      { text: "Unlimited price alerts", included: false },
+      { text: "Strategy backtesting", included: false },
+      { text: "Advanced reports", included: false },
+      { text: "Public API", included: false },
     ],
   },
   {
@@ -45,18 +45,18 @@ const PLANS = [
     stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID,
     stripePriceIdAnnual: process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID,
     features: [
-      { text: "Tout le plan Free inclus", included: true },
-      { text: "Signaux IA illimités", included: true },
-      { text: "Screener 160+ actifs", included: true },
-      { text: "Alertes de prix illimitées", included: true },
-      { text: "Tous les cours (tous niveaux)", included: true },
-      { text: "Backtest de stratégies", included: true },
-      { text: "Rapports avancés (Sharpe, DD)", included: true },
-      { text: "Scanner IA de patterns", included: true },
-      { text: "Coach IA illimité", included: true },
-      { text: "Rapport hebdomadaire IA", included: true },
-      { text: "Support prioritaire", included: false },
-      { text: "API publique", included: false },
+      { text: "Everything in Free included", included: true },
+      { text: "Unlimited AI signals", included: true },
+      { text: "160+ asset screener", included: true },
+      { text: "Unlimited price alerts", included: true },
+      { text: "All courses (all levels)", included: true },
+      { text: "Strategy backtesting", included: true },
+      { text: "Advanced reports (Sharpe, DD)", included: true },
+      { text: "AI pattern scanner", included: true },
+      { text: "Unlimited AI coach", included: true },
+      { text: "Weekly AI report", included: true },
+      { text: "Priority support", included: false },
+      { text: "Public API", included: false },
     ],
   },
   {
@@ -70,52 +70,52 @@ const PLANS = [
     stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PREMIUM_MONTHLY_PRICE_ID,
     stripePriceIdAnnual: process.env.NEXT_PUBLIC_STRIPE_PREMIUM_ANNUAL_PRICE_ID,
     features: [
-      { text: "Tout le plan Pro inclus", included: true },
-      { text: "API publique Tradex", included: true },
-      { text: "Support prioritaire 24h", included: true },
-      { text: "Accès bêta aux nouvelles features", included: true },
-      { text: "Rapport IA ultra-personnalisé", included: true },
-      { text: "Signaux haute confluence prioritaires", included: true },
-      { text: "Onboarding personnalisé 1-1", included: true },
-      { text: "Exportation données CSV/PDF", included: true },
-      { text: "Intégrations tierces (à venir)", included: true },
-      { text: "Label blanc possible", included: true },
-      { text: "Formation privée (à venir)", included: true },
-      { text: "Tout illimité", included: true },
+      { text: "Everything in Pro included", included: true },
+      { text: "Tradex public API", included: true },
+      { text: "Priority support 24h", included: true },
+      { text: "Beta access to new features", included: true },
+      { text: "Ultra-personalized AI report", included: true },
+      { text: "Priority high-confluence signals", included: true },
+      { text: "Personalized 1-on-1 onboarding", included: true },
+      { text: "CSV/PDF data export", included: true },
+      { text: "Third-party integrations (coming soon)", included: true },
+      { text: "White-label option", included: true },
+      { text: "Private training (coming soon)", included: true },
+      { text: "Everything unlimited", included: true },
     ],
   },
 ]
 
 const FAQS = [
-  { q: "Est-ce que Tradex utilise de vraies données de marché ?", a: "Oui, toutes les données proviennent de Yahoo Finance en temps réel. Les prix, variations et volumes sont mis à jour en continu pendant les heures de marché." },
-  { q: "Le paper trading c'est quoi exactement ?", a: "C'est du trading simulé avec $100,000 fictifs. Tu apprends à trader sans risquer un seul euro. Parfait pour débuter ou tester de nouvelles stratégies avant de les appliquer sur de vrais marchés." },
-  { q: "Les signaux IA sont-ils fiables ?", a: "Nos signaux combinent 20+ indicateurs techniques avec un score de confluence algorithmique. Plus la confluence est haute (>70%), plus le signal est statistiquement fiable. Ce ne sont pas des garanties, mais des outils d'aide à la décision." },
-  { q: "Puis-je annuler à tout moment ?", a: "Oui, sans engagement et sans frais d'annulation. Tu peux annuler depuis tes paramètres en un clic. Tu gardes l'accès jusqu'à la fin de la période payée." },
-  { q: "Y a-t-il une période d'essai ?", a: "Le plan Free est illimité dans le temps — tu peux l'utiliser sans limite. Il te donne accès aux fonctionnalités essentielles pour évaluer Tradex avant de passer à Pro." },
-  { q: "Tradex est-il un conseiller financier ?", a: "Non. Tradex est un outil éducatif de paper trading. Les signaux et analyses sont fournis à titre informatif uniquement et ne constituent pas des conseils d'investissement. Trade toujours avec ton propre jugement." },
-  { q: "Comment fonctionne le paiement ?", a: "Le paiement est sécurisé par Stripe, le leader mondial du paiement en ligne. Nous acceptons toutes les cartes bancaires. Aucune information de paiement n'est stockée sur nos serveurs." },
-  { q: "Y a-t-il une app mobile ?", a: "Tradex est une PWA (Progressive Web App) installable sur iOS et Android depuis le navigateur. Une app native Capacitor est en cours de soumission sur l'App Store et Play Store." },
+  { q: "Does Tradex use real market data?", a: "Yes, all data comes from Yahoo Finance in real time. Prices, changes and volumes are updated continuously during market hours." },
+  { q: "What exactly is paper trading?", a: "It's simulated trading with $100,000 virtual funds. You learn to trade without risking a single cent. Perfect for beginners or testing new strategies before applying them to real markets." },
+  { q: "Are the AI signals reliable?", a: "Our signals combine 20+ technical indicators with an algorithmic confluence score. The higher the confluence (>70%), the more statistically reliable the signal. They are not guarantees, but decision-support tools." },
+  { q: "Can I cancel at any time?", a: "Yes, with no commitment and no cancellation fees. You can cancel from your settings in one click. You keep access until the end of the paid period." },
+  { q: "Is there a trial period?", a: "The Free plan is unlimited in time — you can use it without restriction. It gives you access to the essential features to evaluate Tradex before upgrading to Pro." },
+  { q: "Is Tradex a financial advisor?", a: "No. Tradex is an educational paper trading tool. Signals and analyses are provided for informational purposes only and do not constitute investment advice. Always trade with your own judgment." },
+  { q: "How does payment work?", a: "Payment is secured by Stripe, the global leader in online payment. We accept all major credit cards. No payment information is stored on our servers." },
+  { q: "Is there a mobile app?", a: "Tradex is a PWA (Progressive Web App) installable on iOS and Android from the browser. A native Capacitor app is currently being submitted to the App Store and Play Store." },
 ]
 
 const TESTIMONIALS = [
-  { name: "Thomas M.", role: "Trader débutant", stars: 5, text: "En 2 mois avec Tradex, j'ai appris plus qu'en 1 an seul sur YouTube. Les simulations sur données réelles sont incroyables.", avatar: "T", color: "#4ade80" },
-  { name: "Sarah K.", role: "Investisseuse", stars: 5, text: "Les signaux IA sont bluffants. La confluence algorithmique m'a permis d'identifier des opportunités que je n'aurais jamais vues seule.", avatar: "S", color: "#60a5fa" },
-  { name: "Marc D.", role: "Swing trader", stars: 5, text: "Le screener 160 actifs + les alertes en temps réel ont complètement changé ma façon de trader. Indispensable pour Pro.", avatar: "M", color: "#a78bfa" },
-  { name: "Julie L.", role: "Crypto trader", stars: 5, text: "Le coach IA répond à toutes mes questions à n'importe quelle heure. C'est comme avoir un mentor expert disponible 24/7.", avatar: "J", color: "#f97316" },
+  { name: "Thomas M.", role: "Beginner trader", stars: 5, text: "In 2 months with Tradex, I learned more than in 1 year alone on YouTube. The real-data simulations are incredible.", avatar: "T", color: "#4ade80" },
+  { name: "Sarah K.", role: "Investor", stars: 5, text: "The AI signals are stunning. The algorithmic confluence helped me identify opportunities I would never have seen on my own.", avatar: "S", color: "#60a5fa" },
+  { name: "Marc D.", role: "Swing trader", stars: 5, text: "The 160-asset screener + real-time alerts completely changed how I trade. Essential for Pro users.", avatar: "M", color: "#a78bfa" },
+  { name: "Julie L.", role: "Crypto trader", stars: 5, text: "The AI coach answers all my questions at any hour. It's like having an expert mentor available 24/7.", avatar: "J", color: "#f97316" },
 ]
 
 const COMPARISON_ROWS = [
-  { feature: "Signaux IA",        free: "3/jour",           pro: "Illimités",     premium: "Illimités + priorité" },
-  { feature: "Indicateurs",       free: "RSI, MACD, BB",    pro: "20+",           premium: "20+" },
-  { feature: "Screener",          free: "Top 5 seulement",  pro: "160+ actifs",   premium: "160+ actifs" },
-  { feature: "Alertes de prix",   free: "3 max",            pro: "Illimitées",    premium: "Illimitées" },
-  { feature: "Cours académie",    free: "Niveau débutant",  pro: "Tous niveaux",  premium: "Tous niveaux" },
-  { feature: "Coach IA",          free: "5/jour",           pro: "Illimité",      premium: "Illimité" },
+  { feature: "AI Signals",        free: "3/day",            pro: "Unlimited",     premium: "Unlimited + priority" },
+  { feature: "Indicators",        free: "RSI, MACD, BB",    pro: "20+",           premium: "20+" },
+  { feature: "Screener",          free: "Top 5 only",       pro: "160+ assets",   premium: "160+ assets" },
+  { feature: "Price alerts",      free: "3 max",            pro: "Unlimited",     premium: "Unlimited" },
+  { feature: "Academy courses",   free: "Beginner level",   pro: "All levels",    premium: "All levels" },
+  { feature: "AI coach",          free: "5/day",            pro: "Unlimited",     premium: "Unlimited" },
   { feature: "Backtest",          free: "✗",                pro: "✓",             premium: "✓" },
-  { feature: "Scanner IA",        free: "✗",                pro: "✓",             premium: "✓" },
-  { feature: "API publique",      free: "✗",                pro: "✗",             premium: "✓" },
-  { feature: "Support",           free: "Forum",            pro: "Email",         premium: "Prioritaire 24h" },
-  { feature: "Rapport hebdo IA",  free: "✗",                pro: "✓",             premium: "Ultra-personnalisé" },
+  { feature: "AI scanner",        free: "✗",                pro: "✓",             premium: "✓" },
+  { feature: "Public API",        free: "✗",                pro: "✗",             premium: "✓" },
+  { feature: "Support",           free: "Forum",            pro: "Email",         premium: "Priority 24h" },
+  { feature: "Weekly AI report",  free: "✗",                pro: "✓",             premium: "Ultra-personalized" },
 ]
 
 export default function PricingPage() {
@@ -333,7 +333,7 @@ export default function PricingPage() {
           <h2 className="text-3xl font-black text-white text-center mb-12">{t.pricing.comparisonTitle}</h2>
           <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
             <div className="grid grid-cols-[2fr_1fr_1fr_1fr]" style={{ background: "rgba(255,255,255,0.02)" }}>
-              <div className="px-5 py-4 text-[10px] text-white/25 uppercase tracking-widest font-bold">Fonctionnalité</div>
+              <div className="px-5 py-4 text-[10px] text-white/25 uppercase tracking-widest font-bold">Feature</div>
               {PLANS.map(plan => (
                 <div key={plan.key} className="px-4 py-4 text-center">
                   <p className="text-sm font-black" style={{ color: plan.color }}>{t.pricing.plans[plan.key as keyof typeof t.pricing.plans]?.name ?? plan.key}</p>
@@ -453,14 +453,14 @@ export default function PricingPage() {
       {/* Footer */}
       <footer className="border-t border-white/5 py-8 px-6 text-center">
         <div className="flex items-center justify-center gap-6 flex-wrap text-xs text-white/25">
-          <a href="/legal/terms" className="hover:text-white transition">CGU</a>
-          <a href="/legal/privacy" className="hover:text-white transition">Confidentialité</a>
+          <a href="/legal/terms" className="hover:text-white transition">Terms</a>
+          <a href="/legal/privacy" className="hover:text-white transition">Privacy</a>
           <a href="/legal/cookies" className="hover:text-white transition">Cookies</a>
           <a href="/support" className="hover:text-white transition">Support</a>
           <span>© 2026 Tradex</span>
         </div>
         <p className="text-[10px] text-white/15 mt-3 max-w-lg mx-auto">
-          Tradex est un outil éducatif de paper trading. Les performances passées ne garantissent pas les résultats futurs. Trading comporte des risques.
+          Tradex is an educational paper trading tool. Past performance does not guarantee future results. Trading involves risk.
         </p>
       </footer>
     </div>

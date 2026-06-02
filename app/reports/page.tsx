@@ -43,13 +43,13 @@ const DAYS = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"]
 const SECTOR_COLORS = ["#4ade80", "#60a5fa", "#f472b6", "#facc15", "#a78bfa", "#fb923c"]
 
 const KPI_TOOLTIPS: Record<string, string> = {
-  sharpe: "Sharpe Ratio : rendement ajusté au risque. > 1 = bon, > 2 = très bon, > 3 = excellent.",
-  sortino: "Sortino Ratio : comme Sharpe mais ne pénalise que la volatilité baissière.",
-  maxDrawdown: "Max Drawdown : perte maximale pic-à-creux. Plus c'est bas, mieux c'est.",
-  winRate: "Win Rate : % de trades gagnants. > 50% est bien, mais le profit factor compte autant.",
-  profitFactor: "Profit Factor : gains bruts / pertes brutes. > 1.5 = bon, > 2 = excellent.",
-  avgRR: "Risk/Reward moyen : combien tu gagnes en moyenne vs ce que tu risques.",
-  volatility: "Volatilité annualisée : écart-type des rendements quotidiens × √252.",
+  sharpe: "Sharpe Ratio: risk-adjusted return. > 1 = good, > 2 = very good, > 3 = excellent.",
+  sortino: "Sortino Ratio: like Sharpe but only penalizes downside volatility.",
+  maxDrawdown: "Max Drawdown: maximum peak-to-trough loss. The lower the better.",
+  winRate: "Win Rate: % of winning trades. > 50% is good, but profit factor matters just as much.",
+  profitFactor: "Profit Factor: gross gains / gross losses. > 1.5 = good, > 2 = excellent.",
+  avgRR: "Average Risk/Reward: how much you gain on average vs what you risk.",
+  volatility: "Annualized volatility: standard deviation of daily returns × √252.",
 }
 
 function KPICard({ label, value, suffix = "", tooltip, color = "text-white" }: {
@@ -95,7 +95,7 @@ function CalendarHeatmap({ data }: { data: ReportData["dailySnapshots"] }) {
           let bg = "bg-white/5"
           if (c.pnl !== null) bg = c.pnl > 0 ? "bg-green-500/60" : c.pnl < 0 ? "bg-red-500/60" : "bg-white/10"
           return (
-            <div key={i} title={`${c.date}: ${c.pnl !== null ? (c.pnl >= 0 ? "+" : "") + c.pnl.toFixed(0) + "$" : "Pas de données"}`}
+            <div key={i} title={`${c.date}: ${c.pnl !== null ? (c.pnl >= 0 ? "+" : "") + c.pnl.toFixed(0) + "$" : "No data"}`}
               className={`w-6 h-6 rounded-sm ${bg} cursor-default`} />
           )
         })}
@@ -134,7 +134,7 @@ function TradeHeatmap({ data }: { data: ReportData["heatmapData"] }) {
                   : "rgba(255,255,255,0.03)"
                 return (
                   <div key={`${day}-${hour}`} className="h-6 rounded-sm cursor-default" style={{ background: bg }}
-                    title={cell ? `${DAYS[day]} ${hour}h: ${cell.pnl >= 0 ? "+" : ""}${cell.pnl.toFixed(0)}$ (${cell.count} trades)` : "Pas de données"} />
+                    title={cell ? `${DAYS[day]} ${hour}h: ${cell.pnl >= 0 ? "+" : ""}${cell.pnl.toFixed(0)}$ (${cell.count} trades)` : "No data"} />
                 )
               })}
             </>
@@ -269,8 +269,8 @@ export default function ReportsPage() {
       pdf.text("Tradex", 28, 22)
       pdf.setFontSize(11)
       pdf.setTextColor(150, 150, 150)
-      pdf.text(`Rapport de performance — Période ${report.period}`, 14, 32)
-      pdf.text(`Généré le ${new Date().toLocaleDateString("fr-FR")}`, 14, 38)
+      pdf.text(`Performance Report — Period ${report.period}`, 14, 32)
+      pdf.text(`Generated on ${new Date().toLocaleDateString("en-US")}`, 14, 38)
 
       const kpis = [
         { label: "Portfolio", value: `$${report.portfolioValue.toLocaleString("en-US", { maximumFractionDigits: 0 })}` },
@@ -279,7 +279,7 @@ export default function ReportsPage() {
         { label: "Profit Factor", value: String(report.profitFactor) },
         { label: "Sharpe Ratio", value: String(report.sharpe) },
         { label: "Max Drawdown", value: `-${report.maxDrawdown}%` },
-        { label: "Trades fermés", value: String(report.closedTrades) },
+        { label: "Closed trades", value: String(report.closedTrades) },
         { label: "R/R Moyen", value: String(report.avgRR) },
       ]
       let yPos = 50
@@ -308,7 +308,7 @@ export default function ReportsPage() {
       pdf.setTextColor(255, 255, 255)
       pdf.setFontSize(14)
       pdf.setFont("helvetica", "bold")
-      pdf.text("Analyse détaillée", 14, 20)
+      pdf.text("Detailed analysis", 14, 20)
       const canvas = await html2canvas(reportRef.current, {
         scale: 1, backgroundColor: "#080808", useCORS: true, logging: false,
       })
@@ -456,10 +456,10 @@ export default function ReportsPage() {
             <div className="h-12 w-px bg-white/5 hidden sm:block self-center" />
             <div className="flex gap-5 flex-wrap">
               {[
-                { v: report.totalTrades, l: "Ordres" },
+                { v: report.totalTrades, l: "Orders" },
                 { v: `${report.winRate}%`, l: "Win Rate" },
                 { v: report.profitFactor, l: "Profit Factor" },
-                { v: report.closedTrades, l: "Trades fermés" },
+                { v: report.closedTrades, l: "Closed trades" },
               ].map(({ v, l }) => (
                 <div key={l} className="text-center">
                   <p className="text-white font-black text-lg">{v}</p>
@@ -576,7 +576,7 @@ export default function ReportsPage() {
               )}
               <div className="bg-[#111] border border-white/5 rounded-2xl overflow-hidden">
                 <div className="p-4 border-b border-white/5">
-                  <p className="text-white font-bold text-sm">Tableau détaillé par actif</p>
+                  <p className="text-white font-bold text-sm">Detailed breakdown by asset</p>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -605,7 +605,7 @@ export default function ReportsPage() {
                         </tr>
                       ))}
                       {report.perAsset.length === 0 && (
-                        <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-600 text-sm">Pas encore assez de trades fermés</td></tr>
+                        <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-600 text-sm">Not enough closed trades yet</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -620,7 +620,7 @@ export default function ReportsPage() {
               {report.perSector.length > 0 ? (
                 <>
                   <div className="bg-[#111] border border-white/5 rounded-2xl p-5">
-                    <p className="text-white font-bold text-sm mb-4">Répartition par secteur</p>
+                    <p className="text-white font-bold text-sm mb-4">Breakdown by sector</p>
                     <div className="flex flex-col sm:flex-row items-center gap-6">
                       <ResponsiveContainer width={180} height={180}>
                         <PieChart>
@@ -683,12 +683,12 @@ export default function ReportsPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-[#111] border border-white/5 rounded-2xl p-4">
-                  <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-2">Durée moy. gagnants</p>
+                  <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-2">Avg. hold — winners</p>
                   <p className="text-2xl font-black text-green-400">{report.avgWinDuration}h</p>
                   <p className="text-gray-600 text-xs mt-1">Tu laisses courir tes profits</p>
                 </div>
                 <div className="bg-[#111] border border-white/5 rounded-2xl p-4">
-                  <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-2">Durée moy. perdants</p>
+                  <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-2">Avg. hold — losers</p>
                   <p className="text-2xl font-black text-red-400">{report.avgLossDuration}h</p>
                   <p className="text-gray-600 text-xs mt-1">Tu coupes tes pertes</p>
                 </div>
@@ -700,7 +700,7 @@ export default function ReportsPage() {
                   <div className="flex items-start gap-3 p-3 rounded-xl bg-orange-500/5 border border-orange-500/15">
                     <span className="text-lg flex-shrink-0">⚠️</span>
                     <div>
-                      <p className="text-white text-sm font-bold">Tendance à couper trop tôt</p>
+                      <p className="text-white text-sm font-bold">Tendency to cut too early</p>
                       <p className="text-gray-500 text-xs mt-0.5">Tes trades gagnants durent moins longtemps que tes perdants. Laisse courir tes profits.</p>
                     </div>
                   </div>
@@ -718,8 +718,8 @@ export default function ReportsPage() {
                   <div className="flex items-start gap-3 p-3 rounded-xl bg-blue-500/5 border border-blue-500/15">
                     <span className="text-lg flex-shrink-0">💡</span>
                     <div>
-                      <p className="text-white text-sm font-bold">Trader orienté Risk/Reward</p>
-                      <p className="text-gray-500 text-xs mt-0.5">Tu gagnes moins souvent mais tes gains sont bien plus grands. Stratégie solide.</p>
+                      <p className="text-white text-sm font-bold">Risk/Reward-focused trader</p>
+                      <p className="text-gray-500 text-xs mt-0.5">You win less often but your gains are much bigger. Solid strategy.</p>
                     </div>
                   </div>
                 )}
@@ -727,8 +727,8 @@ export default function ReportsPage() {
                   <div className="flex items-start gap-3 p-3 rounded-xl bg-red-500/5 border border-red-500/15">
                     <span className="text-lg flex-shrink-0">🚨</span>
                     <div>
-                      <p className="text-white text-sm font-bold">Drawdown élevé détecté</p>
-                      <p className="text-gray-500 text-xs mt-0.5">Ton drawdown max de {report.maxDrawdown}% est élevé. Réduis la taille de tes positions ou améliore tes stops.</p>
+                      <p className="text-white text-sm font-bold">High drawdown detected</p>
+                      <p className="text-gray-500 text-xs mt-0.5">Your max drawdown of {report.maxDrawdown}% is high. Reduce position size or improve your stops.</p>
                     </div>
                   </div>
                 )}
@@ -736,8 +736,8 @@ export default function ReportsPage() {
                   <div className="flex items-start gap-3 p-3 rounded-xl bg-white/3 border border-white/8">
                     <span className="text-lg flex-shrink-0">📊</span>
                     <div>
-                      <p className="text-white text-sm font-bold">Pas encore assez de données</p>
-                      <p className="text-gray-500 text-xs mt-0.5">Passe au moins 5 trades fermés pour débloquer l&apos;analyse comportementale.</p>
+                      <p className="text-white text-sm font-bold">Not enough data yet</p>
+                      <p className="text-gray-500 text-xs mt-0.5">Complete at least 5 closed trades to unlock behavioral analysis.</p>
                     </div>
                   </div>
                 )}

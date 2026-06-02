@@ -63,7 +63,7 @@ function formatCountdown(secs: number): string {
 
 function timeUntilExpiry(expires_at: string): string {
   const diff = new Date(expires_at).getTime() - Date.now()
-  if (diff <= 0) return "Expiré"
+  if (diff <= 0) return "Expired"
   const h = Math.floor(diff / 3_600_000)
   const m = Math.floor((diff % 3_600_000) / 60_000)
   if (h > 0) return `${h}h${m > 0 ? m + "m" : ""}`
@@ -73,11 +73,11 @@ function timeUntilExpiry(expires_at: string): string {
 function localTimeAgo(date: string): string {
   const diff = Date.now() - new Date(date).getTime()
   const mins = Math.floor(diff / 60000)
-  if (mins < 2) return "à l'instant"
-  if (mins < 60) return `il y a ${mins} min`
+  if (mins < 2) return "just now"
+  if (mins < 60) return `${mins}m ago`
   const h = Math.floor(mins / 60)
-  if (h < 24) return `il y a ${h}h`
-  return `il y a ${Math.floor(h / 24)}j`
+  if (h < 24) return `${h}h ago`
+  return `${Math.floor(h / 24)}d ago`
 }
 
 function pctChange(from: number, to: number): string {
@@ -87,16 +87,16 @@ function pctChange(from: number, to: number): string {
 }
 
 const REASON_MAP: Record<string, string> = {
-  "RSI":      "Survente/Surachat",
-  "Stoch":    "Retournement probable",
+  "RSI":      "Overbought/Oversold",
+  "Stoch":    "Likely reversal",
   "MACD":     "Momentum change",
-  "BB":       "Limites Bollinger",
-  "Volume":   "Volume anormal",
-  "Williams": "Zone retournement",
-  "EMA":      "Croisement tendance",
-  "OBV":      "Pression volume",
-  "Ichimoku": "Signal Ichimoku",
-  "CCI":      "Oscillateur CCI",
+  "BB":       "Bollinger limits",
+  "Volume":   "Abnormal volume",
+  "Williams": "Reversal zone",
+  "EMA":      "Trend crossover",
+  "OBV":      "Volume pressure",
+  "Ichimoku": "Ichimoku signal",
+  "CCI":      "CCI oscillator",
 }
 
 function humanReason(indicator: string): string {
@@ -107,17 +107,17 @@ function humanReason(indicator: string): string {
 function isBull(signal: string) { return signal === "ACHAT" || signal === "ACHAT_FORT" }
 
 function sigLabel(signal: string) {
-  if (signal === "ACHAT_FORT") return "⚡ Achat Fort"
-  if (signal === "ACHAT")      return "↗ Achat"
-  if (signal === "VENTE_FORT") return "⚡ Vente Forte"
-  return "↘ Vente"
+  if (signal === "ACHAT_FORT") return "⚡ Strong Buy"
+  if (signal === "ACHAT")      return "↗ Buy"
+  if (signal === "VENTE_FORT") return "⚡ Strong Sell"
+  return "↘ Sell"
 }
 
 function sigLabelShort(signal: string) {
-  if (signal === "ACHAT_FORT") return "⚡ Fort"
-  if (signal === "ACHAT")      return "↗ Achat"
-  if (signal === "VENTE_FORT") return "⚡ Fort"
-  return "↘ Vente"
+  if (signal === "ACHAT_FORT") return "⚡ Strong"
+  if (signal === "ACHAT")      return "↗ Buy"
+  if (signal === "VENTE_FORT") return "⚡ Strong"
+  return "↘ Sell"
 }
 
 // ─── HeroSignalCard ──────────────────────────────────────────────────────────
@@ -152,7 +152,7 @@ function HeroSignalCard({ signal, onUpgrade, blurred }: {
           <button onClick={onUpgrade}
             className="px-5 py-2 rounded-xl text-sm font-black text-black transition hover:opacity-90"
             style={{ background: D.green }}>
-            Débloquer →
+            Unlock →
           </button>
         </div>
       )}
@@ -189,7 +189,7 @@ function HeroSignalCard({ signal, onUpgrade, blurred }: {
               <div>
                 <p className="text-lg font-black text-white tabular-nums">{formatPrice(signal.price)}</p>
                 <p className={`text-xs font-bold ${signal.change_24h >= 0 ? "text-green-400" : "text-red-400"}`}>
-                  {formatChange(signal.change_24h)} aujourd'hui
+                  {formatChange(signal.change_24h)} today
                 </p>
               </div>
             </div>
@@ -200,13 +200,13 @@ function HeroSignalCard({ signal, onUpgrade, blurred }: {
               <div className="mb-3 p-3 rounded-xl"
                 style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.15)" }}>
                 <p className="text-[10px] text-purple-400/60 uppercase tracking-widest font-bold mb-1">
-                  🤖 Pourquoi ce signal ?
+                  🤖 Why this signal?
                 </p>
                 <p className="text-xs text-white/70 leading-relaxed">{signal.ai_comment}</p>
               </div>
             ) : reasons.length > 0 ? (
               <div className="mb-3">
-                <p className="text-[10px] text-white/30 uppercase tracking-widest mb-1.5">Pourquoi ce signal ?</p>
+                <p className="text-[10px] text-white/30 uppercase tracking-widest mb-1.5">Why this signal?</p>
                 <div className="flex flex-wrap gap-1.5">
                   {reasons.map((r, i) => (
                     <span key={i} className="text-[10px] font-semibold px-2.5 py-1 rounded-lg"
@@ -275,7 +275,7 @@ function HeroSignalCard({ signal, onUpgrade, blurred }: {
               onClick={() => router.push(`/signaux/${signal.symbol}`)}
               className="w-full py-2.5 rounded-xl text-xs font-black transition-all hover:scale-[1.01] active:scale-95"
               style={{ background: color, color: "black" }}>
-              🔍 Analyse complète →
+              🔍 Full analysis →
             </button>
             <button
               onClick={() => router.push(`/dashboard?symbol=${signal.symbol}&action=${bullish ? "buy" : "sell"}&price=${signal.entry_price}&tp=${signal.tp1}&sl=${signal.sl}`)}
@@ -370,7 +370,7 @@ function CompactSignalCard({ signal, rank, onUpgrade, blurred }: {
         {/* Confluence */}
         <div className="mb-3">
           <div className="flex justify-between text-[10px] mb-1">
-            <span className="text-white/30">Confiance</span>
+            <span className="text-white/30">Confidence</span>
             <span className="font-black" style={{ color }}>{signal.confluence_score.toFixed(0)}%</span>
           </div>
           <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
@@ -407,7 +407,7 @@ function CompactSignalCard({ signal, rank, onUpgrade, blurred }: {
           </span>
           <span className="text-[11px] font-black px-3 py-1.5 rounded-xl"
             style={{ background: `${color}18`, color, border: `1px solid ${color}25` }}>
-            Analyser →
+            Analyze →
           </span>
         </div>
       </div>
@@ -422,8 +422,8 @@ function HistoriqueView({ rows }: { rows: HistoriqueRow[] }) {
   if (rows.length === 0) return (
     <div className="text-center py-16" style={{ color: "rgba(255,255,255,0.3)" }}>
       <p className="text-4xl mb-3">📋</p>
-      <p className="text-lg font-semibold text-white">Aucun historique disponible</p>
-      <p className="text-sm mt-1">Les signaux apparaîtront ici après le premier scan</p>
+      <p className="text-lg font-semibold text-white">No history available</p>
+      <p className="text-sm mt-1">Signals will appear here after the first scan</p>
     </div>
   )
 
@@ -468,7 +468,7 @@ function HistoriqueView({ rows }: { rows: HistoriqueRow[] }) {
                   style={isActive
                     ? { background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", color: D.yellow }
                     : { background: "rgba(255,255,255,0.04)", border: `1px solid ${D.border}`, color: "rgba(255,255,255,0.3)" }}>
-                  {isActive ? "En cours ⏳" : "Clôturé ◼"}
+                  {isActive ? "Active ⏳" : "Closed ◼"}
                 </span>
                 <span className="text-[10px] text-white/25">{localTimeAgo(row.created_at)}</span>
               </div>
@@ -543,7 +543,7 @@ function HistoriqueView({ rows }: { rows: HistoriqueRow[] }) {
                 style={{ color: "rgba(255,255,255,0.25)" }}
                 onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.7)")}
                 onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.25)")}>
-                Voir graphe ↗
+                View chart ↗
               </button>
             </div>
 
@@ -711,7 +711,7 @@ export default function Signaux() {
                       background: tab === t ? "rgba(255,255,255,0.1)" : "transparent",
                       color: tab === t ? "white" : "rgba(255,255,255,0.3)",
                     }}>
-                    {t === "live" ? "Live" : "Historique"}
+                    {t === "live" ? "Live" : "History"}
                   </button>
                 ))}
               </div>
@@ -729,7 +729,7 @@ export default function Signaux() {
               ) : (
                 <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black text-yellow-400"
                   style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)" }}>
-                  🌙 Marché fermé · Signaux valables à l'ouverture
+                  🌙 Market closed · Signals valid at open
                 </span>
               )}
             </div>
@@ -737,7 +737,7 @@ export default function Signaux() {
             {/* Countdown + refresh */}
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <p className="text-[9px] text-white/25 uppercase tracking-widest">Prochain scan</p>
+                <p className="text-[9px] text-white/25 uppercase tracking-widest">Next scan</p>
                 <p className={`text-lg font-black tabular-nums ${countdown <= 60 ? "text-red-400" : "text-white"}`}>
                   {formatCountdown(countdown)}
                 </p>
@@ -765,13 +765,13 @@ export default function Signaux() {
               style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
               <p className="text-sm text-white/60">
                 {s.achats > s.ventes
-                  ? `📈 Le marché est plutôt haussier aujourd'hui — ${s.achats} signal${s.achats > 1 ? "s" : ""} d'achat sur ${s.total}.`
+                  ? `📈 The market is leaning bullish today — ${s.achats} buy signal${s.achats > 1 ? "s" : ""} out of ${s.total}.`
                   : s.ventes > s.achats
-                    ? `📉 Le marché est plutôt baissier aujourd'hui — ${s.ventes} signal${s.ventes > 1 ? "s" : ""} de vente sur ${s.total}.`
-                    : "⚖️ Le marché est neutre — autant de signaux haussiers que baissiers."}
+                    ? `📉 The market is leaning bearish today — ${s.ventes} sell signal${s.ventes > 1 ? "s" : ""} out of ${s.total}.`
+                    : "⚖️ The market is neutral — equal bullish and bearish signals."}
                 {s.fort > 0 && (
                   <span className="text-orange-400 font-bold">
-                    {" "}⚡ {s.fort} signal{s.fort > 1 ? "s" : ""} fort{s.fort > 1 ? "s" : ""} détecté{s.fort > 1 ? "s" : ""} !
+                    {" "}⚡ {s.fort} strong signal{s.fort > 1 ? "s" : ""} detected!
                   </span>
                 )}
               </p>
@@ -782,44 +782,44 @@ export default function Signaux() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
             {[
               {
-                label: "⚡ Forts",
+                label: "⚡ Strong",
                 value: String(s.fort),
                 color: s.fort > 0 ? "#f97316" : "rgba(255,255,255,0.25)",
                 bg:    s.fort > 0 ? "rgba(249,115,22,0.08)" : "rgba(255,255,255,0.03)",
                 border:s.fort > 0 ? "rgba(249,115,22,0.2)"  : D.border,
-                desc:  "Priorité maximale",
+                desc:  "Maximum priority",
               },
               {
-                label: "📈 Achats",
+                label: "📈 Buys",
                 value: String(s.achats),
                 color: "#4ade80",
                 bg:    "rgba(34,197,94,0.05)",
                 border:"rgba(34,197,94,0.12)",
-                desc:  "Signaux haussiers",
+                desc:  "Bullish signals",
               },
               {
-                label: "📉 Ventes",
+                label: "📉 Sells",
                 value: String(s.ventes),
                 color: "#f87171",
                 bg:    "rgba(239,68,68,0.05)",
                 border:"rgba(239,68,68,0.12)",
-                desc:  "Signaux baissiers",
+                desc:  "Bearish signals",
               },
               {
-                label: "🎯 Confiance moy.",
+                label: "🎯 Avg. confidence",
                 value: `${s.avg_confluence}%`,
                 color: s.avg_confluence >= 65 ? "#4ade80" : s.avg_confluence >= 50 ? "#fbbf24" : "#9ca3af",
                 bg:    "rgba(255,255,255,0.03)",
                 border:D.border,
-                desc:  s.avg_confluence >= 65 ? "Qualité élevée 🔥" : "Qualité moyenne",
+                desc:  s.avg_confluence >= 65 ? "High quality 🔥" : "Average quality",
               },
               {
                 label: "🌡️ Sentiment",
-                value: s.achats > s.ventes ? "Haussier 🐂" : s.ventes > s.achats ? "Baissier 🐻" : "Neutre",
+                value: s.achats > s.ventes ? "Bullish 🐂" : s.ventes > s.achats ? "Bearish 🐻" : "Neutral",
                 color: s.achats > s.ventes ? "#4ade80" : s.ventes > s.achats ? "#f87171" : "#9ca3af",
                 bg:    "rgba(255,255,255,0.03)",
                 border:D.border,
-                desc:  "Orientation globale",
+                desc:  "Overall direction",
               },
             ].map(kpi => (
               <div key={kpi.label} className="rounded-xl p-3"
@@ -860,8 +860,8 @@ export default function Signaux() {
 
             {/* Asset type */}
             {[
-              { key: "all_types", label: "Tous" },
-              { key: "stock",     label: "📈 Actions" },
+              { key: "all_types", label: "All" },
+              { key: "stock",     label: "📈 Stocks" },
               { key: "crypto",    label: "₿ Crypto" },
               { key: "etf",       label: "📦 ETF" },
             ].map(f => (
@@ -906,7 +906,7 @@ export default function Signaux() {
             {!loading && topSignals.length > 0 && (
               <div data-tour="top-signals" className="px-6 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
                 <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-3">
-                  ⭐ Meilleures opportunités
+                  ⭐ Best opportunities
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   {topSignals.slice(0, 3).map((signal, i) => (
@@ -925,7 +925,7 @@ export default function Signaux() {
             <div className="px-6 py-4 pb-10">
               <div data-tour="signal-list" className="flex items-center justify-between mb-4">
                 <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold">
-                  Tous les signaux ({loading ? "…" : filtered.length})
+                  All signals ({loading ? "…" : filtered.length})
                 </p>
                 {/* View toggle */}
                 <div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${D.border}` }}>
@@ -956,14 +956,14 @@ export default function Signaux() {
                   <p className="font-black text-white mb-2">{t.signals.noSignals}</p>
                   <p className="text-white/40 text-sm mb-4">
                     {filterSignal !== "all" || filterType !== "all_types"
-                      ? "Essaie de changer les filtres."
-                      : "L'algorithme scanne les marchés en continu. Reviens dans quelques minutes."}
+                      ? "Try changing the filters."
+                      : "The algorithm continuously scans the markets. Check back in a few minutes."}
                   </p>
                   {(filterSignal !== "all" || filterType !== "all_types") && (
                     <button onClick={() => { setFilterSignal("all"); setFilterType("all_types") }}
                       className="px-5 py-2.5 rounded-xl text-sm font-black text-black"
                       style={{ background: D.green }}>
-                      Réinitialiser les filtres
+                      Reset filters
                     </button>
                   )}
                 </div>
@@ -1086,7 +1086,7 @@ export default function Signaux() {
                       <button onClick={() => setShowUpgrade(true)}
                         className="px-7 py-3 rounded-2xl text-sm font-black text-black transition-all hover:scale-105 active:scale-95"
                         style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", boxShadow: "0 0 30px rgba(34,197,94,0.3)" }}>
-                        🚀 Débloquer tous les signaux
+                        🚀 Unlock all signals
                       </button>
                     </div>
                   )}
@@ -1099,7 +1099,7 @@ export default function Signaux() {
                   <table className="w-full">
                     <thead>
                       <tr style={{ background: "rgba(255,255,255,0.02)", borderBottom: `1px solid ${D.border}` }}>
-                        {["Signal", "Actif", "Raison", "Prix", "Var.", "Confiance", "R/R", "Expire", ""].map(h => (
+                        {["Signal", "Asset", "Reason", "Price", "Chg.", "Confidence", "R/R", "Expires", ""].map(h => (
                           <th key={h} className="px-4 py-3 text-left text-[9px] text-white/25 uppercase tracking-widest font-bold whitespace-nowrap">
                             {h}
                           </th>
@@ -1179,7 +1179,7 @@ export default function Signaux() {
                             </td>
                             <td className="px-4 py-3">
                               <span className="text-[10px] font-bold text-white/25 hover:text-white transition">
-                                Analyser →
+                                Analyze →
                               </span>
                             </td>
                           </tr>
@@ -1194,7 +1194,7 @@ export default function Signaux() {
                       <button onClick={() => setShowUpgrade(true)}
                         className="px-7 py-2.5 rounded-2xl text-sm font-black text-black transition-all hover:scale-105"
                         style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}>
-                        🚀 Débloquer tous les signaux
+                        🚀 Unlock all signals
                       </button>
                     </div>
                   )}
@@ -1213,14 +1213,14 @@ export default function Signaux() {
             {plan === "free" ? (
               <div className="text-center py-16 rounded-2xl" style={{ border: `1px solid ${D.border}` }}>
                 <p className="text-4xl mb-3">🔒</p>
-                <p className="text-lg font-bold text-white mb-1">Accès Premium requis</p>
+                <p className="text-lg font-bold text-white mb-1">Premium access required</p>
                 <p className="text-sm mb-4 text-white/30">
-                  Consultez l'historique complet des signaux avec un abonnement Pro
+                  View the full signal history with a Pro subscription
                 </p>
                 <button onClick={() => setShowUpgrade(true)}
                   className="px-6 py-2.5 rounded-xl text-sm font-black text-black"
                   style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}>
-                  Débloquer l'historique
+                  Unlock history
                 </button>
               </div>
             ) : histLoading ? (

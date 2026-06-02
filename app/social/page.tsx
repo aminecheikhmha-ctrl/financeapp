@@ -39,11 +39,11 @@ interface PublicTrade {
 function timeAgo(date: string): string {
   const diff = Date.now() - new Date(date).getTime()
   const mins = Math.floor(diff / 60000)
-  if (mins < 2) return "à l'instant"
-  if (mins < 60) return `il y a ${mins} min`
+  if (mins < 2) return "just now"
+  if (mins < 60) return `${mins}m ago`
   const hours = Math.floor(mins / 60)
-  if (hours < 24) return `il y a ${hours}h`
-  return `il y a ${Math.floor(hours / 24)}j`
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.floor(hours / 24)}d ago`
 }
 
 // ─── Podium ───────────────────────────────────────────────────────────────────
@@ -59,7 +59,7 @@ function Podium({ traders }: { traders: Trader[] }) {
   return (
     <div className="bg-[#111] border border-white/5 rounded-2xl p-6 mb-6">
       <p className="text-xs text-gray-600 font-semibold uppercase tracking-widest text-center mb-6">
-        Meilleurs traders
+        Top Traders
       </p>
       <div className="flex items-end justify-center gap-6">
         {POSITIONS.map(idx => {
@@ -79,7 +79,7 @@ function Podium({ traders }: { traders: Trader[] }) {
                 <span style={{ fontSize: isGold ? 22 : 17 }}>{(t.username ?? "?")[0]?.toUpperCase()}</span>
               </div>
               <p className={`font-bold text-white truncate max-w-[70px] text-center ${isGold ? "text-sm" : "text-xs"}`}>
-                {t.username ?? "Anonyme"}
+                {t.username ?? "Anonymous"}
               </p>
               <p className={`font-black text-xs ${(t.avg_pnl_pct ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
                 {(t.avg_pnl_pct ?? 0) >= 0 ? "+" : ""}{(t.avg_pnl_pct ?? 0).toFixed(1)}%
@@ -125,7 +125,7 @@ function TraderCard({
         {(trader.username ?? "?")[0]?.toUpperCase()}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-white font-bold text-sm truncate">@{trader.username ?? "Anonyme"}</p>
+        <p className="text-white font-bold text-sm truncate">@{trader.username ?? "Anonymous"}</p>
         <p className="text-gray-600 text-xs">{trader.total_trades} trades · {Math.round(trader.win_rate ?? 0)}% WR</p>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
@@ -144,7 +144,7 @@ function TraderCard({
         </button>
         <button
           onClick={onCopy}
-          title={isCopying ? "Arrêter la copie" : "Copier les trades"}
+          title={isCopying ? "Stop copying" : "Copy trades"}
           className={`text-xs px-2 py-1.5 rounded-lg font-bold transition flex-shrink-0 ${
             isCopying
               ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
@@ -177,7 +177,7 @@ function FeedCard({ item }: { item: FeedItem }) {
         {isTrade ? (
           <p className="text-sm text-white leading-snug">
             <span className="font-bold text-green-400">@{item.user}</span>
-            {isBuy ? " a acheté " : " a vendu "}
+            {isBuy ? " bought " : " sold "}
             <span className="font-bold">{item.symbol}</span>
             {hasPnl && (
               <span className={`ml-1 font-black ${(item.pnl_pct ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
@@ -188,7 +188,7 @@ function FeedCard({ item }: { item: FeedItem }) {
         ) : (
           <p className="text-sm text-white leading-snug">
             <span className="font-bold text-purple-400">@{item.user}</span>
-            {" a débloqué "}
+            {" unlocked "}
             <span className="font-bold">{item.achievement}</span>
           </p>
         )}
@@ -293,9 +293,9 @@ export default function SocialPage() {
   }
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: "leaderboard", label: "🏆 Classement" },
-    { key: "feed",        label: "📰 Feed"        },
-    { key: "trades",      label: "📊 Trades"      },
+    { key: "leaderboard", label: "🏆 Leaderboard" },
+    { key: "feed",        label: "📰 Feed"         },
+    { key: "trades",      label: "📊 Trades"       },
   ]
 
   return (
@@ -305,7 +305,7 @@ export default function SocialPage() {
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-black text-white">Social Trading</h1>
-          <p className="text-gray-500 text-sm mt-1">Suis les meilleurs traders et copie leurs stratégies</p>
+          <p className="text-gray-500 text-sm mt-1">Follow top traders and copy their strategies</p>
         </div>
 
         {/* Tabs */}
@@ -338,7 +338,7 @@ export default function SocialPage() {
                 {topTraders.length === 0 ? (
                   <div className="text-center py-16 text-gray-600">
                     <p className="text-4xl mb-3">🏆</p>
-                    <p className="font-bold">Aucun trader classé pour le moment</p>
+                    <p className="font-bold">No traders ranked yet</p>
                   </div>
                 ) : (
                   topTraders.slice(3).map((t, i) => (
@@ -378,13 +378,13 @@ export default function SocialPage() {
                 {feed.length === 0 ? (
                   <div className="text-center py-16 text-gray-600">
                     <p className="text-4xl mb-3">👥</p>
-                    <p className="font-bold text-white">Suis des traders pour voir leur activité</p>
-                    <p className="text-sm mt-1">Va dans le classement et clique sur +</p>
+                    <p className="font-bold text-white">Follow traders to see their activity</p>
+                    <p className="text-sm mt-1">Go to the leaderboard and click +</p>
                     <button
                       onClick={() => setActiveTab("leaderboard")}
                       className="mt-4 px-4 py-2 rounded-xl bg-green-500/15 text-green-400 border border-green-500/25 text-sm font-semibold hover:bg-green-500/25 transition"
                     >
-                      Voir le classement →
+                      View leaderboard →
                     </button>
                   </div>
                 ) : (
@@ -399,7 +399,7 @@ export default function SocialPage() {
                 {publicTrades.length === 0 ? (
                   <div className="text-center py-16 text-gray-600">
                     <p className="text-4xl mb-3">📊</p>
-                    <p className="font-bold">Aucun trade public partagé</p>
+                    <p className="font-bold">No public trades shared</p>
                   </div>
                 ) : (
                   publicTrades.map(trade => (
@@ -428,7 +428,7 @@ export default function SocialPage() {
                           href={`/traders/${trade.username}`}
                           className="text-[10px] text-blue-400 hover:text-blue-300 font-semibold"
                         >
-                          Profil →
+                          Profile →
                         </a>
                       </div>
                     </div>
