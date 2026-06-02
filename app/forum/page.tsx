@@ -325,6 +325,14 @@ function LeaderboardTab() {
     </div>
   )
 
+  if (entries.length < 3) return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <p className="text-4xl mb-4 opacity-40">🏆</p>
+      <p className="text-white font-black text-base mb-2">Leaderboard coming soon</p>
+      <p className="text-white/35 text-sm">More traders needed to unlock the rankings.</p>
+    </div>
+  )
+
   const top3 = entries.slice(0, 3)
   const rest = entries.slice(3)
 
@@ -459,7 +467,7 @@ export default function Forum() {
             ))}
           </nav>
 
-          {entries.length >= 3 && <div className="mt-6 pt-4 border-t border-white/5 space-y-0.5">
+          <div className="mt-6 pt-4 border-t border-white/5 space-y-0.5">
             <button
               onClick={() => setTab("leaderboard")}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all ${
@@ -503,7 +511,7 @@ export default function Forum() {
                 </a>
               )
             )}
-          </div>}
+          </div>
 
           {/* Mobile tabs */}
           <div className="flex lg:hidden gap-2 mb-4">
