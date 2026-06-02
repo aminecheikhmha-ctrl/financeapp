@@ -62,7 +62,7 @@ function DashboardContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const toast = useToast()
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
 
   const [ticker, setTicker] = useState(searchParams.get("symbol") ?? "AAPL")
   const lessonParam = searchParams.get("lesson")
@@ -784,20 +784,26 @@ function DashboardContent() {
               style={{ background: "rgba(96,165,250,0.05)", border: "1px solid rgba(96,165,250,0.15)" }}>
               <span>🎓</span>
               <div className="flex-1">
-                <p className="text-xs font-bold text-blue-400">Mode apprentissage actif</p>
+                <p className="text-xs font-bold text-blue-400">{lang === "fr" ? "Mode apprentissage actif" : "Active learning mode"}</p>
                 <p className="text-[11px] text-gray-500 mt-0.5">
                   {lessonParam === "rsi_calculation" || lessonParam === "spot_rsi"
-                    ? `Le RSI de ${ticker.replace("-USD","")} est visible dans l'onglet Indicateurs ci-dessous.`
+                    ? lang === "fr"
+                      ? `Le RSI de ${ticker.replace("-USD","")} est visible dans l'onglet Indicateurs ci-dessous.`
+                      : `The RSI for ${ticker.replace("-USD","")} is visible in the Indicators tab below.`
                     : lessonParam === "macd_explained"
-                    ? `Observe le MACD de ${ticker.replace("-USD","")} dans l'onglet Indicateurs.`
+                    ? lang === "fr"
+                      ? `Observe le MACD de ${ticker.replace("-USD","")} dans l'onglet Indicateurs.`
+                      : `Observe the MACD for ${ticker.replace("-USD","")} in the Indicators tab.`
                     : lessonParam === "identify_support" || lessonParam === "support_resistance"
                     ? `Support/resistance for ${ticker.replace("-USD","")} is visible in the Signals tab.`
-                    : `Applique ce que tu viens d'apprendre sur ${ticker.replace("-USD","")}.`}
+                    : lang === "fr"
+                      ? `Applique ce que tu viens d'apprendre sur ${ticker.replace("-USD","")}.`
+                      : `Apply what you just learned on ${ticker.replace("-USD","")}.`}
                 </p>
               </div>
               <a href="/apprendre" className="text-[10px] font-bold px-3 py-1.5 rounded-lg flex-shrink-0 transition"
                 style={{ background: "rgba(96,165,250,0.1)", color: "#60a5fa", border: "1px solid rgba(96,165,250,0.2)" }}>
-                ← Retour au cours
+                {lang === "fr" ? "← Retour au cours" : "← Back to course"}
               </a>
             </div>
           )}
@@ -1904,7 +1910,7 @@ function DashboardContent() {
                   <div>
                     <label className="text-[10px] text-green-400/80 uppercase tracking-widest mb-1.5 block">Take Profit</label>
                     <input type="number" value={orderTp} onChange={(e) => setOrderTp(e.target.value)}
-                      placeholder="Optionnel"
+                      placeholder={lang === "fr" ? "Optionnel" : "Optional"}
                       className="w-full bg-green-500/5 border border-green-500/15 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-green-500/40" />
                     <div className="flex gap-1 mt-1">
                       {[3, 5, 10].map(pct => (
@@ -1916,7 +1922,7 @@ function DashboardContent() {
                   <div>
                     <label className="text-[10px] text-red-400/80 uppercase tracking-widest mb-1.5 block">Stop Loss</label>
                     <input type="number" value={orderSl} onChange={(e) => setOrderSl(e.target.value)}
-                      placeholder="Optionnel"
+                      placeholder={lang === "fr" ? "Optionnel" : "Optional"}
                       className="w-full bg-red-500/5 border border-red-500/15 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-red-500/40" />
                     <div className="flex gap-1 mt-1">
                       {[3, 5, 10].map(pct => (

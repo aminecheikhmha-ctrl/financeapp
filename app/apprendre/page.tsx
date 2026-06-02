@@ -409,10 +409,10 @@ export default function Apprendre() {
             {/* Right: stats */}
             <div className="grid grid-cols-2 gap-3 md:w-64 flex-shrink-0">
               {[
-                { label: "Completed courses", value: `${completedCourses}/${COURSES.length}`, color: "#4ade80" },
-                { label: "Total XP",         value: `⚡ ${totalXP.toLocaleString()}`, color: "#facc15" },
-                { label: "Progress",         value: `${globalPct}%`, color: "#60a5fa" },
-                { label: "Chapters done",    value: `${completedChapters}/${TOTAL_CHAPTERS}`, color: "#f97316" },
+                { label: t.academy.stats.completedCourses, value: `${completedCourses}/${COURSES.length}`, color: "#4ade80" },
+                { label: t.academy.stats.totalXP,         value: `⚡ ${totalXP.toLocaleString()}`, color: "#facc15" },
+                { label: t.academy.stats.progress,        value: `${globalPct}%`, color: "#60a5fa" },
+                { label: t.academy.stats.chaptersDone,    value: `${completedChapters}/${TOTAL_CHAPTERS}`, color: "#f97316" },
               ].map((s, i) => (
                 <motion.div key={s.label}
                   initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
@@ -446,9 +446,9 @@ export default function Apprendre() {
         {/* ── BADGES ───────────────────────────────────────────────────────── */}
         <div className="flex gap-3 md:gap-4 mb-8 flex-wrap">
           {[
-            { label: "Beginner",      icon: "🌱", color: "#4ade80", unlocked: debutantDone },
-            { label: "Intermediate",  icon: "📊", color: "#60a5fa", unlocked: intermDone   },
-            { label: "Expert",        icon: "🏆", color: "#a78bfa", unlocked: advancedDone },
+            { label: t.academy.badges.beginner,     icon: "🌱", color: "#4ade80", unlocked: debutantDone },
+            { label: t.academy.badges.intermediate, icon: "📊", color: "#60a5fa", unlocked: intermDone   },
+            { label: t.academy.badges.expert,       icon: "🏆", color: "#a78bfa", unlocked: advancedDone },
           ].map((b, i) => (
             <motion.div key={b.label}
               initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }}
@@ -464,7 +464,7 @@ export default function Apprendre() {
               <div>
                 <p className="text-sm font-black text-white">{b.label}</p>
                 <p className="text-[10px] font-bold" style={{ color: b.unlocked ? b.color : "#444" }}>
-                  {b.unlocked ? "✓ Completed" : "To complete"}
+                  {b.unlocked ? t.academy.badges.completed : t.academy.badges.toComplete}
                 </p>
               </div>
             </motion.div>
@@ -751,7 +751,7 @@ export default function Apprendre() {
 
           {/* Type */}
           <div className="flex rounded-xl overflow-hidden flex-shrink-0" style={{ border: "1px solid #1a1a1a" }}>
-            {([["all","All"],["video","📹 Video"],["interactive","🎮 Interactive"]] as const).map(([k,l]) => (
+            {([["all", t.academy.filters.all],["video", t.academy.filters.video],["interactive", t.academy.filters.interactive]] as const).map(([k,l]) => (
               <button key={k} onClick={() => setType(k as any)}
                 className="px-3 py-2 text-[10px] font-bold uppercase tracking-wide transition-colors"
                 style={{ background: typeFilter === k ? "#1a1a1a" : "transparent", color: typeFilter === k ? "#fff" : "#444" }}>

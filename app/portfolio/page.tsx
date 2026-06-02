@@ -820,8 +820,8 @@ export default function PortfolioPage() {
             {/* Sort */}
             <div className="flex gap-2 mb-4">
               {[
-                { key: "date",   label: "Date" },
-                { key: "pnl",    label: "Value" },
+                { key: "date",   label: t.portfolio.table.date },
+                { key: "pnl",    label: t.portfolio.table.value },
                 { key: "symbol", label: "Asset" },
               ].map(s => (
                 <button key={s.key} onClick={() => setSortOrders(s.key as any)}
@@ -935,7 +935,7 @@ export default function PortfolioPage() {
               ) : (
                 <div className="h-40 flex items-center justify-center">
                   <p className="text-white/25 text-sm">
-                    {perfHistory.length <= 1 ? "Place trades to see your history" : "No trades in this period"}
+                    {perfHistory.length <= 1 ? t.portfolio.stats.placeTradesHistory : t.portfolio.stats.noTradesPeriod}
                   </p>
                 </div>
               )}
@@ -1029,11 +1029,11 @@ export default function PortfolioPage() {
             {/* Stats grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {[
-                { label: "Win Rate", value: `${stats.winRate.toFixed(1)}%`, color: stats.winRate >= 50 ? "#4ade80" : "#f87171", desc: "% of winning positions" },
-                { label: "Profit Factor", value: isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : "∞", color: stats.profitFactor >= 1.5 ? "#4ade80" : "#f87171", desc: "Gains / Losses" },
-                { label: "Avg. gain", value: `+$${stats.avgWin.toFixed(2)}`, color: "#4ade80", desc: "Per winning position" },
-                { label: "Avg. loss", value: `-$${Math.abs(stats.avgLoss).toFixed(2)}`, color: "#f87171", desc: "Per losing position" },
-                { label: "Closed trades", value: String(stats.totalTrades), color: "#60a5fa", desc: "Buy/sell pairs" },
+                { label: t.portfolio.stats.winRate, value: `${stats.winRate.toFixed(1)}%`, color: stats.winRate >= 50 ? "#4ade80" : "#f87171", desc: t.portfolio.stats.winningPositions },
+                { label: t.portfolio.stats.profitFactor, value: isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : "∞", color: stats.profitFactor >= 1.5 ? "#4ade80" : "#f87171", desc: t.portfolio.stats.gainsLosses },
+                { label: t.portfolio.stats.avgGain, value: `+$${stats.avgWin.toFixed(2)}`, color: "#4ade80", desc: t.portfolio.stats.perWinning },
+                { label: t.portfolio.stats.avgLoss, value: `-$${Math.abs(stats.avgLoss).toFixed(2)}`, color: "#f87171", desc: t.portfolio.stats.perLosing },
+                { label: t.portfolio.stats.closedTrades, value: String(stats.totalTrades), color: "#60a5fa", desc: t.portfolio.stats.buySellPairs },
                 { label: "Total P&L", value: `${stats.totalPnl >= 0 ? "+" : ""}$${stats.totalPnl.toFixed(2)}`, color: stats.totalPnl >= 0 ? "#4ade80" : "#f87171", desc: "Since the beginning" },
               ].map(stat => (
                 <div key={stat.label} className="rounded-2xl p-4"
