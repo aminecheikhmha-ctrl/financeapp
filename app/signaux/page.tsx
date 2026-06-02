@@ -86,22 +86,22 @@ function pctChange(from: number, to: number): string {
   return (v >= 0 ? "+" : "") + v.toFixed(1) + "%"
 }
 
-const REASON_MAP: Record<string, string> = {
-  "RSI":      "Overbought/Oversold",
-  "Stoch":    "Likely reversal",
-  "MACD":     "Momentum change",
-  "BB":       "Bollinger limits",
-  "Volume":   "Abnormal volume",
-  "Williams": "Reversal zone",
-  "EMA":      "Trend crossover",
-  "OBV":      "Volume pressure",
-  "Ichimoku": "Ichimoku signal",
-  "CCI":      "CCI oscillator",
-}
-
-function humanReason(indicator: string): string {
-  const key = Object.keys(REASON_MAP).find(k => indicator.includes(k))
-  return key ? REASON_MAP[key] : indicator
+function humanReason(indicator: string, ind?: Record<string, string>): string {
+  if (!ind) return indicator
+  const map: Record<string, string> = {
+    "RSI":      ind.overboughtOversold,
+    "Stoch":    ind.likelyReversal,
+    "MACD":     ind.momentumChange,
+    "BB":       ind.bollingerLimits,
+    "Volume":   ind.abnormalVolume,
+    "Williams": ind.reversalZone,
+    "EMA":      ind.trendCrossover,
+    "OBV":      ind.volumePressure,
+    "Ichimoku": ind.ichimokuSignal,
+    "CCI":      ind.cciOscillator,
+  }
+  const key = Object.keys(map).find(k => indicator.includes(k))
+  return key ? map[key] : indicator
 }
 
 function isBull(signal: string) { return signal === "ACHAT" || signal === "ACHAT_FORT" }
@@ -125,6 +125,7 @@ function HeroSignalCard({ signal, onUpgrade, blurred }: {
   signal: SignalResult; onUpgrade: () => void; blurred?: boolean
 }) {
   const router  = useRouter()
+  const { t }   = useLanguage()
   const bullish = isBull(signal.signal)
   const color   = bullish ? D.green : D.red
   const pctTp   = signal.entry_price ? ((signal.tp1 - signal.entry_price) / signal.entry_price) * 100 : 0
@@ -133,7 +134,7 @@ function HeroSignalCard({ signal, onUpgrade, blurred }: {
     ? Math.abs(signal.tp1 - signal.entry_price) / Math.abs(signal.sl - signal.entry_price)
     : signal.risk_reward_tp1
 
-  const reasons = signal.confirmed_by.slice(0, 4).map(humanReason)
+  const reasons = signal.confirmed_by.slice(0, 4).map(i => humanReason(i, t.signals.indicators as Record<string, string>))
 
   return (
     <div className="relative rounded-2xl overflow-hidden"
@@ -306,7 +307,7 @@ function CompactSignalCard({ signal, rank, onUpgrade, blurred }: {
     ? Math.abs(signal.tp1 - signal.entry_price) / Math.abs(signal.sl - signal.entry_price)
     : signal.risk_reward_tp1
 
-  const reasons = signal.confirmed_by.slice(0, 2).map(humanReason)
+  const reasons = signal.confirmed_by.slice(0, 2).map(i => humanReason(i, t.signals.indicators as Record<string, string>))
 
   return (
     <div className="relative rounded-2xl overflow-hidden transition-all hover:scale-[1.005] cursor-pointer"
@@ -704,14 +705,14 @@ export default function Signaux() {
 
               {/* Tabs */}
               <div className="flex rounded-xl overflow-hidden" style={{ border: `1px solid ${D.border}` }}>
-                {(["live", "historique"] as const).map(t => (
-                  <button key={t} onClick={() => setTab(t)}
+                {(["live", "historique"] as const).map(tabKey => (
+                  <button key={tabKey} onClick={() => setTab(tabKey)}
                     className="px-4 py-1.5 text-[11px] font-bold transition-all"
                     style={{
-                      background: tab === t ? "rgba(255,255,255,0.1)" : "transparent",
-                      color: tab === t ? "white" : "rgba(255,255,255,0.3)",
+                      background: tab === tabKey ? "rgba(255,255,255,0.1)" : "transparent",
+                      color: tab === tabKey ? "white" : "rgba(255,255,255,0.3)",
                     }}>
-                    {t === "live" ? "Live" : "History"}
+                    {tabKey === "live" ? t.signals.live : t.signals.history}
                   </button>
                 ))}
               </div>
@@ -787,7 +788,7 @@ export default function Signaux() {
                 color: s.fort > 0 ? "#f97316" : "rgba(255,255,255,0.25)",
                 bg:    s.fort > 0 ? "rgba(249,115,22,0.08)" : "rgba(255,255,255,0.03)",
                 border:s.fort > 0 ? "rgba(249,115,22,0.2)"  : D.border,
-                desc:  "Maximum priority",
+                desc:  t.signals.maxPriority,
               },
               {
                 label: "📈 Buys",
@@ -795,7 +796,7 @@ export default function Signaux() {
                 color: "#4ade80",
                 bg:    "rgba(34,197,94,0.05)",
                 border:"rgba(34,197,94,0.12)",
-                desc:  "Bullish signals",
+                desc:  t.signals.bullishSignals,
               },
               {
                 label: "📉 Sells",
@@ -803,7 +804,7 @@ export default function Signaux() {
                 color: "#f87171",
                 bg:    "rgba(239,68,68,0.05)",
                 border:"rgba(239,68,68,0.12)",
-                desc:  "Bearish signals",
+                desc:  t.signals.bearishSignals,
               },
               {
                 label: "🎯 Avg. confidence",
@@ -811,15 +812,15 @@ export default function Signaux() {
                 color: s.avg_confluence >= 65 ? "#4ade80" : s.avg_confluence >= 50 ? "#fbbf24" : "#9ca3af",
                 bg:    "rgba(255,255,255,0.03)",
                 border:D.border,
-                desc:  s.avg_confluence >= 65 ? "High quality 🔥" : "Average quality",
+                desc:  s.avg_confluence >= 65 ? t.signals.highQuality : t.signals.avgQuality,
               },
               {
                 label: "🌡️ Sentiment",
-                value: s.achats > s.ventes ? "Bullish 🐂" : s.ventes > s.achats ? "Bearish 🐻" : "Neutral",
+                value: s.achats > s.ventes ? t.signals.bullishMarket : s.ventes > s.achats ? t.signals.bearishMarket : t.signals.neutralMarket,
                 color: s.achats > s.ventes ? "#4ade80" : s.ventes > s.achats ? "#f87171" : "#9ca3af",
                 bg:    "rgba(255,255,255,0.03)",
                 border:D.border,
-                desc:  "Overall direction",
+                desc:  t.signals.overallDirection,
               },
             ].map(kpi => (
               <div key={kpi.label} className="rounded-xl p-3"
@@ -981,7 +982,7 @@ export default function Signaux() {
                       const rr       = Math.abs(signal.sl - signal.entry_price) > 0
                         ? Math.abs(signal.tp1 - signal.entry_price) / Math.abs(signal.sl - signal.entry_price)
                         : signal.risk_reward_tp1
-                      const topReason = signal.confirmed_by[0] ? humanReason(signal.confirmed_by[0]) : null
+                      const topReason = signal.confirmed_by[0] ? humanReason(signal.confirmed_by[0], t.signals.indicators as Record<string, string>) : null
 
                       if (blurred) return (
                         <div key={signal.symbol} className="relative flex items-center gap-4 px-5 py-4 rounded-2xl"
@@ -1099,7 +1100,7 @@ export default function Signaux() {
                   <table className="w-full">
                     <thead>
                       <tr style={{ background: "rgba(255,255,255,0.02)", borderBottom: `1px solid ${D.border}` }}>
-                        {["Signal", "Asset", "Reason", "Price", "Chg.", "Confidence", "R/R", "Expires", ""].map(h => (
+                        {[t.signals.tableHeaders.signal, t.signals.tableHeaders.asset, t.signals.tableHeaders.reason, t.signals.tableHeaders.price, t.signals.tableHeaders.change, t.signals.tableHeaders.confidence, t.signals.tableHeaders.rr, t.signals.tableHeaders.expires, ""].map(h => (
                           <th key={h} className="px-4 py-3 text-left text-[9px] text-white/25 uppercase tracking-widest font-bold whitespace-nowrap">
                             {h}
                           </th>

@@ -345,7 +345,7 @@ function DashboardContent() {
         const { haptic } = await import("@/lib/capacitor")
         await haptic("success")
         const isPending = data.status === "pending"
-        const sideLabel = side === "buy" ? "Bought" : side === "short" ? "Shorted" : "Sold"
+        const sideLabel = side === "buy" ? t.dashboard.bought : side === "short" ? t.dashboard.shorted : t.dashboard.sold
         setOrderMsg(isPending
           ? `⏳ Order scheduled — execution at market open`
           : `✅ ${sideLabel} at $${data.price.toFixed(2)}`)
@@ -850,10 +850,10 @@ function DashboardContent() {
                   <div className="hidden lg:flex items-center gap-4 px-4 py-2 rounded-xl"
                     style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
                     {[
-                      { label: "Open",  value: activeData.previousClose?.toFixed(2) ?? "—" },
-                      { label: "High",  value: activeData.high?.toFixed(2) ?? "—", color: "#4ade80" },
-                      { label: "Low",   value: activeData.low?.toFixed(2)  ?? "—", color: "#f87171" },
-                      { label: "Vol.",  value: formatVolume(activeData.volume) },
+                      { label: t.dashboard.indicators.open,   value: activeData.previousClose?.toFixed(2) ?? "—" },
+                      { label: t.dashboard.indicators.high,   value: activeData.high?.toFixed(2) ?? "—", color: "#4ade80" },
+                      { label: t.dashboard.indicators.low,    value: activeData.low?.toFixed(2)  ?? "—", color: "#f87171" },
+                      { label: t.dashboard.indicators.volume, value: formatVolume(activeData.volume) },
                     ].map(stat => (
                       <div key={stat.label} className="text-center">
                         <p className="text-[9px] text-white/20 uppercase tracking-widest mb-0.5">{stat.label}</p>
@@ -911,7 +911,7 @@ function DashboardContent() {
                   ]
                 : [
                     { key: "chart", label: t.dashboard.tabs.signals },
-                    { key: "technique", label: "Indicators" },
+                    { key: "technique", label: t.dashboard.tabs2.indicators },
                     { key: "ia", label: `${t.dashboard.signals} 🤖` },
                     { key: "news", label: "📰 News & Sentiment" },
                   ]
@@ -1062,7 +1062,7 @@ function DashboardContent() {
                   {
                     label: "RSI (14)",
                     value: rsiVal !== null ? rsiVal.toFixed(1) : "—",
-                    signal: rsiVal !== null ? (rsiVal > 70 ? "Overbought" : rsiVal < 30 ? "Oversold" : "Neutral") : "—",
+                    signal: rsiVal !== null ? (rsiVal > 70 ? t.dashboard.indicators.overbought : rsiVal < 30 ? t.dashboard.indicators.oversold : t.dashboard.indicators.neutral) : "—",
                     color: rsiVal !== null ? (rsiVal > 70 ? "#f87171" : rsiVal < 30 ? "#4ade80" : "#9ca3af") : "#9ca3af",
                     bar: rsiVal !== null ? rsiVal : null, barMax: 100,
                     desc: `Momentum oscillator`,
@@ -1070,7 +1070,7 @@ function DashboardContent() {
                   {
                     label: "MACD",
                     value: macdVal !== null ? (macdVal >= 0 ? `+${macdVal}` : `${macdVal}`) : "—",
-                    signal: macdVal !== null ? (macdVal > 0 ? "Bullish" : "Bearish") : "—",
+                    signal: macdVal !== null ? (macdVal > 0 ? t.dashboard.indicators.bullish : t.dashboard.indicators.bearish) : "—",
                     color: macdVal !== null ? (macdVal > 0 ? "#4ade80" : "#f87171") : "#9ca3af",
                     bar: null, barMax: 100,
                     desc: `EMA12 − EMA26`,
@@ -1078,7 +1078,7 @@ function DashboardContent() {
                   {
                     label: "Stochastic %K",
                     value: stochK !== null ? stochK.toFixed(1) : "—",
-                    signal: stochK !== null ? (stochK > 80 ? "Overbought" : stochK < 20 ? "Oversold" : "Neutral") : "—",
+                    signal: stochK !== null ? (stochK > 80 ? t.dashboard.indicators.overbought : stochK < 20 ? t.dashboard.indicators.oversold : t.dashboard.indicators.neutral) : "—",
                     color: stochK !== null ? (stochK > 80 ? "#f87171" : stochK < 20 ? "#4ade80" : "#9ca3af") : "#9ca3af",
                     bar: stochK, barMax: 100,
                     desc: `Oscillator (14)`,
@@ -1086,7 +1086,7 @@ function DashboardContent() {
                   {
                     label: "Bollinger",
                     value: bbUpper !== null ? `±${((bbUpper - bbLower!) / 2).toFixed(2)}` : "—",
-                    signal: bbUpper !== null ? (price >= bbUpper ? "Upper band" : price <= bbLower! ? "Lower band" : "Within bands") : "—",
+                    signal: bbUpper !== null ? (price >= bbUpper ? t.dashboard.indicators.upperBand : price <= bbLower! ? t.dashboard.indicators.lowerBand : t.dashboard.indicators.withinBands) : "—",
                     color: bbUpper !== null ? (price >= bbUpper ? "#f87171" : price <= bbLower! ? "#4ade80" : "#9ca3af") : "#9ca3af",
                     bar: null, barMax: 100,
                     desc: bbUpper !== null ? `${bbLower?.toFixed(0)} – ${bbUpper?.toFixed(0)}` : "MM20 ±2σ",
@@ -1094,7 +1094,7 @@ function DashboardContent() {
                   {
                     label: "EMA 9 / 21",
                     value: ema9Val !== null && ema21Val !== null ? `${ema9Val > ema21Val ? "↑" : "↓"}` : "—",
-                    signal: ema9Val !== null && ema21Val !== null ? (ema9Val > ema21Val ? "Bullish" : "Bearish") : "—",
+                    signal: ema9Val !== null && ema21Val !== null ? (ema9Val > ema21Val ? t.dashboard.indicators.bullish : t.dashboard.indicators.bearish) : "—",
                     color: ema9Val !== null && ema21Val !== null ? (ema9Val > ema21Val ? "#4ade80" : "#f87171") : "#9ca3af",
                     bar: null, barMax: 100,
                     desc: ema9Val !== null ? `EMA9: ${ema9Val} · EMA21: ${ema21Val}` : "EMA crossover",
@@ -1138,7 +1138,7 @@ function DashboardContent() {
                             background: price > ema50Val ? "rgba(74,222,128,0.1)" : "rgba(248,113,113,0.1)",
                             color: price > ema50Val ? "#4ade80" : "#f87171"
                           }}>
-                            Price {price > ema50Val ? "above" : "below"} — {price > ema50Val ? "Uptrend" : "Downtrend"}
+                            Price {price > ema50Val ? "above" : "below"} — {price > ema50Val ? t.dashboard.indicators.uptrend : t.dashboard.indicators.downtrend}
                           </span>
                           <p className="text-[9px] text-gray-700 mt-1">50-period moving average</p>
                         </div>
@@ -1457,7 +1457,7 @@ function DashboardContent() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[9px] text-gray-600 uppercase tracking-widest">
-                    {userProfile?.level === "beginner" ? "Virtual capital" : "Cash"}
+                    {userProfile?.level === "beginner" ? t.dashboard.virtualCapital : t.dashboard.cash}
                   </p>
                   <p className="text-lg font-black text-white tabular-nums">
                     {account ? `$${account.cash.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
@@ -1479,8 +1479,8 @@ function DashboardContent() {
             {/* Tab bar */}
             <div className="flex border-b border-white/[0.05]">
               {([
-                { key: "trade",  label: "Trade",  icon: "⚡" },
-                { key: "calc",   label: "Calc",   icon: "🧮" },
+                { key: "trade",  label: t.dashboard.tabs2.trade,  icon: "⚡" },
+                { key: "calc",   label: t.dashboard.tabs2.calc,   icon: "🧮" },
                 { key: "ordres", label: t.dashboard.tabs.orders, icon: "📋" },
               ] as const).map(tab => (
                 <button key={tab.key} onClick={() => setRightTab(tab.key)}
@@ -1594,11 +1594,11 @@ function DashboardContent() {
                     <div className="space-y-1.5">
                       {[
                         { l: "24h Change", v: `${up ? "+" : ""}${activeData.change.toFixed(2)}%`, c: up ? "text-green-400" : "text-red-400" },
-                        { l: "Day High",   v: activeData.high ? `$${activeData.high.toFixed(2)}` : "—" },
-                        { l: "Day Low",    v: activeData.low  ? `$${activeData.low.toFixed(2)}`  : "—" },
+                        { l: t.dashboard.indicators.dayHigh,   v: activeData.high ? `$${activeData.high.toFixed(2)}` : "—" },
+                        { l: t.dashboard.indicators.dayLow,    v: activeData.low  ? `$${activeData.low.toFixed(2)}`  : "—" },
                         { l: "Prev. Close", v: activeData.previousClose ? `$${activeData.previousClose.toFixed(2)}` : "—" },
-                        { l: "Market Cap",    v: fmt(activeData.marketCap) },
-                        { l: "Volume",        v: fmt(activeData.volume, "") },
+                        { l: t.dashboard.indicators.marketCap, v: fmt(activeData.marketCap) },
+                        { l: t.dashboard.indicators.volume,    v: fmt(activeData.volume, "") },
                       ].map(k => (
                         <div key={k.l} className="flex justify-between items-center">
                           <span className="text-[10px] text-gray-600">{k.l}</span>
@@ -1784,7 +1784,7 @@ function DashboardContent() {
                     <p className="text-[10px] text-orange-400/70 mt-0.5">📉 Short sell — negative position</p>
                   )}
                   <p className="text-[10px] text-gray-500">
-                    {activeData?.name} · {isPending ? "Deferred order" : t.dashboard.market}
+                    {activeData?.name} · {isPending ? t.dashboard.deferredOrder : t.dashboard.market}
                   </p>
                 </div>
               </div>
@@ -1814,7 +1814,7 @@ function DashboardContent() {
             <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3 mb-4 flex justify-between items-center">
               <div>
                 <p className="text-[9px] text-gray-600 uppercase tracking-widest">
-                  {isPending ? "Last known price" : "Current price"}
+                  {isPending ? t.dashboard.lastKnownPrice : t.dashboard.currentPrice}
                 </p>
                 <p className="text-lg font-black text-white">${activeData?.price.toFixed(2)}</p>
                 {isPending && (
