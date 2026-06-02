@@ -106,6 +106,7 @@ function DashboardContent() {
   const [showTour, setShowTour] = useState(false)
   const [analyticsOpen, setAnalyticsOpen] = useState(false)
   const [rightTab, setRightTab] = useState<"trade" | "calc" | "ordres">("trade")
+  const [panelOpen, setPanelOpen] = useState(true)
   const [perfSnapshots, setPerfSnapshots] = useState<{ date: string; daily_pnl: number; daily_pnl_pct: number; portfolio_value: number }[]>([])
   const [perfAlerts, setPerfAlerts] = useState<string[]>([])
   const [isDemo, setIsDemo] = useState(false)
@@ -720,8 +721,8 @@ function DashboardContent() {
         )}>{plan === "free" ? "Free" : plan === "pro" ? "Pro" : "Premium"}</span>
       </div>
 
-      {/* ── Main layout: left chart | right sidebar ──────────────────────── */}
-      <div className="flex flex-col md:flex-row">
+      {/* ── Main layout: left chart | right slide panel ──────────────────── */}
+      <div className="flex flex-col md:flex-row relative">
 
         {/* LEFT — chart + tabs */}
         <div className="flex-1 flex flex-col min-w-0">
@@ -763,14 +764,26 @@ function DashboardContent() {
                 <>
                   <span className="text-base">🧠</span>
                   <span className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Market intelligence</span>
-                  <span className={`px-2 py-0.5 rounded-lg text-xs font-black ${
-                    marketRegime.regime === "risk_on" ? "bg-green-500/15 text-green-400 border border-green-500/25" :
-                    marketRegime.regime === "risk_off" ? "bg-red-500/15 text-red-400 border border-red-500/25" :
-                    "bg-yellow-500/15 text-yellow-400 border border-yellow-500/25"
-                  }`}>
-                    {marketRegime.regime === "risk_on" ? "🟢 Risk On" : marketRegime.regime === "risk_off" ? "🔴 Risk Off" : "🟡 Transition"}
-                  </span>
-                  <span className="text-gray-500 text-xs">VIX: <span className="text-white font-bold">{marketRegime.vix_level}</span></span>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl" style={
+                    marketRegime.regime === "risk_on"
+                      ? { background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.15)" }
+                      : marketRegime.regime === "risk_off"
+                      ? { background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)" }
+                      : { background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.15)" }
+                  }>
+                    <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                      marketRegime.regime === "risk_on" ? "bg-green-400" :
+                      marketRegime.regime === "risk_off" ? "bg-red-400" : "bg-yellow-400"
+                    } animate-pulse`} />
+                    <span className={`text-xs font-bold ${
+                      marketRegime.regime === "risk_on" ? "text-green-400/80" :
+                      marketRegime.regime === "risk_off" ? "text-red-400/80" : "text-yellow-400/80"
+                    }`}>
+                      {marketRegime.regime === "risk_on" ? "Risk On" : marketRegime.regime === "risk_off" ? "Risk Off" : "Transition"}
+                    </span>
+                    <span className="text-white/20 text-xs">·</span>
+                    <span className="text-white/35 text-xs">VIX {marketRegime.vix_level}</span>
+                  </div>
                   <span className="text-gray-600 text-xs hidden sm:block truncate flex-1">{marketRegime.commentary}</span>
                   <span className="text-green-400 text-xs ml-auto hidden sm:block">View Coach →</span>
                 </>
@@ -809,7 +822,7 @@ function DashboardContent() {
           )}
 
           {/* Asset header — premium */}
-          <div className="flex items-center justify-between flex-wrap gap-3 px-5 py-4 border-b border-white/5">
+          <div className="flex items-center justify-between flex-wrap gap-3 px-5 py-4 border-b border-white/5 relative">
             {activeData ? (
               <>
                 <div className="flex items-center gap-4">
@@ -888,6 +901,20 @@ function DashboardContent() {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Panel toggle — desktop only */}
+          <div className="hidden md:flex justify-end px-4 py-2 border-b border-white/[0.04]">
+            <button
+              onClick={() => setPanelOpen(p => !p)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:scale-[1.03]"
+              style={{
+                background: panelOpen ? "rgba(34,197,94,0.10)" : "rgba(255,255,255,0.05)",
+                border: panelOpen ? "1px solid rgba(34,197,94,0.25)" : "1px solid rgba(255,255,255,0.09)",
+                color: panelOpen ? "#4ade80" : "rgba(255,255,255,0.45)",
+              }}>
+              {panelOpen ? "← Close panel" : "Trade →"}
+            </button>
           </div>
 
           {/* Chart */}
@@ -1453,8 +1480,10 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* RIGHT — sticky sidebar with tabs */}
-        <div className="w-full md:w-72 md:flex-shrink-0 border-t md:border-t-0 md:border-l border-white/[0.05] flex flex-col md:sticky md:top-14 md:self-start md:max-h-[calc(100vh-56px)]" style={{ background: "#0c0c0c" }}>
+        {/* RIGHT — slide panel */}
+        <div className={`w-full md:w-72 md:flex-shrink-0 border-t md:border-t-0 md:border-l border-white/[0.05] flex flex-col md:sticky md:top-14 md:self-start md:max-h-[calc(100vh-56px)] transition-all duration-300 ${
+          panelOpen ? "md:translate-x-0 md:opacity-100" : "md:hidden"
+        }`} style={{ background: "#0c0c0c" }}>
 
           {/* ── Header: cash + tab bar ── */}
           <div className="flex-shrink-0">

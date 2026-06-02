@@ -64,11 +64,37 @@ function timeAgo(date: string) {
   return `il y a ${Math.floor(hours / 24)}j`
 }
 
+const AVATAR_GRADIENTS = [
+  "linear-gradient(135deg, #22c55e, #16a34a)",
+  "linear-gradient(135deg, #60a5fa, #3b82f6)",
+  "linear-gradient(135deg, #f59e0b, #d97706)",
+  "linear-gradient(135deg, #a78bfa, #7c3aed)",
+  "linear-gradient(135deg, #f87171, #dc2626)",
+  "linear-gradient(135deg, #34d399, #059669)",
+  "linear-gradient(135deg, #fb923c, #ea580c)",
+  "linear-gradient(135deg, #e879f9, #a21caf)",
+]
+
+function getUserGradient(username: string): string {
+  let hash = 0
+  for (let i = 0; i < username.length; i++) {
+    hash = username.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return AVATAR_GRADIENTS[Math.abs(hash) % AVATAR_GRADIENTS.length]
+}
+
 function Avatar({ username, color, size = 8 }: { username: string; color: string; size?: number }) {
+  const s = size * 4 // Tailwind px equivalent
   return (
     <div
-      className={`w-${size} h-${size} rounded-full flex items-center justify-center flex-shrink-0 font-bold text-black`}
-      style={{ background: color, fontSize: size * 1.5 + "px" }}
+      className="rounded-2xl flex items-center justify-center flex-shrink-0 font-black text-white"
+      style={{
+        width: s,
+        height: s,
+        background: getUserGradient(username),
+        fontSize: Math.max(10, size * 1.4) + "px",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+      }}
     >
       {username?.[0]?.toUpperCase() ?? "?"}
     </div>
@@ -113,10 +139,10 @@ function PostCard({ post, onClick }: { post: Post; onClick: () => void }) {
               </span>
             )}
           </div>
-          <h3 className="text-sm font-semibold text-white group-hover:text-green-400 transition-colors line-clamp-2 mb-2">
+          <h3 className="text-base font-black text-white group-hover:text-green-400 transition-colors line-clamp-2 mb-1.5 leading-snug">
             {post.title}
           </h3>
-          <p className="text-xs text-gray-500 line-clamp-2 mb-3">{post.content}</p>
+          <p className="text-sm text-white/38 leading-relaxed line-clamp-2 mb-3">{post.content}</p>
           <div className="flex items-center gap-4 text-xs text-gray-600">
             <span className="flex items-center gap-1">
               <span>❤️</span> {post.likes}
@@ -433,7 +459,7 @@ export default function Forum() {
             ))}
           </nav>
 
-          <div className="mt-6 pt-4 border-t border-white/5 space-y-0.5">
+          {entries.length >= 3 && <div className="mt-6 pt-4 border-t border-white/5 space-y-0.5">
             <button
               onClick={() => setTab("leaderboard")}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all ${
@@ -477,7 +503,7 @@ export default function Forum() {
                 </a>
               )
             )}
-          </div>
+          </div>}
 
           {/* Mobile tabs */}
           <div className="flex lg:hidden gap-2 mb-4">

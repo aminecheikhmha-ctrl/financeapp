@@ -1,39 +1,45 @@
 export default function NotFound() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-6"
-      style={{ background: "#050505" }}>
-      <div className="max-w-md w-full text-center">
+    <div className="min-h-screen flex flex-col items-center justify-center text-center px-6 relative overflow-hidden"
+      style={{ background: "var(--bg-canvas)" }}>
 
-        {/* Gradient 404 */}
-        <div className="mb-8">
-          <p className="text-[120px] font-black leading-none"
-            style={{
-              background: "linear-gradient(135deg, rgba(34,197,94,0.3), rgba(34,197,94,0.05))",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-            }}>
-            404
-          </p>
-        </div>
+      {/* Background glow */}
+      <div className="absolute inset-0 pointer-events-none"
+        style={{ background: "radial-gradient(ellipse 60% 60% at 50% 50%, rgba(34,197,94,0.06) 0%, transparent 70%)" }} />
 
-        <h1 className="text-2xl font-black text-white mb-3">
-          Page introuvable
+      <div className="relative">
+        {/* Giant 404 */}
+        <p className="text-[160px] font-black leading-none select-none mb-0"
+          style={{
+            background: "linear-gradient(135deg, rgba(34,197,94,0.18), rgba(34,197,94,0.03))",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+            letterSpacing: "-0.04em",
+          }}>
+          404
+        </p>
+
+        <h1 className="text-2xl font-black text-white mb-3 -mt-4"
+          style={{ letterSpacing: "-0.02em" }}>
+          Page not found
         </h1>
-        <p className="text-white/40 text-sm leading-relaxed mb-8">
-          Cette page n&apos;existe pas ou a été déplacée.
-          Retourne au dashboard pour continuer à trader.
+        <p className="text-sm max-w-xs mx-auto leading-relaxed mb-8"
+          style={{ color: "rgba(255,255,255,0.35)", lineHeight: 1.7 }}>
+          This page doesn&apos;t exist or has been moved.
+          Head back to the dashboard to continue trading.
         </p>
 
         <div className="flex gap-3 justify-center">
           <a href="/dashboard"
-            className="px-6 py-3 rounded-xl text-sm font-black text-black transition-all hover:scale-[1.02]"
-            style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}>
+            className="px-6 py-3 rounded-xl text-sm font-black text-black transition-all hover:scale-[1.02] active:scale-[0.98]"
+            style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", boxShadow: "0 4px 20px rgba(34,197,94,0.30)" }}>
             → Dashboard
           </a>
           <a href="/"
-            className="px-6 py-3 rounded-xl text-sm font-semibold text-white/50 hover:text-white transition border border-white/10">
-            Accueil
+            className="px-6 py-3 rounded-xl text-sm font-semibold transition-all hover:text-white"
+            style={{ color: "rgba(255,255,255,0.42)", border: "1px solid rgba(255,255,255,0.09)" }}>
+            Home
           </a>
         </div>
       </div>

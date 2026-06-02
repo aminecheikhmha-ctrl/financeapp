@@ -734,27 +734,42 @@ export default function Apprendre() {
         {/* ── FILTERS ──────────────────────────────────────────────────────── */}
         <div className="flex gap-2 mb-6 overflow-x-auto pb-1 flex-nowrap md:flex-wrap items-center">
           {/* Level */}
-          <div className="flex rounded-xl overflow-hidden flex-shrink-0" style={{ border: "1px solid #1a1a1a" }}>
-            {(["all", "débutant", "intermédiaire", "avancé"] as const).map(lv => (
-              <button key={lv} onClick={() => setLevel(lv)}
-                className="px-3 py-2 text-[10px] font-bold uppercase tracking-wide transition-colors"
-                style={{
-                  background: levelFilter === lv ? "#1a1a1a" : "transparent",
-                  color: levelFilter === lv
-                    ? (lv === "all" ? "#fff" : LEVEL_COLORS[lv as keyof typeof LEVEL_COLORS]?.text ?? "#fff")
-                    : "#444",
-                }}>
-                {lv === "all" ? t.signals.filters.all : lv === "débutant" ? "🌱" : lv === "intermédiaire" ? "📊" : "🏆"}{lv !== "all" ? ` ${lv === "débutant" ? t.academy.levels.beginner : lv === "intermédiaire" ? t.academy.levels.intermediate : t.academy.levels.advanced}` : ""}
-              </button>
-            ))}
+          <div className="flex gap-1.5 flex-shrink-0">
+            {(["all", "débutant", "intermédiaire", "avancé"] as const).map(lv => {
+              const active = levelFilter === lv
+              const color = lv !== "all" ? (LEVEL_COLORS[lv as keyof typeof LEVEL_COLORS]?.text ?? "#fff") : "#4ade80"
+              return (
+                <button key={lv} onClick={() => setLevel(lv)}
+                  className="px-4 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap"
+                  style={active ? {
+                    background: `rgba(${lv === "all" ? "34,197,94" : lv === "débutant" ? "74,222,128" : lv === "intermédiaire" ? "96,165,250" : "167,139,250"},0.12)`,
+                    border: `1px solid rgba(${lv === "all" ? "34,197,94" : lv === "débutant" ? "74,222,128" : lv === "intermédiaire" ? "96,165,250" : "167,139,250"},0.30)`,
+                    color,
+                  } : {
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    color: "rgba(255,255,255,0.38)",
+                  }}>
+                  {lv === "all" ? t.signals.filters.all : lv === "débutant" ? "🌱" : lv === "intermédiaire" ? "📊" : "🏆"}{lv !== "all" ? ` ${lv === "débutant" ? t.academy.levels.beginner : lv === "intermédiaire" ? t.academy.levels.intermediate : t.academy.levels.advanced}` : ""}
+                </button>
+              )
+            })}
           </div>
 
           {/* Type */}
-          <div className="flex rounded-xl overflow-hidden flex-shrink-0" style={{ border: "1px solid #1a1a1a" }}>
+          <div className="flex gap-1.5 flex-shrink-0">
             {([["all", t.academy.filters.all],["video", t.academy.filters.video],["interactive", t.academy.filters.interactive]] as const).map(([k,l]) => (
               <button key={k} onClick={() => setType(k as any)}
-                className="px-3 py-2 text-[10px] font-bold uppercase tracking-wide transition-colors"
-                style={{ background: typeFilter === k ? "#1a1a1a" : "transparent", color: typeFilter === k ? "#fff" : "#444" }}>
+                className="px-4 py-2 rounded-2xl text-xs font-bold transition-all"
+                style={typeFilter === k ? {
+                  background: "rgba(255,255,255,0.10)",
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  color: "#fff",
+                } : {
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  color: "rgba(255,255,255,0.38)",
+                }}>
                 {l}
               </button>
             ))}

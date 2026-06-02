@@ -323,10 +323,11 @@ function ChatBotInner() {
         ref={btnRef}
         onMouseDown={onMouseDown}
         onTouchStart={onTouchStart}
-        className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl select-none"
+        className="w-12 h-12 rounded-2xl flex items-center justify-center select-none transition-transform hover:scale-110"
         style={{
           ...btnStyle,
-          background: "linear-gradient(135deg, #4ade80, #059669)",
+          background: "linear-gradient(135deg, #22c55e, #16a34a)",
+          boxShadow: "0 8px 30px rgba(34,197,94,0.35), 0 2px 8px rgba(0,0,0,0.3)",
           touchAction: "none",
           userSelect: "none",
         }}

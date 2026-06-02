@@ -16,24 +16,24 @@ export default function EmptyState({ icon, title, desc, cta, size = "md" }: Prop
 
   return (
     <div className={`flex flex-col items-center justify-center text-center ${s.py} px-6`}>
-      <p className={`${s.icon} mb-4`}>{icon}</p>
+      <div className={`${s.icon} mb-4`} style={{ opacity: 0.5 }}>{icon}</div>
       <p className={`font-black text-white ${s.title} mb-2`}>{title}</p>
-      <p className={`text-white/35 ${s.desc} max-w-sm leading-relaxed mb-5`}>{desc}</p>
+      <p className={`${s.desc} max-w-sm leading-relaxed mb-5`} style={{ color: "rgba(255,255,255,0.32)", lineHeight: 1.65 }}>
+        {desc}
+      </p>
       {cta && (
         cta.href ? (
           <a
             href={cta.href}
             className="px-5 py-2.5 rounded-xl text-sm font-black text-black transition-all hover:scale-[1.02] active:scale-95"
-            style={{ background: "var(--green)" }}
-          >
+            style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", boxShadow: "0 4px 16px rgba(34,197,94,0.25)" }}>
             {cta.label}
           </a>
         ) : (
           <button
             onClick={cta.onClick}
             className="px-5 py-2.5 rounded-xl text-sm font-black text-black transition-all hover:scale-[1.02] active:scale-95"
-            style={{ background: "var(--green)" }}
-          >
+            style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", boxShadow: "0 4px 16px rgba(34,197,94,0.25)" }}>
             {cta.label}
           </button>
         )
