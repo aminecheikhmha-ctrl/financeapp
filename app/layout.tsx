@@ -16,6 +16,7 @@ import CookieBanner    from "./components/CookieBanner"
 import NativePushSetup from "./components/NativePushSetup"
 import AppSplashScreen from "./components/AppSplashScreen"
 import PWAInstallBanner from "./components/PWAInstallBanner"
+import CustomCursor    from "./components/CustomCursor"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -115,6 +116,7 @@ export default function RootLayout({
           <SpeedInsights />
           <ChatBot />
           <CookieBanner />
+          <CustomCursor />
         </ToastProvider>
         </I18nProvider>
       </body>
