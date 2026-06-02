@@ -426,7 +426,7 @@ export default function NewsPage() {
   const selectTheme = (key: ThemeKey) => { setActiveTheme(key); setSearchQuery("") }
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "#050505" }}>
+    <div className="flex h-screen overflow-hidden" style={{ background: "var(--bg-canvas)" }}>
 
       {/* ── LEFT SIDEBAR — fixed, never scrolls ────────────────────────────── */}
       <aside className="w-[220px] flex-shrink-0 flex flex-col overflow-hidden h-full hidden lg:flex"
@@ -506,7 +506,7 @@ export default function NewsPage() {
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
 
         {/* TOPBAR — fixed */}
-        <div className="flex-shrink-0" style={{ background: "#080808", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+        <div className="flex-shrink-0" style={{ background: "var(--bg-canvas)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
 
           {/* Ticker tape */}
           {tapePrices.length > 0 && (

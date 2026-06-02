@@ -360,7 +360,7 @@ export default function AnalysesPage() {
   return (
     <div
       className="flex flex-col overflow-hidden"
-      style={{ height: "calc(100vh - var(--topbar-h, 56px))", background: "#080808" }}
+      style={{ height: "calc(100vh - var(--topbar-h, 56px))", background: "var(--bg-canvas)" }}
     >
 
       {/* ═══════════════════════════════════════════════════════

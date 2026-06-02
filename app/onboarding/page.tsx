@@ -142,7 +142,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#050505]">
+    <div className="min-h-screen flex flex-col bg-transparent">
 
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">

@@ -60,7 +60,7 @@ export default function SupportPage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "#050505" }}>
+    <div className="min-h-screen" style={{ background: "var(--bg-canvas)" }}>
 
       {/* Header */}
       <div className="border-b border-white/5 px-6 py-4 flex items-center justify-between">

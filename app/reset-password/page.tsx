@@ -24,7 +24,7 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#080808" }}>
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "var(--bg-canvas)" }}>
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center text-2xl"

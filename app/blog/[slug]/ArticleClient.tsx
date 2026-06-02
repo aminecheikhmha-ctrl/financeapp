@@ -135,7 +135,7 @@ export default function ArticleClient({
   }, [headings])
 
   return (
-    <div className="min-h-screen" style={{ background: "#080808", color: "#e5e7eb" }}>
+    <div className="min-h-screen" style={{ background: "var(--bg-canvas)", color: "#e5e7eb" }}>
       {/* Breadcrumb */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 pt-8 pb-2">
         <div className="flex items-center gap-2 text-xs text-gray-600">

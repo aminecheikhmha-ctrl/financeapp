@@ -22,7 +22,7 @@ export default function AppSplashScreen() {
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center"
       style={{
-        background: "#050505",
+        background: "var(--bg-canvas)",
         opacity: fading ? 0 : 1,
         transition: "opacity 0.5s ease",
         pointerEvents: fading ? "none" : "all",

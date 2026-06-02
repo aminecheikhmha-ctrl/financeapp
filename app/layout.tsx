@@ -96,7 +96,7 @@ export default function RootLayout({
           })();
         `}} />
       </head>
-      <body className={`${inter.variable} font-sans bg-[#050505] text-white`}>
+      <body className={`${inter.variable} font-sans text-white`} style={{ background: "var(--bg-canvas)" }}>
         <a href="#main-content" className="skip-link">Skip to content</a>
         <I18nProvider>
         <ToastProvider>

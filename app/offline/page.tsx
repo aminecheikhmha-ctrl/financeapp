@@ -4,7 +4,7 @@ export default function OfflinePage() {
   return (
     <div
       className="min-h-screen flex items-center justify-center p-6"
-      style={{ background: "#050505" }}
+      style={{ background: "var(--bg-canvas)" }}
     >
       <div className="max-w-sm text-center">
         <div

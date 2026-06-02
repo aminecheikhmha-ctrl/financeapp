@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
           flexDirection: "column",
           justifyContent: "space-between",
           padding: "60px",
-          background: "#080808",
+          background: "var(--bg-canvas)",
           fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
           position: "relative",
         }}

@@ -676,7 +676,7 @@ export default function TradingChart({
   const Sidebar = (
     <div
       className="flex-shrink-0 flex flex-col overflow-hidden border-l border-[#1a1a1a]"
-      style={{ width: 260, background: "#080808" }}
+      style={{ width: 260, background: "var(--bg-canvas)" }}
     >
       {/* Symbol header */}
       <div className="px-4 py-3 border-b border-[#111]">

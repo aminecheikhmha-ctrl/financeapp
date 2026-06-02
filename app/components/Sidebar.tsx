@@ -221,7 +221,7 @@ export default function Sidebar() {
         className="fixed top-0 left-0 bottom-0 z-50 hidden md:flex flex-col overflow-hidden transition-all duration-200"
         style={{
           width: expanded ? "220px" : "64px",
-          background: "#080808",
+          background: "var(--bg-canvas)",
           borderRight: "1px solid rgba(255,255,255,0.06)",
         }}>
 

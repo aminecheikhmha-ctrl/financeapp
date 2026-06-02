@@ -82,10 +82,10 @@ export default function NotificationsPage() {
   const unreadCount   = notifications.filter(n => !n.read).length
 
   return (
-    <div className="min-h-screen bg-[#050505] pb-20">
+    <div className="min-h-screen bg-transparent pb-20">
 
       {/* Header */}
-      <div className="px-6 py-5 border-b border-white/5 sticky top-0 bg-[#050505]/95 backdrop-blur-xl z-10">
+      <div className="px-6 py-5 border-b border-white/5 sticky top-0 bg-transparent/95 backdrop-blur-xl z-10">
         <div className="flex items-center justify-between max-w-2xl mx-auto">
           <div>
             <h1 className="text-2xl font-black text-white">Notifications</h1>

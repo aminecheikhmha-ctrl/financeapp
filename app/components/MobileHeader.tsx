@@ -83,7 +83,7 @@ export default function MobileHeader() {
 
       {/* Full-screen search overlay */}
       {searchOpen && (
-        <div className="md:hidden fixed inset-0 z-[100] bg-[#080808] flex flex-col">
+        <div className="md:hidden fixed inset-0 z-[100] bg-transparent flex flex-col">
           {/* Search input row */}
           <div className="flex items-center gap-3 px-4 pt-5 pb-3 border-b border-white/5">
             <div className="flex-1 flex items-center gap-2 px-3 py-3 bg-white/5 border border-white/10 rounded-2xl">

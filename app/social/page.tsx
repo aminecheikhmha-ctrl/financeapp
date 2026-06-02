@@ -299,7 +299,7 @@ export default function SocialPage() {
   ]
 
   return (
-    <div className="min-h-screen text-white overflow-x-hidden" style={{ background: "#080808" }}>
+    <div className="min-h-screen text-white overflow-x-hidden" style={{ background: "var(--bg-canvas)" }}>
       <div className="max-w-2xl mx-auto px-4 py-6">
 
         {/* Header */}

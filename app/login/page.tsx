@@ -81,7 +81,7 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen bg-[#080808] flex">
+    <div className="min-h-screen bg-transparent flex">
 
       {/* LEFT — Form */}
       <div className="flex-1 flex flex-col justify-center px-8 py-12 max-w-md mx-auto lg:mx-0 lg:px-16 w-full">

@@ -121,7 +121,7 @@ export default function CoachPage() {
   const username = user?.email?.split("@")[0] ?? "Trader"
 
   return (
-    <div className="min-h-screen text-white overflow-x-hidden flex flex-col" style={{ background: "#080808" }}>
+    <div className="min-h-screen text-white overflow-x-hidden flex flex-col" style={{ background: "var(--bg-canvas)" }}>
       <div className="max-w-2xl mx-auto w-full flex flex-col flex-1 px-4 py-6">
 
         {/* Header */}
@@ -187,7 +187,7 @@ export default function CoachPage() {
         </div>
 
         {/* Input */}
-        <div className="sticky bottom-0 pt-2" style={{ background: "#080808" }}>
+        <div className="sticky bottom-0 pt-2" style={{ background: "var(--bg-canvas)" }}>
           {messages.length > 0 && (
             <div className="flex gap-2 overflow-x-auto pb-2 mb-2 no-scrollbar">
               {SUGGESTED.slice(0, 3).map(s => (

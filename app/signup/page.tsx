@@ -57,7 +57,7 @@ export default function Signup() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-[#080808] flex items-center justify-center px-6">
+      <div className="min-h-screen bg-transparent flex items-center justify-center px-6">
         <div className="bg-[#111] border border-white/10 rounded-2xl p-8 w-full max-w-md text-center">
           <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 text-3xl mx-auto mb-4">✓</div>
           <h2 className="text-2xl font-black text-white mb-2">{t.auth.emailSent}</h2>
@@ -69,7 +69,7 @@ export default function Signup() {
   }
 
   return (
-    <div className="min-h-screen bg-[#080808] flex">
+    <div className="min-h-screen bg-transparent flex">
 
       {/* LEFT — Form */}
       <div className="flex-1 flex flex-col justify-center px-8 py-12 max-w-md mx-auto lg:mx-0 lg:px-16 w-full">

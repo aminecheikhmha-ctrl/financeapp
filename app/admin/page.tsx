@@ -240,12 +240,12 @@ export default function AdminPage() {
   }
 
   if (loading) return (
-    <div className="min-h-screen bg-[#080808] flex items-center justify-center">
+    <div className="min-h-screen bg-transparent flex items-center justify-center">
       <div className="w-8 h-8 border-2 border-green-400 border-t-transparent rounded-full animate-spin" />
     </div>
   )
   if (!data) return (
-    <div className="min-h-screen bg-[#080808] flex items-center justify-center">
+    <div className="min-h-screen bg-transparent flex items-center justify-center">
       <p className="text-red-400">Accès refusé</p>
     </div>
   )
@@ -271,7 +271,7 @@ export default function AdminPage() {
   ] as const
 
   return (
-    <div className="min-h-screen bg-[#080808]">
+    <div className="min-h-screen bg-transparent">
 
       {/* Toast */}
       {toast && (
@@ -333,7 +333,7 @@ export default function AdminPage() {
       )}
 
       {/* Header */}
-      <div className="border-b border-white/8 px-6 py-4 flex items-center justify-between sticky top-0 bg-[#080808]/95 backdrop-blur z-10">
+      <div className="border-b border-white/8 px-6 py-4 flex items-center justify-between sticky top-0 bg-transparent/95 backdrop-blur z-10">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center">
             <span className="text-black font-black text-sm">A</span>

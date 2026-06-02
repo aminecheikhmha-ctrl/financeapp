@@ -1,6 +1,6 @@
 export default function LegalLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-[#050505]">
+    <div className="min-h-screen bg-transparent">
       <div className="border-b border-white/5 px-6 py-4">
         <a href="/" className="flex items-center gap-2 w-fit">
           <div className="w-7 h-7 rounded-lg flex items-center justify-center font-black text-sm text-black"

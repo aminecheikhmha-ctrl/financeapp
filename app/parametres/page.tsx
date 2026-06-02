@@ -219,14 +219,14 @@ export default function ParametresPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#050505]">
+      <div className="flex items-center justify-center min-h-screen bg-transparent">
         <div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white pb-20">
+    <div className="min-h-screen bg-transparent text-white pb-20">
 
       {/* Header */}
       <div className="px-6 py-5 border-b border-white/5">
