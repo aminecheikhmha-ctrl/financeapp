@@ -97,6 +97,11 @@ body::after {
   0%, 100% { box-shadow: 0 0 12px rgba(74,222,128,0.3); }
   50%       { box-shadow: 0 0 28px rgba(74,222,128,0.6); }
 }
+@keyframes buy-glow {
+  0%, 100% { box-shadow: 0 4px 20px rgba(34,197,94,0.25); }
+  50%       { box-shadow: 0 4px 35px rgba(34,197,94,0.50); }
+}
+.btn-buy { animation: buy-glow 2.5s ease-in-out infinite; }
 @keyframes slide-up {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }

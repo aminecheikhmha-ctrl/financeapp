@@ -105,8 +105,15 @@ function DashboardContent() {
   const [challenges, setChallenges] = useState<any[]>([])
   const [showTour, setShowTour] = useState(false)
   const [analyticsOpen, setAnalyticsOpen] = useState(false)
-  const [rightTab, setRightTab] = useState<"trade" | "calc" | "ordres">("trade")
+  const [rightTab, setRightTab] = useState<"trade" | "positions" | "orders">("trade")
   const [panelOpen, setPanelOpen] = useState(true)
+  const [panelQty, setPanelQty] = useState(1)
+  const [panelTp, setPanelTp] = useState("")
+  const [panelSl, setPanelSl] = useState("")
+  const [showTPSL, setShowTPSL] = useState(false)
+  const [alertDir, setAlertDir] = useState<"above" | "below">("above")
+  const [alertPriceInput, setAlertPriceInput] = useState("")
+  const [aiSignal, setAiSignal] = useState<any>(null)
   const [perfSnapshots, setPerfSnapshots] = useState<{ date: string; daily_pnl: number; daily_pnl_pct: number; portfolio_value: number }[]>([])
   const [perfAlerts, setPerfAlerts] = useState<string[]>([])
   const [isDemo, setIsDemo] = useState(false)
@@ -268,6 +275,11 @@ function DashboardContent() {
     loadAccount()
     // Auto-charge le graphe
     loadChart()
+    // AI signal for this ticker
+    fetch(`/api/screener?symbols=${ticker}`)
+      .then(r => r.json())
+      .then(d => setAiSignal(d.assets?.[0] ?? null))
+      .catch(() => {})
   }, [ticker])
 
   async function loadChart() {
@@ -1480,318 +1492,506 @@ function DashboardContent() {
           {panelOpen ? "← Fermer" : "Trade →"}
         </button>
 
-        {/* RIGHT — absolute slide panel from right */}
-        <div className={`hidden md:flex flex-col fixed top-14 right-0 h-[calc(100vh-56px)] w-[300px] z-10 transition-all duration-300 border-l border-white/5 ${
+        {/* RIGHT — Premium terminal panel */}
+        <div className={`hidden md:flex flex-col fixed top-14 right-0 h-[calc(100vh-56px)] w-[300px] z-10 transition-all duration-300 ${
           panelOpen ? "translate-x-0" : "translate-x-full"
-        }`} style={{ background: "rgba(8,12,8,0.97)", backdropFilter: "blur(20px)" }}>
+        }`} style={{
+          background: "linear-gradient(180deg, rgba(8,14,8,0.98) 0%, rgba(5,10,5,0.99) 100%)",
+          borderLeft: "1px solid rgba(255,255,255,0.06)",
+          backdropFilter: "blur(20px)",
+        }}>
 
-          {/* ── Header: cash + tab bar ── */}
-          <div className="flex-shrink-0">
-            {/* Cash */}
-            <div className="px-4 pt-3 pb-2 border-b border-white/[0.05]">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[9px] text-gray-600 uppercase tracking-widest">
-                    {userProfile?.level === "beginner" ? t.dashboard.virtualCapital : t.dashboard.cash}
-                  </p>
-                  <p className="text-lg font-black text-white tabular-nums">
-                    {account ? `$${account.cash.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
-                  </p>
-                </div>
-                {activeData && (
-                  <div className="text-right">
-                    <p className={`text-xs font-black tabular-nums ${up ? "text-green-400" : "text-red-400"}`}>
-                      ${activeData.price.toFixed(2)}
-                    </p>
-                    <p className={`text-[10px] font-semibold ${up ? "text-green-400" : "text-red-400"}`}>
-                      {up ? "+" : ""}{activeData.change.toFixed(2)}%
-                    </p>
-                  </div>
-                )}
+          {/* ── 1. Header Capital + P&L ── */}
+          <div className="flex-shrink-0 px-4 pt-4 pb-3 border-b border-white/5">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold">
+                {userProfile?.level === "beginner" ? "Capital virtuel" : "Cash disponible"}
+              </p>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                <p className="text-[9px] text-white/25">Live</p>
               </div>
             </div>
-
-            {/* Tab bar */}
-            <div className="flex border-b border-white/[0.05]">
-              {([
-                { key: "trade",  label: t.dashboard.tabs2.trade,  icon: "⚡" },
-                { key: "calc",   label: t.dashboard.tabs2.calc,   icon: "🧮" },
-                { key: "ordres", label: t.dashboard.tabs.orders, icon: "📋" },
-              ] as const).map(tab => (
-                <button key={tab.key} onClick={() => setRightTab(tab.key)}
-                  className={`flex-1 py-2 text-[11px] font-bold transition border-b-2 ${
-                    rightTab === tab.key
-                      ? "text-white border-white"
-                      : "text-gray-600 border-transparent hover:text-gray-400"
-                  }`}>
-                  {tab.icon} {tab.label}
-                </button>
-              ))}
-            </div>
+            {account ? (() => {
+              const cash = account.cash
+              const pnl = cash - 100000
+              const pnlPct = (pnl / 100000) * 100
+              const isPos = pnl >= 0
+              return (
+                <>
+                  <div className="flex items-baseline justify-between">
+                    <p className="text-2xl font-black text-white tabular-nums">
+                      ${cash.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    </p>
+                    <div className="text-right">
+                      <p className={`text-sm font-black tabular-nums ${isPos ? "text-green-400" : "text-red-400"}`}>
+                        {isPos ? "+" : ""}${Math.abs(pnl).toFixed(0)}
+                      </p>
+                      <p className={`text-[10px] ${isPos ? "text-green-400/60" : "text-red-400/60"}`}>
+                        {isPos ? "+" : ""}{pnlPct.toFixed(2)}%
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-2 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                    <div className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${Math.min(100, Math.max(0, 50 + pnlPct * 2))}%`,
+                        background: isPos ? "rgba(74,222,128,0.7)" : "rgba(248,113,113,0.7)",
+                      }} />
+                  </div>
+                </>
+              )
+            })() : (
+              <p className="text-2xl font-black text-white/20">—</p>
+            )}
           </div>
 
-          {/* ── Scrollable tab content ── */}
-          <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 56px - 88px)" }}>
+          {/* ── 2. Signal IA sur l'actif ── */}
+          {aiSignal && (
+            <div className="flex-shrink-0 mx-3 my-2 rounded-2xl p-3 relative overflow-hidden"
+              style={{
+                background: aiSignal.signal?.includes("BUY")
+                  ? "linear-gradient(135deg, rgba(34,197,94,0.08), rgba(34,197,94,0.03))"
+                  : "linear-gradient(135deg, rgba(239,68,68,0.08), rgba(239,68,68,0.03))",
+                border: `1px solid ${aiSignal.signal?.includes("BUY") ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`,
+              }}>
+              <div className="absolute top-0 right-0 w-20 h-20 rounded-full blur-2xl opacity-20"
+                style={{ background: aiSignal.signal?.includes("BUY") ? "#22c55e" : "#ef4444" }} />
+              <div className="relative">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full"
+                      style={{
+                        background: aiSignal.signal?.includes("BUY") ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)",
+                        color: aiSignal.signal?.includes("BUY") ? "#4ade80" : "#f87171",
+                      }}>
+                      {aiSignal.signal === "STRONG_BUY" ? "⚡ ACHAT FORT" :
+                       aiSignal.signal === "BUY" ? "↗ ACHAT" :
+                       aiSignal.signal === "STRONG_SELL" ? "⚡ VENTE FORTE" : "↘ VENTE"}
+                    </span>
+                    <span className="text-[9px] text-white/25">IA Signal</span>
+                  </div>
+                  <span className="text-sm font-black tabular-nums"
+                    style={{ color: aiSignal.signal?.includes("BUY") ? "#4ade80" : "#f87171" }}>
+                    {aiSignal.confluence ?? aiSignal.score ?? "—"}%
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full overflow-hidden mb-2.5"
+                  style={{ background: "rgba(255,255,255,0.08)" }}>
+                  <div className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      width: `${aiSignal.confluence ?? aiSignal.score ?? 50}%`,
+                      background: aiSignal.signal?.includes("BUY")
+                        ? "linear-gradient(90deg, #16a34a, #22c55e)"
+                        : "linear-gradient(90deg, #dc2626, #ef4444)",
+                    }} />
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[
+                    { label: "Entrée", value: activeData ? `$${activeData.price.toFixed(2)}` : "—", color: "rgba(255,255,255,0.7)" },
+                    { label: "TP", value: aiSignal.tp ? `$${Number(aiSignal.tp).toFixed(2)}` : "—", color: "#4ade80" },
+                    { label: "SL", value: aiSignal.sl ? `$${Number(aiSignal.sl).toFixed(2)}` : "—", color: "#f87171" },
+                  ].map(item => (
+                    <div key={item.label} className="rounded-xl px-2 py-1.5 text-center"
+                      style={{ background: "rgba(255,255,255,0.04)" }}>
+                      <p className="text-[8px] text-white/25 uppercase tracking-wider mb-0.5">{item.label}</p>
+                      <p className="text-[10px] font-black tabular-nums" style={{ color: item.color }}>{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
-            {/* ── TAB: TRADE ── */}
+          {/* ── 3. Onglets premium ── */}
+          <div className="flex-shrink-0 flex px-3 gap-1 py-2">
+            {([
+              { key: "trade",     label: "Trade",     icon: "⚡" },
+              { key: "positions", label: "Positions", icon: "📊" },
+              { key: "orders",    label: "Ordres",    icon: "📋" },
+            ] as const).map(tab => (
+              <button key={tab.key}
+                onClick={() => setRightTab(tab.key)}
+                className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-[11px] font-bold transition-all ${
+                  rightTab === tab.key ? "text-white" : "text-white/30 hover:text-white/60"
+                }`}
+                style={rightTab === tab.key ? {
+                  background: "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                } : {}}>
+                <span>{tab.icon}</span>
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* ── 4. Contenu scrollable ── */}
+          <div className="flex-1 overflow-y-auto scrollbar-hide">
+
+            {/* ── TAB TRADE ── */}
             {rightTab === "trade" && (
-              <div className="flex flex-col gap-0">
-                {/* Position */}
-                {position ? (
-                  <div className="px-4 py-3 border-b border-white/[0.05]">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-[9px] text-gray-600 uppercase tracking-widest">Position · {ticker.replace("-USD", "")}</p>
-                      <button onClick={() => setTpSlModal(true)} className="text-[9px] text-gray-600 hover:text-gray-300 transition px-2 py-0.5 rounded border border-white/10">⚙️ TP/SL</button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 mb-2">
-                      <div>
-                        <p className="text-[9px] text-gray-600 uppercase tracking-widest">Quantity</p>
-                        <p className="text-sm font-bold text-white mt-0.5">{position.qty}</p>
-                      </div>
-                      <div>
-                        <p className="text-[9px] text-gray-600 uppercase tracking-widest">Avg. cost</p>
-                        <p className="text-sm font-bold text-white mt-0.5">${position.avg_price.toFixed(2)}</p>
-                      </div>
-                      <div>
-                        <p className="text-[9px] text-gray-600 uppercase tracking-widest">Value</p>
-                        <p className="text-sm font-bold text-white mt-0.5">{activeData ? `$${(activeData.price * position.qty).toFixed(2)}` : "—"}</p>
-                      </div>
-                      <div>
-                        <p className="text-[9px] text-gray-600 uppercase tracking-widest">P&L</p>
-                        <p className={`text-sm font-bold mt-0.5 ${(positionPnl ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
-                          {(positionPnl ?? 0) >= 0 ? "+" : ""}${positionPnl?.toFixed(2)}
-                          <span className="text-[10px] ml-1 opacity-70">({positionPnlPct?.toFixed(1)}%)</span>
-                        </p>
-                      </div>
-                    </div>
-                    {(position.take_profit != null || position.stop_loss != null) && (
-                      <div className="flex gap-2 mt-1">
-                        {position.take_profit != null && (
-                          <div className="flex-1 bg-green-500/5 border border-green-500/15 rounded-lg px-2 py-1.5">
-                            <p className="text-[9px] text-green-500/60 uppercase tracking-widest">TP</p>
-                            <p className="text-xs font-bold text-green-400">${position.take_profit.toFixed(2)}</p>
-                          </div>
-                        )}
-                        {position.stop_loss != null && (
-                          <div className="flex-1 bg-red-500/5 border border-red-500/15 rounded-lg px-2 py-1.5">
-                            <p className="text-[9px] text-red-500/60 uppercase tracking-widest">SL</p>
-                            <p className="text-xs font-bold text-red-400">${position.stop_loss.toFixed(2)}</p>
-                          </div>
-                        )}
-                      </div>
+              <div className="px-3 pb-4 space-y-3">
+
+                {/* Quantité */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold">Quantité</p>
+                    {account && activeData && (
+                      <p className="text-[10px] text-white/20">
+                        Max: {Math.floor(account.cash / activeData.price)} parts
+                      </p>
                     )}
                   </div>
-                ) : (
-                  <div className="px-4 py-3 border-b border-white/[0.05]">
-                    <p className="text-[9px] text-gray-700 uppercase tracking-widest">{t.dashboard.noPositions} — {ticker.replace("-USD", "")}</p>
+                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
+                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                    <button onClick={() => setPanelQty(q => Math.max(1, q - 1))}
+                      className="text-white/40 hover:text-white transition font-black text-lg w-5 text-center leading-none">−</button>
+                    <input type="number" value={panelQty} min={1}
+                      onChange={e => setPanelQty(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="flex-1 text-center text-base font-black text-white bg-transparent outline-none tabular-nums" />
+                    <button onClick={() => setPanelQty(q => q + 1)}
+                      className="text-white/40 hover:text-white transition font-black text-lg w-5 text-center leading-none">+</button>
+                  </div>
+                  <div className="flex gap-1.5 mt-2">
+                    {[1, 5, 10, 25].map(n => (
+                      <button key={n} onClick={() => setPanelQty(n)}
+                        className="flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all"
+                        style={{
+                          background: panelQty === n ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.04)",
+                          color: panelQty === n ? "#4ade80" : "rgba(255,255,255,0.35)",
+                          border: `1px solid ${panelQty === n ? "rgba(34,197,94,0.25)" : "rgba(255,255,255,0.06)"}`,
+                        }}>
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Résumé ordre */}
+                {activeData && (
+                  <div className="rounded-xl p-3 space-y-1.5"
+                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    {[
+                      { label: "Prix actuel", value: `$${activeData.price.toFixed(2)}` },
+                      { label: "Quantité", value: `${panelQty} part${panelQty > 1 ? "s" : ""}` },
+                      { label: "Total", value: `$${(panelQty * activeData.price).toFixed(2)}`, bold: true },
+                      { label: "Cash après", value: account ? `$${(account.cash - panelQty * activeData.price).toFixed(0)}` : "—", muted: true },
+                    ].map(row => (
+                      <div key={row.label} className="flex items-center justify-between">
+                        <p className="text-[11px] text-white/35">{row.label}</p>
+                        <p className={`text-[11px] tabular-nums ${row.bold ? "font-black text-white" : row.muted ? "font-semibold text-white/40" : "font-semibold text-white/70"}`}>
+                          {row.value}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 )}
 
-                {/* Buy / Sell */}
-                <div data-tour="buy-btn" className="px-4 py-3 border-b border-white/[0.05] space-y-2">
-                  <button onClick={isDemo ? () => setShowSignupModal(true) : openBuy}
-                    className="w-full py-3 rounded-xl btn-primary text-sm tracking-wide">
-                    {t.dashboard.buyBtn} {ticker.replace("-USD", "")}
+                {/* Boutons Buy / Short premium */}
+                <div className="space-y-2" data-tour="buy-btn">
+                  <button
+                    onClick={isDemo ? () => setShowSignupModal(true) : () => {
+                      setOrderQty(String(panelQty))
+                      setOrderTp(panelTp || (activeData ? (activeData.price * 1.05).toFixed(2) : ""))
+                      setOrderSl(panelSl || (activeData ? (activeData.price * 0.97).toFixed(2) : ""))
+                      setOrderModal("buy")
+                      setOrderMsg("")
+                    }}
+                    className="w-full py-3.5 rounded-2xl font-black text-sm text-black transition-all relative overflow-hidden group btn-buy"
+                    style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}>
+                    <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 skew-x-12" />
+                    <span className="relative flex items-center justify-center gap-2">
+                      <span>↗</span>
+                      <span>Acheter {panelQty} {ticker.replace("-USD","")}</span>
+                      {activeData && <span className="text-black/50 text-xs">· ${(panelQty * activeData.price).toFixed(0)}</span>}
+                    </span>
                   </button>
+
                   <button
                     onClick={isDemo ? () => setShowSignupModal(true) : () => {
                       if (position && position.qty > 0) {
                         setOrderModal("sell"); setOrderQty(String(position.qty))
-                      } else if (position && position.qty < 0) {
-                        setOrderModal("buy"); setOrderQty(String(Math.abs(position.qty)))
                       } else {
-                        setOrderModal("short"); setOrderQty("1")
+                        setOrderModal("short"); setOrderQty(String(panelQty))
                       }
+                      setOrderMsg("")
                     }}
-                    className="w-full py-2.5 rounded-xl text-sm font-bold transition bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 cursor-pointer">
-                    {position && position.qty > 0
-                      ? `${t.dashboard.sellBtn} ${position.qty} shares`
-                      : position && position.qty < 0
-                        ? `🔄 Cover (Short ${Math.abs(position.qty)})`
-                        : `📉 Short ${ticker.replace("-USD", "")}`}
+                    className="w-full py-3 rounded-2xl font-black text-sm transition-all relative overflow-hidden group"
+                    style={{
+                      background: "rgba(239,68,68,0.1)",
+                      border: "1px solid rgba(239,68,68,0.25)",
+                      color: "#f87171",
+                    }}>
+                    <div className="absolute inset-0 bg-red-500/5 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 skew-x-12" />
+                    <span className="relative flex items-center justify-center gap-2">
+                      <span>↘</span>
+                      <span>{position && position.qty > 0 ? `Vendre ${position.qty} parts` : `Shorter ${ticker.replace("-USD","")}`}</span>
+                    </span>
                   </button>
                 </div>
 
-                {/* Price alerts */}
-                <div data-tour="alerts">
-                  <AlertsPanel symbol={ticker} currentPrice={activeData?.price} token={token} />
-                </div>
-              </div>
-            )}
-
-            {/* ── TAB: CALC ── */}
-            {rightTab === "calc" && (
-              <div className="flex flex-col gap-0">
-                {/* Market stats */}
-                {activeData && (
-                  <div className="px-4 py-3 border-b border-white/[0.05]">
-                    <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-2">Market · {ticker.replace("-USD", "")}</p>
-                    <div className="space-y-1.5">
+                {/* TP/SL optionnel */}
+                <div>
+                  <button onClick={() => setShowTPSL(p => !p)}
+                    className="w-full flex items-center justify-between py-2 text-[11px] text-white/30 hover:text-white/60 transition">
+                    <span>⚙️ Take Profit / Stop Loss</span>
+                    <span className="text-[10px]">{showTPSL ? "▲" : "▼"}</span>
+                  </button>
+                  {showTPSL && (
+                    <div className="grid grid-cols-2 gap-2 mt-1">
                       {[
-                        { l: "24h Change", v: `${up ? "+" : ""}${activeData.change.toFixed(2)}%`, c: up ? "text-green-400" : "text-red-400" },
-                        { l: t.dashboard.indicators.dayHigh,   v: activeData.high ? `$${activeData.high.toFixed(2)}` : "—" },
-                        { l: t.dashboard.indicators.dayLow,    v: activeData.low  ? `$${activeData.low.toFixed(2)}`  : "—" },
-                        { l: "Prev. Close", v: activeData.previousClose ? `$${activeData.previousClose.toFixed(2)}` : "—" },
-                        { l: t.dashboard.indicators.marketCap, v: fmt(activeData.marketCap) },
-                        { l: t.dashboard.indicators.volume,    v: fmt(activeData.volume, "") },
-                      ].map(k => (
-                        <div key={k.l} className="flex justify-between items-center">
-                          <span className="text-[10px] text-gray-600">{k.l}</span>
-                          <span className={`text-[10px] font-semibold tabular-nums ${k.c ?? "text-gray-300"}`}>{k.v}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {/* Position Calculator */}
-                <div className="px-4 py-3">
-                  <PositionCalculator
-                    currentPrice={activeData?.price ?? 0}
-                    symbol={ticker}
-                    accountSize={account?.cash}
-                    onApply={(qty, tp, sl) => {
-                      setOrderQty(String(qty))
-                      setOrderTp(String(tp))
-                      setOrderSl(String(sl))
-                      setRightTab("trade")
-                      openBuy()
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* ── TAB: ORDRES ── */}
-            {rightTab === "ordres" && (
-              <div className="flex flex-col gap-0">
-                {/* Order history */}
-                <div className="px-4 py-3 border-b border-white/[0.05]">
-                  <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-2">My orders · {ticker.replace("-USD", "")}</p>
-                  {orderHistory.length === 0 ? (
-                    <p className="text-[10px] text-gray-700 py-2">{t.dashboard.noOrders}</p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {[...orderHistory].reverse().slice(0, 10).map((o, i) => (
-                        <div key={i} className={`flex items-center justify-between px-2.5 py-2 rounded-lg border ${
-                          o.type === "buy" ? "bg-green-500/5 border-green-500/10" : "bg-red-500/5 border-red-500/10"
-                        }`}>
-                          <div className="flex items-center gap-2">
-                            <span className={`text-[10px] font-black ${o.type === "buy" ? "text-green-400" : "text-red-400"}`}>
-                              {o.type === "buy" ? "▲" : "▼"}
-                            </span>
-                            <div>
-                              <p className={`text-[10px] font-bold ${o.type === "buy" ? "text-green-400" : "text-red-400"}`}>
-                                {o.type === "buy" ? "Buy" : "Sell"} ×{o.qty}
-                              </p>
-                              <p className="text-[9px] text-gray-600">{o.date}</p>
-                            </div>
-                          </div>
-                          <p className="text-[10px] font-bold text-white tabular-nums">${o.price.toFixed(2)}</p>
+                        { label: "Take Profit", color: "#4ade80", val: panelTp, set: setPanelTp },
+                        { label: "Stop Loss",   color: "#f87171", val: panelSl, set: setPanelSl },
+                      ].map(item => (
+                        <div key={item.label}>
+                          <p className="text-[9px] font-bold mb-1" style={{ color: item.color }}>{item.label}</p>
+                          <input type="number" value={item.val}
+                            onChange={e => item.set(e.target.value)}
+                            placeholder="Prix $"
+                            className="w-full px-3 py-2 rounded-xl text-xs text-white placeholder-white/20 outline-none tabular-nums"
+                            style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${item.color}25` }} />
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
 
+                {/* Position actuelle */}
+                {position && (
+                  <div className="rounded-xl p-3"
+                    style={{
+                      background: (positionPnl ?? 0) >= 0 ? "rgba(34,197,94,0.05)" : "rgba(239,68,68,0.05)",
+                      border: `1px solid ${(positionPnl ?? 0) >= 0 ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)"}`,
+                    }}>
+                    <p className="text-[9px] text-white/30 uppercase tracking-widest mb-2">Position · {ticker.replace("-USD","")}</p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {[
+                        { l: "Quantité", v: String(position.qty) },
+                        { l: "Prix moy.", v: `$${position.avg_price.toFixed(2)}` },
+                        { l: "Valeur", v: activeData ? `$${(activeData.price * position.qty).toFixed(0)}` : "—" },
+                        { l: "P&L", v: `${(positionPnl ?? 0) >= 0 ? "+" : ""}$${positionPnl?.toFixed(2)}`, color: (positionPnl ?? 0) >= 0 ? "#4ade80" : "#f87171" },
+                      ].map(k => (
+                        <div key={k.l}>
+                          <p className="text-[8px] text-white/25 uppercase tracking-wider">{k.l}</p>
+                          <p className="text-xs font-black tabular-nums" style={k.color ? { color: k.color } : { color: "rgba(255,255,255,0.8)" }}>{k.v}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Alertes prix */}
+                <div>
+                  <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-2">🔔 Alertes prix</p>
+                  <div className="flex rounded-xl overflow-hidden mb-2"
+                    style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
+                    {([
+                      { key: "above", label: "▲ Au-dessus", color: "#4ade80" },
+                      { key: "below", label: "▼ En-dessous", color: "#f87171" },
+                    ] as const).map(opt => (
+                      <button key={opt.key}
+                        onClick={() => setAlertDir(opt.key)}
+                        className="flex-1 py-2 text-[11px] font-bold transition-all"
+                        style={alertDir === opt.key ? {
+                          background: `${opt.color}15`, color: opt.color,
+                        } : { color: "rgba(255,255,255,0.3)" }}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 mb-2">
+                    <input type="number" value={alertPriceInput}
+                      onChange={e => setAlertPriceInput(e.target.value)}
+                      placeholder={activeData ? String(activeData.price.toFixed(2)) : "Prix"}
+                      className="flex-1 px-3 py-2.5 rounded-xl text-sm text-white placeholder-white/20 outline-none tabular-nums font-bold"
+                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                    <button
+                      disabled={!alertPriceInput}
+                      onClick={() => {
+                        if (!alertPriceInput) return
+                        // Use AlertsPanel logic via token
+                        const price = parseFloat(alertPriceInput)
+                        if (!isNaN(price) && token) {
+                          fetch("/api/alerts", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                            body: JSON.stringify({ symbol: ticker, condition: alertDir, price }),
+                          }).then(() => setAlertPriceInput("")).catch(() => {})
+                        }
+                      }}
+                      className="px-4 py-2.5 rounded-xl text-xs font-black text-black disabled:opacity-40 transition-all hover:scale-[1.02]"
+                      style={{ background: "#22c55e" }}>
+                      + Ajouter
+                    </button>
+                  </div>
+                  {activeData && (
+                    <div className="flex gap-1.5 mb-2">
+                      {[-5, -2, 2, 5].map(pct => {
+                        const price = activeData.price * (1 + pct / 100)
+                        const isNeg = pct < 0
+                        return (
+                          <button key={pct}
+                            onClick={() => { setAlertPriceInput(price.toFixed(2)); setAlertDir(isNeg ? "below" : "above") }}
+                            className="flex-1 py-1.5 rounded-lg text-[9px] font-black transition-all text-center"
+                            style={{
+                              background: isNeg ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.08)",
+                              color: isNeg ? "#f87171" : "#4ade80",
+                              border: `1px solid ${isNeg ? "rgba(239,68,68,0.15)" : "rgba(34,197,94,0.15)"}`,
+                            }}>
+                            {pct > 0 ? "+" : ""}{pct}%
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                  {/* Embedded AlertsPanel (list only) */}
+                  <div data-tour="alerts">
+                    <AlertsPanel symbol={ticker} currentPrice={activeData?.price} token={token} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── TAB POSITIONS ── */}
+            {rightTab === "positions" && (
+              <div className="px-3 pb-4 pt-1">
+                {!position ? (
+                  <div className="text-center py-10">
+                    <p className="text-3xl mb-2">📊</p>
+                    <p className="text-sm font-black text-white mb-1">Aucune position</p>
+                    <p className="text-xs text-white/30">Place un trade pour commencer</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {[position].map(pos => {
+                      const pnl = positionPnl ?? 0
+                      const pnlPct = positionPnlPct ?? 0
+                      const isPos = pnl >= 0
+                      return (
+                        <div key={pos.symbol}
+                          className="rounded-2xl p-3 cursor-pointer"
+                          onClick={() => setTicker(pos.symbol)}
+                          style={{
+                            background: isPos ? "rgba(34,197,94,0.05)" : "rgba(239,68,68,0.05)",
+                            border: `1px solid ${isPos ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)"}`,
+                          }}>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black text-black"
+                                style={{ background: isPos ? "#22c55e" : "#ef4444" }}>
+                                {pos.symbol[0]}
+                              </div>
+                              <div>
+                                <p className="text-sm font-black text-white">{pos.symbol.replace("-USD","")}</p>
+                                <p className="text-[10px] text-white/30">{pos.qty} parts · moy. ${pos.avg_price.toFixed(2)}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className={`text-sm font-black tabular-nums ${isPos ? "text-green-400" : "text-red-400"}`}>
+                                {isPos ? "+" : ""}${Math.abs(pnl).toFixed(2)}
+                              </p>
+                              <p className={`text-[10px] font-bold ${isPos ? "text-green-400/70" : "text-red-400/70"}`}>
+                                {isPos ? "+" : ""}{pnlPct.toFixed(2)}%
+                              </p>
+                            </div>
+                          </div>
+                          <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                            <div className="h-full rounded-full"
+                              style={{
+                                width: `${Math.min(100, Math.abs(pnlPct) * 5)}%`,
+                                background: isPos ? "#22c55e" : "#ef4444",
+                              }} />
+                          </div>
+                        </div>
+                      )
+                    })}
+                    {/* TP/SL edit button */}
+                    <button onClick={() => setTpSlModal(true)}
+                      className="w-full py-2.5 rounded-xl text-xs font-bold text-white/40 hover:text-white/70 transition"
+                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                      ⚙️ Modifier TP / SL
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── TAB ORDRES ── */}
+            {rightTab === "orders" && (
+              <div className="px-3 pb-4 pt-1 space-y-2">
+                {orderHistory.length === 0 ? (
+                  <div className="text-center py-10">
+                    <p className="text-3xl mb-2">📋</p>
+                    <p className="text-sm font-black text-white mb-1">Aucun ordre</p>
+                    <p className="text-xs text-white/30">Tes trades apparaîtront ici</p>
+                  </div>
+                ) : (
+                  [...orderHistory].reverse().slice(0, 15).map((o, i) => (
+                    <div key={i}
+                      className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+                      style={{
+                        background: o.type === "buy" ? "rgba(34,197,94,0.05)" : "rgba(239,68,68,0.05)",
+                        border: `1px solid ${o.type === "buy" ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)"}`,
+                      }}>
+                      <div className="flex items-center gap-2.5">
+                        <span className={`text-xs font-black ${o.type === "buy" ? "text-green-400" : "text-red-400"}`}>
+                          {o.type === "buy" ? "▲" : "▼"}
+                        </span>
+                        <div>
+                          <p className={`text-xs font-black ${o.type === "buy" ? "text-green-400" : "text-red-400"}`}>
+                            {o.type === "buy" ? "Buy" : "Sell"} ×{o.qty}
+                          </p>
+                          <p className="text-[9px] text-white/25">{o.date}</p>
+                        </div>
+                      </div>
+                      <p className="text-xs font-black text-white tabular-nums">${o.price.toFixed(2)}</p>
+                    </div>
+                  ))
+                )}
+
                 {/* Performance alerts */}
                 {perfAlerts.length > 0 && (
-                  <div className="px-4 pt-3 pb-1 space-y-2 border-b border-white/[0.05]">
+                  <div className="pt-2 space-y-2">
                     {perfAlerts.map((alert, i) => (
-                      <div key={i} className={`px-3 py-2.5 rounded-xl border text-xs font-semibold ${
-                        alert.startsWith("⚠️") ? "bg-orange-500/8 border-orange-500/20 text-orange-300" :
-                        alert.startsWith("🔥") ? "bg-green-500/8 border-green-500/20 text-green-300" :
-                        "bg-blue-500/8 border-blue-500/20 text-blue-300"
+                      <div key={i} className={`px-3 py-2.5 rounded-xl text-xs font-semibold ${
+                        alert.startsWith("⚠️") ? "bg-orange-500/8 border border-orange-500/20 text-orange-300" :
+                        "bg-green-500/8 border border-green-500/20 text-green-300"
                       }`}>{alert}</div>
                     ))}
                   </div>
                 )}
 
-                {/* Analytics widget */}
-                <div className="px-4 pt-3 pb-3">
-                  <button onClick={() => setAnalyticsOpen(!analyticsOpen)}
-                    className="w-full flex items-center justify-between px-3 py-2.5 bg-[#111] border border-white/5 rounded-xl hover:bg-white/3 transition">
-                    <span className="text-white font-bold text-xs">📊 Analytics 30 days</span>
-                    <span className="text-gray-600 text-[10px]">{analyticsOpen ? "▲" : "▼"}</span>
-                  </button>
-                  {analyticsOpen && perfSnapshots.length === 0 && (
-                    <div className="mt-1.5 bg-[#111] border border-white/5 rounded-xl p-4 text-center space-y-1">
-                      <p className="text-2xl">📈</p>
-                      <p className="text-white text-xs font-semibold">No data yet</p>
-                      <p className="text-gray-600 text-[10px]">Stats will appear after your first trades.</p>
-                    </div>
-                  )}
-                  {analyticsOpen && perfSnapshots.length > 0 && (() => {
-                    const thisWeek = perfSnapshots.slice(-7)
-                    const lastWeek = perfSnapshots.slice(-14, -7)
-                    const weekPnl = thisWeek.reduce((s, d) => s + (d.daily_pnl ?? 0), 0)
-                    const lastWeekPnl = lastWeek.reduce((s, d) => s + (d.daily_pnl ?? 0), 0)
-                    let streak = 0
-                    for (let i = perfSnapshots.length - 1; i >= 0; i--) {
-                      if ((perfSnapshots[i].daily_pnl ?? 0) > 0) streak++
-                      else break
-                    }
-                    return (
-                      <div className="mt-1.5 bg-[#111] border border-white/5 rounded-xl p-3 space-y-3">
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="text-center">
-                            <p className={`text-base font-black ${weekPnl >= 0 ? "text-green-400" : "text-red-400"}`}>
-                              {weekPnl >= 0 ? "+" : ""}${Math.abs(weekPnl).toFixed(0)}
-                            </p>
-                            <p className="text-gray-600 text-[9px]">This week</p>
-                          </div>
-                          <div className="text-center">
-                            <p className={`text-base font-black ${weekPnl >= lastWeekPnl ? "text-green-400" : "text-red-400"}`}>
-                              {weekPnl >= lastWeekPnl ? "▲" : "▼"}
-                            </p>
-                            <p className="text-gray-600 text-[9px]">vs S-1</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-base font-black text-orange-400">🔥 {streak}</p>
-                            <p className="text-gray-600 text-[9px]">Profit days</p>
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap gap-0.5">
-                          {perfSnapshots.map((s, i) => (
-                            <div key={i} title={`${s.date}: ${(s.daily_pnl ?? 0) >= 0 ? "+" : ""}$${(s.daily_pnl ?? 0).toFixed(0)}`}
-                              className={`w-4 h-4 rounded-sm ${(s.daily_pnl ?? 0) > 0 ? "bg-green-500/60" : (s.daily_pnl ?? 0) < 0 ? "bg-red-500/50" : "bg-white/5"}`} />
-                          ))}
-                        </div>
-                        <a href="/reports" className="block text-center text-[10px] text-green-400 font-bold hover:text-green-300 transition">
-                          Full report →
-                        </a>
-                      </div>
-                    )
-                  })()}
-                </div>
-
                 {/* Weekly Challenges */}
                 {challenges.length > 0 && (
-                  <div className="px-4 pb-3 border-t border-white/[0.05] pt-3">
-                    <h3 className="text-white font-bold text-xs mb-2">🎯 Weekly challenges</h3>
-                    <div className="space-y-2">
+                  <div className="pt-2">
+                    <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-2">🎯 Défis</p>
+                    <div className="space-y-1.5">
                       {challenges.map((c: any) => (
-                        <div key={c.id} className={`rounded-xl p-2.5 border flex items-center gap-2 ${c.completed ? "bg-green-500/5 border-green-500/20" : "bg-[#111] border-white/5"}`}>
-                          <span className="text-base flex-shrink-0">{c.completed ? "✅" : "🎯"}</span>
+                        <div key={c.id}
+                          className={`rounded-xl p-2.5 flex items-center gap-2 ${c.completed ? "bg-green-500/5 border border-green-500/20" : "bg-white/3 border border-white/6"}`}>
+                          <span className="text-sm">{c.completed ? "✅" : "🎯"}</span>
                           <div className="flex-1 min-w-0">
                             <p className={`text-[10px] font-bold ${c.completed ? "text-green-400" : "text-white"}`}>{c.title}</p>
-                            <p className="text-gray-600 text-[9px] truncate">{c.description}</p>
                           </div>
-                          <p className="text-[10px] font-black text-yellow-400 flex-shrink-0">+{c.reward_xp} XP</p>
+                          <p className="text-[10px] font-black text-yellow-400">+{c.reward_xp} XP</p>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
+
+                <a href="/reports" className="block text-center text-[10px] text-green-400 font-bold hover:text-green-300 transition pt-1">
+                  Rapport complet →
+                </a>
               </div>
             )}
-
           </div>
 
-          {/* Footer */}
-          <div className="flex-shrink-0 px-4 py-2 border-t border-white/[0.05]">
-            <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-              <span className="text-[9px] text-gray-700">Yahoo Finance · Groq AI · Live</span>
+          {/* ── Footer ── */}
+          <div className="flex-shrink-0 px-4 py-2.5 border-t border-white/5">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+              <p className="text-[9px] text-white/20">Yahoo Finance · Groq AI · Live</p>
             </div>
           </div>
         </div>
