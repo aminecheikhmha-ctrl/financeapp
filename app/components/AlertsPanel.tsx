@@ -288,17 +288,17 @@ export default function AlertsPanel({
               return (
                 <div
                   key={a.id}
-                  className="flex items-center justify-between px-2.5 py-1.5 rounded-lg"
-                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}
+                  className="flex items-center justify-between px-3 py-3 rounded-xl mb-2 transition-all hover:bg-white/[0.03]"
+                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
                 >
-                  <div className="flex items-center gap-2">
-                    <span style={{ color, fontSize: 10 }}>{icon}</span>
-                    <span className="text-[10px] font-mono" style={{ color: "#ccc" }}>{text}</span>
+                  <div>
+                    <p className="text-xs font-bold text-white">{a.symbol}</p>
+                    <p className="text-[10px] text-white/40 mt-0.5">{a.condition === "above" ? "Au-dessus de" : "En-dessous de"} ${a.price.toFixed(2)}</p>
                   </div>
                   <button
                     onClick={() => deleteAlert(a.id)}
-                    className="text-gray-700 hover:text-red-400 text-xs transition leading-none"
-                  >×</button>
+                    className="text-white/20 hover:text-red-400 transition text-xs"
+                  >✕</button>
                 </div>
               )
             })}

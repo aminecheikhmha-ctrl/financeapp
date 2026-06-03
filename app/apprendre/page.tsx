@@ -367,7 +367,7 @@ export default function Apprendre() {
   }).sort((a, b) => (LEVEL_ORDER[a.level] ?? 0) - (LEVEL_ORDER[b.level] ?? 0))
 
   if (!ready) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg-canvas)" }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: "transparent" }}>
       <div className="flex flex-col items-center gap-4">
         <div className="relative w-12 h-12">
           <div className="absolute inset-0 rounded-full border-2 border-green-400/20" />
@@ -379,7 +379,7 @@ export default function Apprendre() {
   )
 
   return (
-    <div className="min-h-screen text-white overflow-x-hidden" style={{ background: "var(--bg-canvas)" }}>
+    <div className="min-h-screen text-white overflow-x-hidden" style={{ background: "transparent" }}>
       <div className="max-w-6xl mx-auto px-4 md:px-5 py-6 md:py-8">
 
         {/* ── HERO ─────────────────────────────────────────────────────────── */}
@@ -734,7 +734,7 @@ export default function Apprendre() {
         {/* ── FILTERS ──────────────────────────────────────────────────────── */}
         <div className="flex gap-2 mb-6 overflow-x-auto pb-1 flex-nowrap md:flex-wrap items-center">
           {/* Level */}
-          <div className="flex gap-1.5 flex-shrink-0">
+          <div className="flex gap-2 flex-shrink-0">
             {(["all", "débutant", "intermédiaire", "avancé"] as const).map(lv => {
               const active = levelFilter === lv
               const color = lv !== "all" ? (LEVEL_COLORS[lv as keyof typeof LEVEL_COLORS]?.text ?? "#fff") : "#4ade80"
@@ -757,7 +757,7 @@ export default function Apprendre() {
           </div>
 
           {/* Type */}
-          <div className="flex gap-1.5 flex-shrink-0">
+          <div className="flex gap-2 flex-shrink-0">
             {([["all", t.academy.filters.all],["video", t.academy.filters.video],["interactive", t.academy.filters.interactive]] as const).map(([k,l]) => (
               <button key={k} onClick={() => setType(k as any)}
                 className="px-4 py-2 rounded-2xl text-xs font-bold transition-all"

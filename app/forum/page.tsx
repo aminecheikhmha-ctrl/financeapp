@@ -444,27 +444,35 @@ export default function Forum() {
   }
 
   return (
-    <div className="min-h-screen text-white overflow-x-hidden page-enter" style={{ background: "var(--bg-canvas)" }}>
+    <div className="min-h-screen text-white overflow-x-hidden page-enter" style={{ background: "transparent" }}>
       <div className="flex">
 
         {/* Left sidebar */}
         <aside className="hidden lg:flex flex-col w-56 flex-shrink-0 sticky top-0 h-screen pt-8 px-4 border-r border-white/5">
           <h2 className="text-xs font-bold uppercase tracking-widest text-gray-600 mb-4 px-2">Catégories</h2>
           <nav className="space-y-0.5">
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat.key}
-                onClick={() => { setCategory(cat.key); setTab("forum") }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all ${
-                  tab === "forum" && category === cat.key
-                    ? "bg-green-500/15 text-green-400"
-                    : "text-gray-500 hover:text-white hover:bg-white/5"
-                }`}
-              >
-                <span>{cat.icon}</span>
-                <span>{cat.label}</span>
-              </button>
-            ))}
+            {CATEGORIES.map(cat => {
+              const count = cat.key === "all" ? posts.length : posts.filter(p => p.category === cat.key).length
+              const isActive = tab === "forum" && category === cat.key
+              return (
+                <button
+                  key={cat.key}
+                  onClick={() => { setCategory(cat.key); setTab("forum") }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left ${
+                    isActive ? "bg-white/8 text-white" : "text-white/40 hover:text-white/70 hover:bg-white/4"
+                  }`}
+                >
+                  <span className="text-base">{cat.icon}</span>
+                  <span className="flex-1 text-sm font-semibold">{cat.label}</span>
+                  {count > 0 && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                      style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.3)" }}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
           </nav>
 
           <div className="mt-6 pt-4 border-t border-white/5 space-y-0.5">
