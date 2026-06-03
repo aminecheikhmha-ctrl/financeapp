@@ -722,9 +722,9 @@ function DashboardContent() {
       </div>
 
       {/* ── Main layout: chart full-width + absolute slide panel ─────────── */}
-      <div className="relative flex-1">
+      <div className="relative overflow-hidden">
 
-        {/* LEFT — chart + tabs — always full width, margin-right when panel open */}
+        {/* LEFT — chart + tabs — margin-right when panel open */}
         <div className={`flex flex-col min-w-0 transition-all duration-300 ${panelOpen ? "md:mr-[300px]" : "mr-0"}`}>
 
           {/* Onboarding checklist */}
@@ -902,18 +902,6 @@ function DashboardContent() {
               </div>
             )}
           </div>
-
-          {/* Panel toggle — desktop only, floating top-right */}
-          <button
-            onClick={() => setPanelOpen(p => !p)}
-            className="hidden md:flex absolute top-4 right-4 z-20 items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all hover:scale-[1.02]"
-            style={{
-              background: panelOpen ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.06)",
-              border: `1px solid ${panelOpen ? "rgba(34,197,94,0.3)" : "rgba(255,255,255,0.1)"}`,
-              color: panelOpen ? "#4ade80" : "rgba(255,255,255,0.5)",
-            }}>
-            {panelOpen ? "← Fermer" : "Trade →"}
-          </button>
 
           {/* Chart */}
           <div data-tour="chart" className="border border-white/[0.05]">
@@ -1477,6 +1465,20 @@ function DashboardContent() {
             </div>
           </div>
         </div>
+
+        {/* Bouton toggle panneau — absolu dans le conteneur relatif */}
+        <button
+          onClick={() => setPanelOpen(p => !p)}
+          className="hidden md:flex absolute top-4 z-20 items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all hover:scale-[1.02]"
+          style={{
+            right: panelOpen ? "316px" : "16px",
+            background: panelOpen ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.06)",
+            border: `1px solid ${panelOpen ? "rgba(34,197,94,0.3)" : "rgba(255,255,255,0.1)"}`,
+            color: panelOpen ? "#4ade80" : "rgba(255,255,255,0.5)",
+            transition: "right 0.3s, background 0.2s, border 0.2s, color 0.2s",
+          }}>
+          {panelOpen ? "← Fermer" : "Trade →"}
+        </button>
 
         {/* RIGHT — absolute slide panel from right */}
         <div className={`hidden md:flex flex-col fixed top-14 right-0 h-[calc(100vh-56px)] w-[300px] z-10 transition-all duration-300 border-l border-white/5 ${
