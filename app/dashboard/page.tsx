@@ -1632,78 +1632,16 @@ function DashboardContent() {
             {rightTab === "trade" && (
               <div className="px-3 pb-4 space-y-3">
 
-                {/* Quantité */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold">Quantité</p>
-                    {account && activeData && (
-                      <p className="text-[10px] text-white/20">
-                        Max: {Math.floor(account.cash / activeData.price)} parts
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
-                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                    <button onClick={() => setPanelQty(q => Math.max(1, q - 1))}
-                      className="text-white/40 hover:text-white transition font-black text-lg w-5 text-center leading-none">−</button>
-                    <input type="number" value={panelQty} min={1}
-                      onChange={e => setPanelQty(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="flex-1 text-center text-base font-black text-white bg-transparent outline-none tabular-nums" />
-                    <button onClick={() => setPanelQty(q => q + 1)}
-                      className="text-white/40 hover:text-white transition font-black text-lg w-5 text-center leading-none">+</button>
-                  </div>
-                  <div className="flex gap-1.5 mt-2">
-                    {[1, 5, 10, 25].map(n => (
-                      <button key={n} onClick={() => setPanelQty(n)}
-                        className="flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all"
-                        style={{
-                          background: panelQty === n ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.04)",
-                          color: panelQty === n ? "#4ade80" : "rgba(255,255,255,0.35)",
-                          border: `1px solid ${panelQty === n ? "rgba(34,197,94,0.25)" : "rgba(255,255,255,0.06)"}`,
-                        }}>
-                        {n}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Résumé ordre */}
-                {activeData && (
-                  <div className="rounded-xl p-3 space-y-1.5"
-                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                    {[
-                      { label: "Prix actuel", value: `$${activeData.price.toFixed(2)}` },
-                      { label: "Quantité", value: `${panelQty} part${panelQty > 1 ? "s" : ""}` },
-                      { label: "Total", value: `$${(panelQty * activeData.price).toFixed(2)}`, bold: true },
-                      { label: "Cash après", value: account ? `$${(account.cash - panelQty * activeData.price).toFixed(0)}` : "—", muted: true },
-                    ].map(row => (
-                      <div key={row.label} className="flex items-center justify-between">
-                        <p className="text-[11px] text-white/35">{row.label}</p>
-                        <p className={`text-[11px] tabular-nums ${row.bold ? "font-black text-white" : row.muted ? "font-semibold text-white/40" : "font-semibold text-white/70"}`}>
-                          {row.value}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
                 {/* Boutons Buy / Short premium */}
-                <div className="space-y-2" data-tour="buy-btn">
+                <div className="space-y-2 pt-1" data-tour="buy-btn">
                   <button
-                    onClick={isDemo ? () => setShowSignupModal(true) : () => {
-                      setOrderQty(String(panelQty))
-                      setOrderTp(panelTp || (activeData ? (activeData.price * 1.05).toFixed(2) : ""))
-                      setOrderSl(panelSl || (activeData ? (activeData.price * 0.97).toFixed(2) : ""))
-                      setOrderModal("buy")
-                      setOrderMsg("")
-                    }}
+                    onClick={isDemo ? () => setShowSignupModal(true) : openBuy}
                     className="w-full py-3.5 rounded-2xl font-black text-sm text-black transition-all relative overflow-hidden group btn-buy"
                     style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}>
                     <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 skew-x-12" />
                     <span className="relative flex items-center justify-center gap-2">
                       <span>↗</span>
-                      <span>Acheter {panelQty} {ticker.replace("-USD","")}</span>
-                      {activeData && <span className="text-black/50 text-xs">· ${(panelQty * activeData.price).toFixed(0)}</span>}
+                      <span>{t.dashboard.buyBtn} {ticker.replace("-USD","")}</span>
                     </span>
                   </button>
 
@@ -1711,8 +1649,10 @@ function DashboardContent() {
                     onClick={isDemo ? () => setShowSignupModal(true) : () => {
                       if (position && position.qty > 0) {
                         setOrderModal("sell"); setOrderQty(String(position.qty))
+                      } else if (position && position.qty < 0) {
+                        setOrderModal("buy"); setOrderQty(String(Math.abs(position.qty)))
                       } else {
-                        setOrderModal("short"); setOrderQty(String(panelQty))
+                        setOrderModal("short"); setOrderQty("1")
                       }
                       setOrderMsg("")
                     }}
@@ -1725,129 +1665,27 @@ function DashboardContent() {
                     <div className="absolute inset-0 bg-red-500/5 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 skew-x-12" />
                     <span className="relative flex items-center justify-center gap-2">
                       <span>↘</span>
-                      <span>{position && position.qty > 0 ? `Vendre ${position.qty} parts` : `Shorter ${ticker.replace("-USD","")}`}</span>
+                      <span>{position && position.qty > 0 ? `${t.dashboard.sellBtn} ${position.qty} parts` : position && position.qty < 0 ? `🔄 Cover (Short ${Math.abs(position.qty)})` : `📉 Short ${ticker.replace("-USD","")}`}</span>
                     </span>
                   </button>
                 </div>
 
-                {/* TP/SL optionnel */}
-                <div>
-                  <button onClick={() => setShowTPSL(p => !p)}
-                    className="w-full flex items-center justify-between py-2 text-[11px] text-white/30 hover:text-white/60 transition">
-                    <span>⚙️ Take Profit / Stop Loss</span>
-                    <span className="text-[10px]">{showTPSL ? "▲" : "▼"}</span>
-                  </button>
-                  {showTPSL && (
-                    <div className="grid grid-cols-2 gap-2 mt-1">
-                      {[
-                        { label: "Take Profit", color: "#4ade80", val: panelTp, set: setPanelTp },
-                        { label: "Stop Loss",   color: "#f87171", val: panelSl, set: setPanelSl },
-                      ].map(item => (
-                        <div key={item.label}>
-                          <p className="text-[9px] font-bold mb-1" style={{ color: item.color }}>{item.label}</p>
-                          <input type="number" value={item.val}
-                            onChange={e => item.set(e.target.value)}
-                            placeholder="Prix $"
-                            className="w-full px-3 py-2 rounded-xl text-xs text-white placeholder-white/20 outline-none tabular-nums"
-                            style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${item.color}25` }} />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Position actuelle */}
-                {position && (
-                  <div className="rounded-xl p-3"
-                    style={{
-                      background: (positionPnl ?? 0) >= 0 ? "rgba(34,197,94,0.05)" : "rgba(239,68,68,0.05)",
-                      border: `1px solid ${(positionPnl ?? 0) >= 0 ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)"}`,
-                    }}>
-                    <p className="text-[9px] text-white/30 uppercase tracking-widest mb-2">Position · {ticker.replace("-USD","")}</p>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {[
-                        { l: "Quantité", v: String(position.qty) },
-                        { l: "Prix moy.", v: `$${position.avg_price.toFixed(2)}` },
-                        { l: "Valeur", v: activeData ? `$${(activeData.price * position.qty).toFixed(0)}` : "—" },
-                        { l: "P&L", v: `${(positionPnl ?? 0) >= 0 ? "+" : ""}$${positionPnl?.toFixed(2)}`, color: (positionPnl ?? 0) >= 0 ? "#4ade80" : "#f87171" },
-                      ].map(k => (
-                        <div key={k.l}>
-                          <p className="text-[8px] text-white/25 uppercase tracking-wider">{k.l}</p>
-                          <p className="text-xs font-black tabular-nums" style={k.color ? { color: k.color } : { color: "rgba(255,255,255,0.8)" }}>{k.v}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {/* Calculateur de position */}
+                <PositionCalculator
+                  currentPrice={activeData?.price ?? 0}
+                  symbol={ticker}
+                  accountSize={account?.cash}
+                  onApply={(qty, tp, sl) => {
+                    setOrderQty(String(qty))
+                    setOrderTp(String(tp))
+                    setOrderSl(String(sl))
+                    openBuy()
+                  }}
+                />
 
                 {/* Alertes prix */}
-                <div>
-                  <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-2">🔔 Alertes prix</p>
-                  <div className="flex rounded-xl overflow-hidden mb-2"
-                    style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
-                    {([
-                      { key: "above", label: "▲ Au-dessus", color: "#4ade80" },
-                      { key: "below", label: "▼ En-dessous", color: "#f87171" },
-                    ] as const).map(opt => (
-                      <button key={opt.key}
-                        onClick={() => setAlertDir(opt.key)}
-                        className="flex-1 py-2 text-[11px] font-bold transition-all"
-                        style={alertDir === opt.key ? {
-                          background: `${opt.color}15`, color: opt.color,
-                        } : { color: "rgba(255,255,255,0.3)" }}>
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex gap-2 mb-2">
-                    <input type="number" value={alertPriceInput}
-                      onChange={e => setAlertPriceInput(e.target.value)}
-                      placeholder={activeData ? String(activeData.price.toFixed(2)) : "Prix"}
-                      className="flex-1 px-3 py-2.5 rounded-xl text-sm text-white placeholder-white/20 outline-none tabular-nums font-bold"
-                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
-                    <button
-                      disabled={!alertPriceInput}
-                      onClick={() => {
-                        if (!alertPriceInput) return
-                        // Use AlertsPanel logic via token
-                        const price = parseFloat(alertPriceInput)
-                        if (!isNaN(price) && token) {
-                          fetch("/api/alerts", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                            body: JSON.stringify({ symbol: ticker, condition: alertDir, price }),
-                          }).then(() => setAlertPriceInput("")).catch(() => {})
-                        }
-                      }}
-                      className="px-4 py-2.5 rounded-xl text-xs font-black text-black disabled:opacity-40 transition-all hover:scale-[1.02]"
-                      style={{ background: "#22c55e" }}>
-                      + Ajouter
-                    </button>
-                  </div>
-                  {activeData && (
-                    <div className="flex gap-1.5 mb-2">
-                      {[-5, -2, 2, 5].map(pct => {
-                        const price = activeData.price * (1 + pct / 100)
-                        const isNeg = pct < 0
-                        return (
-                          <button key={pct}
-                            onClick={() => { setAlertPriceInput(price.toFixed(2)); setAlertDir(isNeg ? "below" : "above") }}
-                            className="flex-1 py-1.5 rounded-lg text-[9px] font-black transition-all text-center"
-                            style={{
-                              background: isNeg ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.08)",
-                              color: isNeg ? "#f87171" : "#4ade80",
-                              border: `1px solid ${isNeg ? "rgba(239,68,68,0.15)" : "rgba(34,197,94,0.15)"}`,
-                            }}>
-                            {pct > 0 ? "+" : ""}{pct}%
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )}
-                  {/* Embedded AlertsPanel (list only) */}
-                  <div data-tour="alerts">
-                    <AlertsPanel symbol={ticker} currentPrice={activeData?.price} token={token} />
-                  </div>
+                <div data-tour="alerts">
+                  <AlertsPanel symbol={ticker} currentPrice={activeData?.price} token={token} />
                 </div>
               </div>
             )}
