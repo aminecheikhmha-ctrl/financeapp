@@ -543,7 +543,7 @@ function DashboardContent() {
   )
 
   return (
-    <div className="min-h-screen page-enter" style={{ background: "var(--bg-canvas)" }}>
+    <div className="min-h-screen page-enter" style={{ background: "transparent" }}>
 
       {/* ── Demo banner ──────────────────────────────────────────────────── */}
       {isDemo && (
@@ -721,11 +721,11 @@ function DashboardContent() {
         )}>{plan === "free" ? "Free" : plan === "pro" ? "Pro" : "Premium"}</span>
       </div>
 
-      {/* ── Main layout: left chart | right slide panel ──────────────────── */}
-      <div className="flex flex-col md:flex-row relative">
+      {/* ── Main layout: chart full-width + absolute slide panel ─────────── */}
+      <div className="relative flex-1">
 
-        {/* LEFT — chart + tabs */}
-        <div className="flex-1 flex flex-col min-w-0">
+        {/* LEFT — chart + tabs — always full width, margin-right when panel open */}
+        <div className={`flex flex-col min-w-0 transition-all duration-300 ${panelOpen ? "md:mr-[300px]" : "mr-0"}`}>
 
           {/* Onboarding checklist */}
           {showChecklist && (
@@ -903,19 +903,17 @@ function DashboardContent() {
             )}
           </div>
 
-          {/* Panel toggle — desktop only */}
-          <div className="hidden md:flex justify-end px-4 py-2 border-b border-white/[0.04]">
-            <button
-              onClick={() => setPanelOpen(p => !p)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:scale-[1.03]"
-              style={{
-                background: panelOpen ? "rgba(34,197,94,0.10)" : "rgba(255,255,255,0.05)",
-                border: panelOpen ? "1px solid rgba(34,197,94,0.25)" : "1px solid rgba(255,255,255,0.09)",
-                color: panelOpen ? "#4ade80" : "rgba(255,255,255,0.45)",
-              }}>
-              {panelOpen ? "← Close panel" : "Trade →"}
-            </button>
-          </div>
+          {/* Panel toggle — desktop only, floating top-right */}
+          <button
+            onClick={() => setPanelOpen(p => !p)}
+            className="hidden md:flex absolute top-4 right-4 z-20 items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all hover:scale-[1.02]"
+            style={{
+              background: panelOpen ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.06)",
+              border: `1px solid ${panelOpen ? "rgba(34,197,94,0.3)" : "rgba(255,255,255,0.1)"}`,
+              color: panelOpen ? "#4ade80" : "rgba(255,255,255,0.5)",
+            }}>
+            {panelOpen ? "← Fermer" : "Trade →"}
+          </button>
 
           {/* Chart */}
           <div data-tour="chart" className="border border-white/[0.05]">
@@ -1480,10 +1478,10 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* RIGHT — slide panel */}
-        <div className={`w-full md:w-72 md:flex-shrink-0 border-t md:border-t-0 md:border-l border-white/[0.05] flex flex-col md:sticky md:top-14 md:self-start md:max-h-[calc(100vh-56px)] transition-all duration-300 ${
-          panelOpen ? "md:translate-x-0 md:opacity-100" : "md:hidden"
-        }`} style={{ background: "#0c0c0c" }}>
+        {/* RIGHT — absolute slide panel from right */}
+        <div className={`hidden md:flex flex-col fixed top-14 right-0 h-[calc(100vh-56px)] w-[300px] z-10 transition-all duration-300 border-l border-white/5 ${
+          panelOpen ? "translate-x-0" : "translate-x-full"
+        }`} style={{ background: "rgba(8,12,8,0.97)", backdropFilter: "blur(20px)" }}>
 
           {/* ── Header: cash + tab bar ── */}
           <div className="flex-shrink-0">
@@ -1795,7 +1793,7 @@ function DashboardContent() {
             </div>
           </div>
         </div>
-      </div>
+      </div>{/* end relative wrapper */}
 
       {/* ── Modal Ordre ───────────────────────────────────────────────────── */}
       {orderModal && (() => {
