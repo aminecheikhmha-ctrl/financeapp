@@ -1,7 +1,7 @@
 export default function NotFound() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center text-center px-6 relative overflow-hidden"
-      style={{ background: "var(--bg-canvas)" }}>
+      style={{ background: "transparent" }}>
 
       {/* Background glow */}
       <div className="absolute inset-0 pointer-events-none"

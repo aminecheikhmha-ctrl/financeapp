@@ -87,19 +87,19 @@ export default function CertificatePage() {
   }
 
   if (!course) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg-canvas)" }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: "transparent" }}>
       <p style={{ color: "#555" }}>Cours introuvable.</p>
     </div>
   )
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg-canvas)" }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: "transparent" }}>
       <div className="w-8 h-8 rounded-full border-2 border-green-400 border-t-transparent animate-spin" />
     </div>
   )
 
   if (!completed) return (
-    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "var(--bg-canvas)" }}>
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "transparent" }}>
       <div className="max-w-md w-full text-center space-y-4">
         <div className="text-6xl">🔒</div>
         <h1 className="text-xl font-black text-white">Certificat non disponible</h1>
@@ -117,7 +117,7 @@ export default function CertificatePage() {
   const date  = completedAt || new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
 
   return (
-    <div className="min-h-screen py-8 px-4" style={{ background: "var(--bg-canvas)" }}>
+    <div className="min-h-screen py-8 px-4" style={{ background: "transparent" }}>
       <div className="max-w-4xl mx-auto space-y-6">
 
         {/* Back */}

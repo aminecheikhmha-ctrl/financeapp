@@ -499,7 +499,7 @@ export default function PortfolioPage() {
   if (loading) return <PortfolioSkeleton />
 
   return (
-    <div className="min-h-screen page-enter" style={{ background: "var(--bg-canvas)" }}>
+    <div className="min-h-screen page-enter" style={{ background: "transparent" }}>
 
       {/* ── KPI HEADER ─────────────────────────────────────────────────────── */}
       <div className="px-6 py-5 border-b border-white/5">
@@ -1100,7 +1100,7 @@ export default function PortfolioPage() {
 
 function PortfolioSkeleton() {
   return (
-    <div className="min-h-screen p-6" style={{ background: "var(--bg-canvas)" }}>
+    <div className="min-h-screen p-6" style={{ background: "transparent" }}>
       <div className="h-36 skeleton rounded-2xl mb-4" />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         {[...Array(4)].map((_, i) => <div key={i} className="h-24 skeleton rounded-2xl" />)}

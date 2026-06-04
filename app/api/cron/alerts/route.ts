@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import Groq from "groq-sdk"
 
 function makeSupabase() {
   return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+    process.env.SUPABASE_SERVICE_KEY || 'placeholder'
   )
 }
 
@@ -122,10 +123,27 @@ export async function GET(req: NextRequest) {
   }
 
   if (triggeredIds.length > 0) {
-    await supabase
-      .from("price_alerts")
-      .update({ triggered: true })
-      .in("id", triggeredIds)
+    // Generate AI context for triggered alerts
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+    await Promise.all(triggeredIds.map(async (id) => {
+      const alert = (alerts ?? []).find((a: any) => a.id === id)
+      if (!alert) return
+      const price = prices[alert.symbol]
+      try {
+        const chat = await groq.chat.completions.create({
+          model: "llama-3.1-8b-instant",
+          max_tokens: 80,
+          messages: [{
+            role: "user",
+            content: `${alert.symbol} vient de dépasser ${alert.condition === "above" ? "la résistance" : "le support"} à $${alert.price.toFixed(2)} (prix actuel: $${price?.toFixed(2)}). Donne un commentaire de marché en 1 phrase concise pour un trader.`
+          }]
+        })
+        const aiComment = chat.choices[0]?.message?.content ?? ""
+        await supabase.from("price_alerts").update({ triggered: true, ai_comment: aiComment }).eq("id", id)
+      } catch {
+        await supabase.from("price_alerts").update({ triggered: true }).eq("id", id)
+      }
+    }))
   }
 
   // ── 5. Check TP / SL on open positions and auto-sell ─────────────────

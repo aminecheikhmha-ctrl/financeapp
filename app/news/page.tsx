@@ -426,7 +426,7 @@ export default function NewsPage() {
   const selectTheme = (key: ThemeKey) => { setActiveTheme(key); setSearchQuery("") }
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "var(--bg-canvas)" }}>
+    <div className="flex h-screen overflow-hidden" style={{ background: "transparent" }}>
 
       {/* ── LEFT SIDEBAR — fixed, never scrolls ────────────────────────────── */}
       <aside className="w-[220px] flex-shrink-0 flex flex-col overflow-hidden h-full hidden lg:flex"

@@ -8,7 +8,7 @@ const ADMIN_EMAIL = "amine_cm@icloud.com"
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://tradex-kappa-six.vercel.app"
 
 function makeSupabase() {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co', process.env.SUPABASE_SERVICE_KEY || 'placeholder')
 }
 
 async function checkAdmin(req: NextRequest) {

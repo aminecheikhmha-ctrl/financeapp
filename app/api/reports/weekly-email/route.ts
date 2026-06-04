@@ -15,8 +15,8 @@ export async function GET(req: NextRequest) {
   }
 
   const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+    process.env.SUPABASE_SERVICE_KEY || 'placeholder'
   )
   const resend  = new Resend(process.env.RESEND_API_KEY ?? "placeholder")
   const groq    = new Groq({ apiKey: process.env.GROQ_API_KEY })

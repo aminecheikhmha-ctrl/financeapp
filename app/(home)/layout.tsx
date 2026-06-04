@@ -14,7 +14,7 @@ export const metadata = {
 
 export default function HomeLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-[100] overflow-y-auto" style={{ background: "var(--bg-canvas)" }}>
+    <div className="fixed inset-0 z-[100] overflow-y-auto" style={{ background: "transparent" }}>
       <Navbar />
       {children}
     </div>

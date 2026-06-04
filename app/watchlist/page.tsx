@@ -207,7 +207,7 @@ export default function WatchlistPage() {
   const best  = items.length > 0 ? items.reduce((b, i) => i.change_1d > b.change_1d ? i : b, items[0]) : null
 
   return (
-    <div className="min-h-screen page-enter" style={{ background: "var(--bg-canvas)" }}>
+    <div className="min-h-screen page-enter" style={{ background: "transparent" }}>
 
       {/* ── HEADER ─────────────────────────────────────────────────────────── */}
       <div className="px-6 py-5 border-b border-white/5">

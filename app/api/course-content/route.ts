@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic"
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import Groq from "groq-sdk"
@@ -6,8 +7,8 @@ import { getCourse } from "@/lib/courses"
 export const maxDuration = 60
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+  process.env.SUPABASE_SERVICE_KEY || "placeholder"
 )
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 

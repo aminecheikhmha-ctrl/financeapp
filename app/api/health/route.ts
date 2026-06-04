@@ -11,8 +11,8 @@ export async function GET() {
   try {
     const start = Date.now()
     const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+      process.env.SUPABASE_SERVICE_KEY || 'placeholder'
     )
     const { error } = await supabase.from("profiles").select("id").limit(1)
     checks.supabase = { status: error ? "error" : "ok", latency: Date.now() - start }

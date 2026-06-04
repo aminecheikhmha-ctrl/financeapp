@@ -760,7 +760,7 @@ export default function SignalDetailPage({ params }: { params: Promise<{ symbol:
   const { symbol } = use(params)
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg-canvas)" }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "transparent" }}>
         <div className="w-8 h-8 border-2 border-t-green-400 rounded-full animate-spin border-white/10" />
       </div>
     }>

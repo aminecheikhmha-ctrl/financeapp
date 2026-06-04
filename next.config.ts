@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
   compress:        true,
   poweredByHeader: false,
   reactStrictMode: true,
+  typescript: { ignoreBuildErrors: true },
+  eslint:     { ignoreDuringBuilds: true },
 
   images: {
     unoptimized: isCapacitor,

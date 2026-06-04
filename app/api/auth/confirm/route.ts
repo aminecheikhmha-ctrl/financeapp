@@ -5,8 +5,8 @@ export async function POST(req: Request) {
     const { userId } = await req.json()
     if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 })
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const serviceKey  = process.env.SUPABASE_SERVICE_KEY!
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+    const serviceKey  = process.env.SUPABASE_SERVICE_KEY || 'placeholder'
 
     // Supabase Admin REST API — confirme l'email directement
     const res = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {

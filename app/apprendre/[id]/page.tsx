@@ -392,7 +392,7 @@ export default function CoursePage() {
   }
 
   if (!course) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg-canvas)" }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: "transparent" }}>
       <p style={{ color: "#555" }}>Cours introuvable.</p>
     </div>
   )
@@ -416,7 +416,7 @@ export default function CoursePage() {
   }
 
   return (
-    <div className="min-h-screen text-white flex flex-col" style={{ background: "var(--bg-canvas)" }}>
+    <div className="min-h-screen text-white flex flex-col" style={{ background: "transparent" }}>
 
       {/* ── Toasts ─────────────────────────────────────────────────────────── */}
       <AnimatePresence>

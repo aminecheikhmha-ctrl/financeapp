@@ -5,7 +5,7 @@ import { sendActivationEmail, sendConversionEmail, sendEngagementEmail } from "@
 export const runtime = "nodejs"
 
 function makeSupabase() {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co', process.env.SUPABASE_SERVICE_KEY || 'placeholder')
 }
 
 // Vercel Cron: GET /api/cron/emails (runs daily at 9:00 UTC via vercel.json)

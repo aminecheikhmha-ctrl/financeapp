@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js"
 import { sendAlertTriggeredEmail } from "@/lib/resend"
 
 function makeSupabase() {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co', process.env.SUPABASE_SERVICE_KEY || 'placeholder')
 }
 
 export async function POST(req: NextRequest) {

@@ -244,7 +244,7 @@ export default function GlossairePage() {
   }, [filtered])
 
   return (
-    <div className="min-h-screen text-white" style={{ background: "var(--bg-canvas)" }}>
+    <div className="min-h-screen text-white" style={{ background: "transparent" }}>
       <div className="max-w-5xl mx-auto px-4 py-8">
 
         {/* Header */}

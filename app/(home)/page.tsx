@@ -7,7 +7,7 @@ import LanguagePicker from "@/app/components/LanguagePicker"
 export default function HomePage() {
   const { t } = useLanguage()
   return (
-    <main className="min-h-screen" style={{ background: "var(--bg-canvas)" }}>
+    <main className="min-h-screen" style={{ background: "transparent" }}>
 
       {/* ── HERO ──────────────────────────────────────────────────────────── */}
       <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden px-6 pt-24 pb-20">
@@ -133,7 +133,7 @@ export default function HomePage() {
               </div>
             </div>
             {/* Dashboard preview content */}
-            <div className="h-80 flex" style={{ background: "var(--bg-canvas)" }}>
+            <div className="h-80 flex" style={{ background: "transparent" }}>
               <div className="w-12 flex flex-col gap-2 p-2 pt-4" style={{ borderRight: "1px solid rgba(255,255,255,0.04)" }}>
                 {[...Array(6)].map((_, i) => (
                   <div key={i} className="h-6 rounded-lg" style={{ background: i === 0 ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.03)" }} />

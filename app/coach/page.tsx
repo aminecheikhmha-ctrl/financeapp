@@ -64,8 +64,49 @@ export default function CoachPage() {
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [token, setToken] = useState<string | null>(null)
+  const [voiceEnabled, setVoiceEnabled] = useState(false)
+  const [speaking, setSpeaking] = useState(false)
+  const [listening, setListening] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+
+  function speak(text: string) {
+    if (!voiceEnabled || typeof window === "undefined" || !("speechSynthesis" in window)) return
+    window.speechSynthesis.cancel()
+    const cleaned = text.replace(/[*_#`~]/g, "").slice(0, 500)
+    const utt = new SpeechSynthesisUtterance(cleaned)
+    utt.lang = lang === "fr" ? "fr-FR" : "en-US"
+    utt.rate = 1.05
+    utt.pitch = 1
+    utt.onstart = () => setSpeaking(true)
+    utt.onend   = () => setSpeaking(false)
+    utt.onerror = () => setSpeaking(false)
+    window.speechSynthesis.speak(utt)
+  }
+
+  function stopSpeaking() {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel()
+      setSpeaking(false)
+    }
+  }
+
+  function startListening() {
+    if (typeof window === "undefined") return
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SR) return
+    const rec = new SR()
+    rec.lang = lang === "fr" ? "fr-FR" : "en-US"
+    rec.interimResults = false
+    rec.onstart  = () => setListening(true)
+    rec.onend    = () => setListening(false)
+    rec.onerror  = () => setListening(false)
+    rec.onresult = (e: any) => {
+      const transcript = e.results[0][0].transcript
+      setInput(transcript)
+    }
+    rec.start()
+  }
 
   useEffect(() => {
     async function init() {
@@ -105,6 +146,7 @@ export default function CoachPage() {
       const json = await res.json()
       const reply = json.reply ?? "Sorry, I couldn't generate a response."
       setMessages(prev => [...prev, { role: "assistant", content: reply }])
+      speak(reply)
     } catch {
       setMessages(prev => [...prev, { role: "assistant", content: "An error occurred. Please try again in a moment." }])
     }
@@ -121,7 +163,7 @@ export default function CoachPage() {
   const username = user?.email?.split("@")[0] ?? "Trader"
 
   return (
-    <div className="min-h-screen text-white overflow-x-hidden flex flex-col" style={{ background: "var(--bg-canvas)" }}>
+    <div className="min-h-screen text-white overflow-x-hidden flex flex-col" style={{ background: "transparent" }}>
       <div className="max-w-2xl mx-auto w-full flex flex-col flex-1 px-4 py-6">
 
         {/* Header */}
@@ -130,9 +172,29 @@ export default function CoachPage() {
             🤖
           </div>
           <h1 className="text-2xl font-black text-white">{t.coach.title}</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {t.coach.systemNote}
-          </p>
+          <p className="text-gray-500 text-sm mt-1">{t.coach.systemNote}</p>
+
+          {/* Voice controls */}
+          <div className="flex items-center justify-center gap-2 mt-3">
+            <button
+              onClick={() => { setVoiceEnabled(v => !v); if (speaking) stopSpeaking() }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
+              style={voiceEnabled ? {
+                background: "rgba(34,197,94,0.15)", color: "#4ade80", border: "1px solid rgba(34,197,94,0.3)"
+              } : {
+                background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.35)", border: "1px solid rgba(255,255,255,0.1)"
+              }}>
+              {speaking ? "🔊" : voiceEnabled ? "🔈" : "🔇"}
+              {voiceEnabled ? "Voix activée" : "Activer la voix"}
+            </button>
+            {speaking && (
+              <button onClick={stopSpeaking}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
+                style={{ background: "rgba(239,68,68,0.1)", color: "#f87171", border: "1px solid rgba(239,68,68,0.25)" }}>
+                ⏹ Stop
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Chat area */}
@@ -187,7 +249,7 @@ export default function CoachPage() {
         </div>
 
         {/* Input */}
-        <div className="sticky bottom-0 pt-2" style={{ background: "var(--bg-canvas)" }}>
+        <div className="sticky bottom-0 pt-2" style={{ background: "transparent" }}>
           {messages.length > 0 && (
             <div className="flex gap-2 overflow-x-auto pb-2 mb-2 no-scrollbar">
               {SUGGESTED.slice(0, 3).map(s => (
@@ -202,6 +264,16 @@ export default function CoachPage() {
             </div>
           )}
           <div className="flex gap-3 items-end bg-[#111] border border-white/10 rounded-2xl p-3 focus-within:border-green-500/40 transition">
+            {/* Mic button */}
+            <button onClick={startListening} title="Dicter"
+              className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-all"
+              style={listening ? {
+                background: "rgba(239,68,68,0.2)", color: "#f87171", border: "1px solid rgba(239,68,68,0.3)", animation: "pulse 1s infinite"
+              } : {
+                background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.3)", border: "1px solid rgba(255,255,255,0.08)"
+              }}>
+              🎙️
+            </button>
             <textarea
               ref={inputRef}
               value={input}

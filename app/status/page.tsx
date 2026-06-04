@@ -97,7 +97,7 @@ export default function StatusPage() {
   const overall        = STATUS_CONFIG[overallStatus]
 
   return (
-    <div className="min-h-screen page-enter" style={{ background: "var(--bg-canvas)" }}>
+    <div className="min-h-screen page-enter" style={{ background: "transparent" }}>
       <div className="max-w-2xl mx-auto px-6 py-12">
 
         {/* Header */}

@@ -164,7 +164,7 @@ export default function PricingPage() {
   const savingsAnnual = Math.round((1 - 15 / 19) * 100)
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg-canvas)" }}>
+    <div className="min-h-screen" style={{ background: "transparent" }}>
 
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">

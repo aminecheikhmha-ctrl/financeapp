@@ -205,7 +205,7 @@ export default function FlashcardsPage() {
   if (mode === "menu") {
     const totalDone = session.easy + session.hard + session.review
     return (
-      <div className="min-h-screen text-white" style={{ background: "var(--bg-canvas)" }}>
+      <div className="min-h-screen text-white" style={{ background: "transparent" }}>
         <div className="max-w-2xl mx-auto px-4 py-8">
           <button onClick={() => router.push("/apprendre")}
             className="text-sm mb-6 flex items-center gap-1.5 transition-colors hover:text-white"
@@ -327,7 +327,7 @@ export default function FlashcardsPage() {
   const isChallenge = mode === "challenge"
 
   return (
-    <div className="min-h-screen text-white flex flex-col" style={{ background: "var(--bg-canvas)" }}>
+    <div className="min-h-screen text-white flex flex-col" style={{ background: "transparent" }}>
       {/* Header */}
       <div className="flex items-center gap-4 px-6 py-4 border-b" style={{ borderColor: "#111" }}>
         <button onClick={() => setMode("menu")} className="text-sm font-bold transition-colors hover:text-white"

@@ -149,7 +149,7 @@ export default function TraderProfile({
   // Skeleton
   if (loading) {
     return (
-      <div className="min-h-screen text-white" style={{ background: "var(--bg-canvas)" }}>
+      <div className="min-h-screen text-white" style={{ background: "transparent" }}>
         <div className="max-w-3xl mx-auto px-4 md:px-6 py-10 space-y-6">
           <div className="flex items-center gap-4">
             <div className="w-20 h-20 rounded-full animate-pulse" style={{ background: "#1a1a1a" }} />
@@ -172,7 +172,7 @@ export default function TraderProfile({
 
   if (notFound || !profile) {
     return (
-      <div className="min-h-screen text-white flex items-center justify-center" style={{ background: "var(--bg-canvas)" }}>
+      <div className="min-h-screen text-white flex items-center justify-center" style={{ background: "transparent" }}>
         <div className="text-center">
           <p className="text-5xl mb-4">🔍</p>
           <p className="text-xl font-black text-white">Trader introuvable</p>
@@ -189,7 +189,7 @@ export default function TraderProfile({
   }
 
   return (
-    <div className="min-h-screen text-white overflow-x-hidden" style={{ background: "var(--bg-canvas)" }}>
+    <div className="min-h-screen text-white overflow-x-hidden" style={{ background: "transparent" }}>
       <div className="max-w-3xl mx-auto px-4 md:px-6 py-8 space-y-8">
 
         {/* ── Header ── */}

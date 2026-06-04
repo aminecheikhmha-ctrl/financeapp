@@ -224,7 +224,7 @@ function CompareContent() {
   ]
 
   return (
-    <div className="min-h-screen page-enter" style={{ background: "var(--bg-canvas)" }}>
+    <div className="min-h-screen page-enter" style={{ background: "transparent" }}>
       <div className="max-w-5xl mx-auto px-6 py-6">
 
         {/* HEADER */}
@@ -490,7 +490,7 @@ function CompareContent() {
 export default function ComparePage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg-canvas)" }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "transparent" }}>
         <div className="w-8 h-8 border-2 border-green-400 border-t-transparent rounded-full animate-spin" />
       </div>
     }>

@@ -1,12 +1,15 @@
+export const dynamic = "force-dynamic"
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import Groq from "groq-sdk"
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+  process.env.SUPABASE_SERVICE_KEY || "placeholder"
 )
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+function getGroq() {
+  return new Groq({ apiKey: process.env.GROQ_API_KEY })
+}
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

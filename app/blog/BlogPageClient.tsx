@@ -139,7 +139,7 @@ export default function BlogPageClient({ initialPosts }: { initialPosts: Post[] 
   const popular = [...initialPosts].sort(() => Math.random() - 0.5).slice(0, 5)
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg-canvas)" }}>
+    <div className="min-h-screen" style={{ background: "transparent" }}>
       {/* Header */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 pt-16 pb-10">
         <div className="text-center max-w-2xl mx-auto">

@@ -8,8 +8,8 @@ export async function GET(req: NextRequest) {
   const symbol = req.nextUrl.searchParams.get("symbol")
 
   const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+    process.env.SUPABASE_SERVICE_KEY || 'placeholder'
   )
 
   const { data: { user } } = await supabase.auth.getUser(token)
@@ -41,8 +41,8 @@ export async function PATCH(req: NextRequest) {
   const { symbol, take_profit, stop_loss } = await req.json()
 
   const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+    process.env.SUPABASE_SERVICE_KEY || 'placeholder'
   )
 
   const { data: { user } } = await supabase.auth.getUser(token)

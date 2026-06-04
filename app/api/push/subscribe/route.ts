@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     if (!subscription) return NextResponse.json({ error: "subscription required" }, { status: 400 })
 
     if (userId) {
-      const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
+      const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co', process.env.SUPABASE_SERVICE_KEY || 'placeholder')
       await supabase.from("push_subscriptions").upsert({
         user_id: userId,
         subscription: JSON.stringify(subscription),

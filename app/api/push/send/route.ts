@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   const { user_id, all, title, body, url, icon } = await req.json()
   if (!title || !body) return NextResponse.json({ error: "title and body required" }, { status: 400 })
 
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co', process.env.SUPABASE_SERVICE_KEY || 'placeholder')
   let query = supabase.from("push_subscriptions").select("*")
   if (user_id) query = query.eq("user_id", user_id)
 

@@ -417,13 +417,43 @@ export default function ReportsPage() {
             </span>
           </div>
           {aiReport ? (
-            <p className="text-sm text-white/60 leading-relaxed">{aiReport}</p>
+            <div className="space-y-3">
+              {aiReport.split("\n").filter(Boolean).map((line, i) => (
+                <p key={i} className={`text-sm leading-relaxed ${line.startsWith("**") || /^\d\)/.test(line) ? "font-bold text-white" : "text-white/55"}`}>
+                  {line.replace(/\*\*/g, "")}
+                </p>
+              ))}
+              <button onClick={() => setAiReport(null)} className="text-xs text-white/25 hover:text-white/50 transition mt-2">
+                ↺ Regénérer
+              </button>
+            </div>
           ) : (
-            <button onClick={generateAIReport} disabled={generatingReport}
-              className="px-4 py-2 rounded-xl text-sm font-bold transition-all hover:scale-[1.02] disabled:opacity-50"
-              style={{ background: "rgba(139,92,246,0.12)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.2)" }}>
-              {generatingReport ? `⏳ ${t.reports.generating}` : `${t.reports.generate} →`}
-            </button>
+            <div className="flex gap-2 flex-wrap">
+              <button onClick={generateAIReport} disabled={generatingReport}
+                className="px-4 py-2 rounded-xl text-sm font-bold transition-all hover:scale-[1.02] disabled:opacity-50"
+                style={{ background: "rgba(139,92,246,0.12)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.2)" }}>
+                {generatingReport ? "⏳ Génération…" : "📊 Analyse IA →"}
+              </button>
+              <button
+                disabled={generatingReport}
+                onClick={async () => {
+                  if (!token) return
+                  setGeneratingReport(true)
+                  try {
+                    const res = await fetch("/api/reports/ai-weekly", {
+                      method: "POST",
+                      headers: { Authorization: `Bearer ${token}` }
+                    })
+                    const data = await res.json()
+                    if (data.report) setAiReport(data.report)
+                  } catch {}
+                  setGeneratingReport(false)
+                }}
+                className="px-4 py-2 rounded-xl text-sm font-bold transition-all hover:scale-[1.02] disabled:opacity-50"
+                style={{ background: "rgba(34,197,94,0.1)", color: "#4ade80", border: "1px solid rgba(34,197,94,0.2)" }}>
+                {generatingReport ? "⏳ Génération…" : "📋 Rapport hebdo →"}
+              </button>
+            </div>
           )}
         </div>
 
