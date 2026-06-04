@@ -18,6 +18,8 @@ import { cn } from "@/lib/utils"
 import { Search, Plus, TrendingUp, TrendingDown, ChevronRight, Settings, ArrowUpRight, Star } from "lucide-react"
 import GlobalSearch from "@/app/components/GlobalSearch"
 import { useLanguage } from "@/lib/i18n/context"
+import { useKeyboardShortcuts } from "@/lib/useKeyboardShortcuts"
+import KeyboardShortcutsHelp from "@/app/components/KeyboardShortcutsHelp"
 
 type TickerData = {
   symbol: string
@@ -125,6 +127,7 @@ function DashboardContent() {
   const [rightPanel, setRightPanel] = useState<"watchlist" | "order">("order")
   const [showMobileOrder, setShowMobileOrder] = useState(false)
   const [priceFlash, setPriceFlash] = useState<"up" | "down" | null>(null)
+  const [showShortcuts, setShowShortcuts] = useState(false)
   const prevPriceRef = useRef<number>(0)
 
   const searchTimeout = useRef<any>(null)
@@ -553,6 +556,29 @@ function DashboardContent() {
     userProfile.preferred_assets?.includes("crypto") ||
     userProfile.risk_tolerance === "high"
   )
+
+  // ── Raccourcis clavier ──────────────────────────────────────────────────
+  useKeyboardShortcuts([
+    { key: "b", description: "Acheter", action: () => { if (!orderModal && !isDemo) openBuy() } },
+    { key: "s", description: "Vendre / Short", action: () => {
+      if (orderModal || isDemo) return
+      if (position && position.qty > 0) { setOrderModal("sell"); setOrderQty(String(position.qty)) }
+      else { setOrderModal("short"); setOrderQty("1") }
+    }},
+    { key: "Escape", description: "Fermer", action: () => {
+      if (orderModal) { setOrderModal(null); setOrderMsg("") }
+      else if (tpSlModal) setTpSlModal(false)
+      else if (showShortcuts) setShowShortcuts(false)
+    }},
+    { key: "t", description: "Toggle panneau Trade", action: () => setPanelOpen(p => !p) },
+    { key: "?", description: "Raccourcis", action: () => setShowShortcuts(p => !p) },
+    { key: "1", description: "Actif 1", action: () => { if (effectiveWatchlist[0]) setTicker(effectiveWatchlist[0]) } },
+    { key: "2", description: "Actif 2", action: () => { if (effectiveWatchlist[1]) setTicker(effectiveWatchlist[1]) } },
+    { key: "3", description: "Actif 3", action: () => { if (effectiveWatchlist[2]) setTicker(effectiveWatchlist[2]) } },
+    { key: "4", description: "Actif 4", action: () => { if (effectiveWatchlist[3]) setTicker(effectiveWatchlist[3]) } },
+    { key: "5", description: "Actif 5", action: () => { if (effectiveWatchlist[4]) setTicker(effectiveWatchlist[4]) } },
+    { key: "6", description: "Actif 6", action: () => { if (effectiveWatchlist[5]) setTicker(effectiveWatchlist[5]) } },
+  ])
 
   return (
     <div className="min-h-screen page-enter" style={{ background: "transparent" }}>
@@ -2171,6 +2197,22 @@ function DashboardContent() {
           </button>
         </div>
       </div>
+
+      {/* ── Keyboard shortcuts overlay ─────────────────────────────────────── */}
+      {showShortcuts && <KeyboardShortcutsHelp onClose={() => setShowShortcuts(false)} />}
+
+      {/* ── Hint ? button — desktop only ────────────────────────────────────── */}
+      <button
+        onClick={() => setShowShortcuts(p => !p)}
+        title="Raccourcis clavier (?)"
+        className="hidden md:flex fixed bottom-6 left-20 z-30 w-8 h-8 rounded-xl items-center justify-center text-xs font-black transition-all hover:scale-110"
+        style={{
+          background: "rgba(255,255,255,0.06)",
+          border: "1px solid rgba(255,255,255,0.1)",
+          color: "rgba(255,255,255,0.3)",
+        }}>
+        ?
+      </button>
     </div>
   )
 }
