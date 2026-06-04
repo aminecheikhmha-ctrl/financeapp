@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { I18nProvider } from "@/lib/i18n/context"
+import { ThemeProvider } from "@/lib/theme"
 import Navbar          from "./components/Navbar"
 import Sidebar         from "./components/Sidebar"
 import BottomNav       from "./components/BottomNav"
@@ -92,12 +93,15 @@ export default function RootLayout({
             try {
               var s = JSON.parse(localStorage.getItem('tradex_settings') || '{}');
               if (s.compact_mode) document.body && document.body.classList.add('compact');
+              var theme = localStorage.getItem('tradex_theme') || 'dark';
+              document.documentElement.setAttribute('data-theme', theme);
             } catch(e) {}
           })();
         `}} />
       </head>
-      <body className={`${inter.variable} font-sans text-white`} style={{ background: "var(--bg-canvas)" }}>
+      <body className={`${inter.variable} font-sans text-white`}>
         <a href="#main-content" className="skip-link">Skip to content</a>
+        <ThemeProvider>
         <I18nProvider>
         <ToastProvider>
           <AppSplashScreen />
@@ -119,6 +123,7 @@ export default function RootLayout({
           <CustomCursor />
         </ToastProvider>
         </I18nProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

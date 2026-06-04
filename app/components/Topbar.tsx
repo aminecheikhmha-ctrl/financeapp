@@ -6,6 +6,7 @@ import { Bell } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import GlobalSearch from "@/app/components/GlobalSearch"
 import { useLanguage } from "@/lib/i18n/context"
+import { useTheme } from "@/lib/theme"
 
 const PUBLIC_ROUTES = ["/", "/login", "/signup", "/onboarding", "/pricing", "/preuves"]
 
@@ -47,6 +48,8 @@ export default function Topbar() {
   const [showUserMenu,  setShowUserMenu]  = useState(false)
   const [marketOpen,    setMarketOpen]    = useState(false)
   const [profileLoaded, setProfileLoaded] = useState(false)
+
+  const { theme, toggle } = useTheme()
 
   const pageTitle = Object.entries(PAGE_TITLES).find(
     ([key]) => pathname === key || pathname.startsWith(key + "/"),
@@ -163,6 +166,14 @@ export default function Topbar() {
             {t.topbar.upgradePro}
           </a>
         )}
+
+        {/* Theme toggle */}
+        <button
+          onClick={toggle}
+          title={theme === "dark" ? "Mode clair" : "Mode sombre"}
+          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:bg-white/[0.06] text-white/40 hover:text-white/80 text-base">
+          {theme === "dark" ? "☀️" : "🌙"}
+        </button>
 
         {/* Notifications */}
         <button onClick={() => router.push("/notifications")}

@@ -402,6 +402,60 @@ body.compact-mode .text-4xl { font-size: 1.75rem !important; }
 body.compact-mode .text-3xl { font-size: 1.375rem !important; }
 body.compact-mode .text-2xl { font-size: 1.125rem !important; }
 
+/* ── Light mode ────────────────────────────────── */
+[data-theme="light"] {
+  --bg-canvas:   #f4f7f4;
+  --bg-surface:  #ffffff;
+  --bg-elevated: #eef2ee;
+
+  --border-dim:     rgba(0,0,0,0.07);
+  --border-default: rgba(0,0,0,0.11);
+  --border-accent:  rgba(22,163,74,0.30);
+
+  --text-primary:   rgba(0,0,0,0.88);
+  --text-secondary: rgba(0,0,0,0.50);
+  --text-muted:     rgba(0,0,0,0.32);
+  --text-tertiary:  rgba(0,0,0,0.20);
+
+  --accent-dim:  rgba(34,197,94,0.10);
+  --accent-glow: rgba(34,197,94,0.20);
+}
+
+[data-theme="light"] body {
+  background-color: #f4f7f4;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(34,197,94,0.07), transparent),
+    radial-gradient(ellipse 40% 60% at 90% 20%,  rgba(34,197,94,0.03), transparent);
+  color: rgba(0,0,0,0.88);
+}
+
+/* Topbar / Sidebar */
+[data-theme="light"] header[style*="rgba(5,5,5"],
+[data-theme="light"] header[style*="rgba(8,8,8"] {
+  background: rgba(244,247,244,0.95) !important;
+  border-color: rgba(0,0,0,0.08) !important;
+}
+
+/* Cards / surfaces with hardcoded dark colors */
+[data-theme="light"] .card-premium {
+  background: #ffffff !important;
+  border-color: rgba(0,0,0,0.07) !important;
+}
+
+[data-theme="light"] .glass,
+[data-theme="light"] .glass-premium {
+  background: rgba(255,255,255,0.7) !important;
+  border-color: rgba(0,0,0,0.08) !important;
+}
+
+/* Scrollbar in light mode */
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.12);
+}
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(34,197,94,0.4);
+}
+
 /* ── Design system variables ── */
 :root {
   --topbar-h:    56px;
