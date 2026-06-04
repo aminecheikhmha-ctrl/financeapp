@@ -1484,9 +1484,9 @@ function DashboardContent() {
           className="hidden md:flex absolute top-4 z-20 items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all hover:scale-[1.02]"
           style={{
             right: panelOpen ? "316px" : "16px",
-            background: panelOpen ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.06)",
-            border: `1px solid ${panelOpen ? "rgba(34,197,94,0.3)" : "rgba(255,255,255,0.1)"}`,
-            color: panelOpen ? "#4ade80" : "rgba(255,255,255,0.5)",
+            background: !panelOpen ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.06)",
+            border: `1px solid ${!panelOpen ? "rgba(34,197,94,0.3)" : "rgba(255,255,255,0.1)"}`,
+            color: !panelOpen ? "#4ade80" : "rgba(255,255,255,0.5)",
             transition: "right 0.3s, background 0.2s, border 0.2s, color 0.2s",
           }}>
           {panelOpen ? "Fermer →" : "← Trade"}
