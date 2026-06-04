@@ -1489,7 +1489,7 @@ function DashboardContent() {
             color: panelOpen ? "#4ade80" : "rgba(255,255,255,0.5)",
             transition: "right 0.3s, background 0.2s, border 0.2s, color 0.2s",
           }}>
-          {panelOpen ? "← Fermer" : "Trade →"}
+          {panelOpen ? "Fermer →" : "← Trade"}
         </button>
 
         {/* RIGHT — Premium terminal panel */}
