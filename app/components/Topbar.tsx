@@ -2,85 +2,79 @@
 
 import { useState, useEffect, useRef } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import { Bell } from "lucide-react"
+import { Bell, Search } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import GlobalSearch from "@/app/components/GlobalSearch"
 import { useLanguage } from "@/lib/i18n/context"
 import { useTheme } from "@/lib/theme"
+import { cn } from "@/lib/utils"
 
 const PUBLIC_ROUTES = ["/", "/login", "/signup", "/onboarding", "/pricing", "/preuves"]
+
+const PAGE_META: Record<string, { label: string; emoji?: string }> = {
+  "/dashboard":    { label: "Dashboard",     emoji: "📊" },
+  "/signaux":      { label: "Signaux IA",    emoji: "📡" },
+  "/analyses":     { label: "Analyses",      emoji: "🔍" },
+  "/portfolio":    { label: "Portfolio",     emoji: "💼" },
+  "/watchlist":    { label: "Watchlist",     emoji: "⭐" },
+  "/news":         { label: "News",          emoji: "📰" },
+  "/apprendre":    { label: "Académie",      emoji: "🎓" },
+  "/forum":        { label: "Forum",         emoji: "💬" },
+  "/coach":        { label: "Coach IA",      emoji: "🤖" },
+  "/social":       { label: "Social",        emoji: "👥" },
+  "/reports":      { label: "Rapports",      emoji: "📈" },
+  "/compare":      { label: "Comparateur",   emoji: "⚖️" },
+  "/profil":       { label: "Mon profil",    emoji: "👤" },
+  "/notifications":{ label: "Notifications", emoji: "🔔" },
+  "/parametres":   { label: "Paramètres",    emoji: "⚙️" },
+  "/classement":   { label: "Classement",    emoji: "🏆" },
+  "/duel":         { label: "Duels",         emoji: "🥊" },
+  "/room":         { label: "Trading Room",  emoji: "💬" },
+  "/feed":         { label: "Signal Feed",   emoji: "📱" },
+  "/backtest":     { label: "Backtest",      emoji: "📈" },
+  "/replay":       { label: "Replay",        emoji: "⏪" },
+  "/scanner":      { label: "Scanner",       emoji: "🔍" },
+  "/calendrier":   { label: "Calendrier",    emoji: "📅" },
+  "/brief":        { label: "Tradex Brief",  emoji: "☀️" },
+  "/referral":     { label: "Parrainage",    emoji: "🎁" },
+  "/api-docs":     { label: "API Publique",  emoji: "🔌" },
+}
 
 export default function Topbar() {
   const pathname = usePathname()
   const router   = useRouter()
   const dropRef  = useRef<HTMLDivElement>(null)
-  const { t } = useLanguage()
+  const { theme, toggle: toggleTheme } = useTheme()
 
-  const PAGE_TITLES: Record<string, string> = {
-    "/dashboard":    t.pageTitles.dashboard,
-    "/signaux":      t.pageTitles.signals,
-    "/analyses":     t.pageTitles.analyses,
-    "/portfolio":    t.pageTitles.portfolio,
-    "/watchlist":    t.pageTitles.watchlist,
-    "/news":         t.pageTitles.news,
-    "/apprendre":    t.pageTitles.academy,
-    "/forum":        t.pageTitles.forum,
-    "/coach":        t.pageTitles.coach,
-    "/reports":      t.pageTitles.reports,
-    "/compare":      t.pageTitles.compare,
-    "/profil":       t.pageTitles.profile,
-    "/notifications":t.pageTitles.notifications,
-    "/parametres":   t.pageTitles.settings,
-    "/pricing":      t.pageTitles.pricing,
-    "/social":       t.pageTitles.social,
-    "/admin":        t.pageTitles.admin,
-    "/status":       t.pageTitles.status,
-  }
+  const [user,         setUser]         = useState<any>(null)
+  const [username,     setUsername]     = useState("")
+  const [avatarColor,  setAvatarColor]  = useState("#22c55e")
+  const [avatarUrl,    setAvatarUrl]    = useState<string | null>(null)
+  const [plan,         setPlan]         = useState("free")
+  const [xp,           setXp]           = useState(0)
+  const [levelName,    setLevelName]    = useState("")
+  const [unreadCount,  setUnreadCount]  = useState(0)
+  const [showUserMenu, setShowUserMenu] = useState(false)
+  const [marketOpen,   setMarketOpen]   = useState(false)
+  const [profileLoaded,setProfileLoaded]= useState(false)
 
-  const [user,          setUser]          = useState<any>(null)
-  const [username,      setUsername]      = useState("")
-  const [avatarColor,   setAvatarColor]   = useState("#22c55e")
-  const [avatarUrl,     setAvatarUrl]     = useState<string | null>(null)
-  const [plan,          setPlan]          = useState("free")
-  const [xp,            setXp]            = useState(0)
-  const [levelName,     setLevelName]     = useState("")
-  const [unreadCount,   setUnreadCount]   = useState(0)
-  const [showUserMenu,  setShowUserMenu]  = useState(false)
-  const [marketOpen,    setMarketOpen]    = useState(false)
-  const [profileLoaded, setProfileLoaded] = useState(false)
-
-  const { theme, toggle } = useTheme()
-
-  const pageTitle = Object.entries(PAGE_TITLES).find(
+  const meta = Object.entries(PAGE_META).find(
     ([key]) => pathname === key || pathname.startsWith(key + "/"),
-  )?.[1] ?? "Tradex"
+  )?.[1] ?? { label: "Tradex" }
 
   useEffect(() => {
-    // US market: Mon-Fri 9:30-16:00 ET
-    const now = new Date()
-    const et  = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }))
-    const day  = et.getDay()
-    const mins = et.getHours() * 60 + et.getMinutes()
+    const et = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }))
+    const day = et.getDay(), mins = et.getHours() * 60 + et.getMinutes()
     setMarketOpen(day >= 1 && day <= 5 && mins >= 570 && mins < 960)
 
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) return
       setUser(data.user)
-
       const [profileRes, planRes, notifRes] = await Promise.all([
-        supabase
-          .from("user_profiles")
-          .select("username, xp, level_name, avatar_color, avatar_url")
-          .eq("id", data.user.id)
-          .single(),
+        supabase.from("user_profiles").select("username,xp,level_name,avatar_color,avatar_url").eq("id", data.user.id).single(),
         supabase.from("profiles").select("plan").eq("id", data.user.id).single(),
-        supabase
-          .from("user_notifications")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", data.user.id)
-          .eq("read", false),
+        supabase.from("user_notifications").select("*", { count: "exact", head: true }).eq("user_id", data.user.id).eq("read", false),
       ])
-
       if (profileRes.data) {
         setUsername(profileRes.data.username ?? data.user.email?.split("@")[0] ?? "")
         setXp(profileRes.data.xp ?? 0)
@@ -92,17 +86,13 @@ export default function Topbar() {
       setUnreadCount(notifRes.count ?? 0)
       setProfileLoaded(true)
     })
-
     const { data: listener } = supabase.auth.onAuthStateChange((_e, s) => setUser(s?.user ?? null))
     return () => listener.subscription.unsubscribe()
   }, [])
 
-  // Close dropdown on outside click
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (dropRef.current && !dropRef.current.contains(e.target as Node)) {
-        setShowUserMenu(false)
-      }
+      if (dropRef.current && !dropRef.current.contains(e.target as Node)) setShowUserMenu(false)
     }
     document.addEventListener("mousedown", handler)
     return () => document.removeEventListener("mousedown", handler)
@@ -120,120 +110,144 @@ export default function Topbar() {
 
   return (
     <header
-      className="hidden md:flex items-center gap-4 px-5 border-b flex-shrink-0"
+      className="hidden md:flex items-center gap-3 flex-shrink-0"
       style={{
         position: "fixed",
         top: 0,
-        left: "var(--sidebar-w, 64px)",
+        left: "var(--sidebar-w, 60px)",
         right: 0,
-        height: "var(--topbar-h)",
+        height: "56px",
         zIndex: 40,
-        transition: "left 0.2s ease",
-        background: "rgba(5,5,5,0.95)",
-        backdropFilter: "blur(20px)",
-        borderColor: "var(--border-dim)",
+        padding: "0 20px",
+        background: "rgba(6,10,7,0.88)",
+        backdropFilter: "blur(24px)",
+        WebkitBackdropFilter: "blur(24px)",
+        borderBottom: "1px solid var(--border-faint)",
+        transition: "left 220ms var(--ease-spring)",
       }}>
 
       {/* Page title */}
-      <div className="flex items-center gap-2.5 flex-shrink-0 min-w-[140px]">
-        <p className="text-sm font-black text-white">{pageTitle}</p>
-        {/* Market status */}
-        <div className="flex items-center gap-1">
-          <div className="w-1.5 h-1.5 rounded-full"
+      <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
+        {meta.emoji && <span className="text-sm">{meta.emoji}</span>}
+        <p className="text-[14px] font-semibold text-white truncate">{meta.label}</p>
+        {/* Market status dot */}
+        <div className="flex items-center gap-1.5 ml-1">
+          <div
+            className="w-[6px] h-[6px] rounded-full flex-shrink-0"
             style={{
-              background: marketOpen ? "var(--green)" : "rgba(255,255,255,0.2)",
-              boxShadow: marketOpen ? "0 0 5px rgba(34,197,94,0.8)" : "none",
-            }} />
+              background: marketOpen ? "var(--green)" : "rgba(255,255,255,0.18)",
+              boxShadow: marketOpen ? "0 0 6px rgba(34,197,94,0.7)" : "none",
+              animation: marketOpen ? "live-pulse 2s infinite" : "none",
+            }}
+          />
           <span className="text-[10px] hidden lg:block" style={{ color: "var(--text-muted)" }}>
-            {marketOpen ? t.topbar.marketOpen : t.topbar.marketClosed}
+            {marketOpen ? "Marché ouvert" : "Fermé"}
           </span>
         </div>
       </div>
 
-      {/* Global search */}
+      {/* Search */}
       <div className="flex-1 max-w-md">
         <GlobalSearch />
       </div>
 
       {/* Right actions */}
-      <div className="flex items-center gap-2 ml-auto">
+      <div className="flex items-center gap-1.5 ml-auto">
 
-        {/* Pro upgrade badge */}
+        {/* Upgrade chip */}
         {plan === "free" && (
           <a href="/pricing"
-            className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all hover:scale-[1.02] active:scale-95"
-            style={{ background: "var(--green-dim)", color: "var(--green-bright)", border: "1px solid var(--green-border)" }}>
-            {t.topbar.upgradePro}
+            className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all hover:scale-[1.02]"
+            style={{ background: "var(--green-dim)", color: "var(--green-light)", border: "1px solid var(--green-border)" }}>
+            ⚡ Pro
           </a>
         )}
 
-        {/* Theme toggle */}
-        <button
-          onClick={toggle}
-          title={theme === "dark" ? "Mode clair" : "Mode sombre"}
-          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:bg-white/[0.06] text-white/40 hover:text-white/80 text-base">
-          {theme === "dark" ? "☀️" : "🌙"}
-        </button>
-
         {/* Notifications */}
         <button onClick={() => router.push("/notifications")}
-          className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-all text-white/35 hover:text-white hover:bg-white/[0.06]">
-          <Bell size={16} />
+          className="relative w-8 h-8 rounded-xl flex items-center justify-center transition-all text-white/30 hover:text-white/70 hover:bg-white/[0.06]"
+          style={{ border: "1px solid transparent" }}>
+          <Bell size={15} />
           {unreadCount > 0 && (
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+            <span className="absolute top-1 right-1 w-[7px] h-[7px] bg-red-500 rounded-full border border-[var(--bg-canvas)]" />
           )}
         </button>
 
         {/* User avatar + dropdown */}
         <div className="relative" ref={dropRef}>
           {!profileLoaded ? (
-            <div className="w-8 h-8 rounded-full skeleton flex-shrink-0" />
+            <div className="w-7 h-7 rounded-full skeleton flex-shrink-0" />
           ) : (
-          <button
-            onClick={() => setShowUserMenu(m => !m)}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black text-black transition-all hover:scale-105 overflow-hidden flex-shrink-0"
-            style={{ background: avatarColor }}>
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
-            ) : (
-              initial
-            )}
-          </button>
+            <button
+              onClick={() => setShowUserMenu(m => !m)}
+              className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black text-black transition-all hover:scale-105 overflow-hidden flex-shrink-0 ring-1 ring-white/10"
+              style={{ background: avatarColor }}>
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+              ) : initial}
+            </button>
           )}
 
           {/* Dropdown */}
           {showUserMenu && (
-            <div className="absolute top-full right-0 mt-2 w-52 rounded-2xl overflow-hidden shadow-2xl animate-scale-in z-50"
-              style={{ background: "#0d0d0d", border: "1px solid var(--border-default)" }}>
+            <div
+              className="absolute top-full right-0 mt-2 w-52 rounded-2xl overflow-hidden animate-scale-in z-50"
+              style={{
+                background: "var(--bg-elevated)",
+                border: "1px solid var(--border-default)",
+                boxShadow: "var(--shadow-xl)",
+              }}>
 
               {/* User info */}
-              <div className="px-4 py-3 border-b" style={{ borderColor: "var(--border-dim)" }}>
-                <p className="text-sm font-black text-white">{username || user?.email?.split("@")[0] || ""}</p>
-                <p className="text-[11px] mt-0.5" style={{ color: "var(--text-muted)" }}>{user?.email}</p>
-                <p className="text-[10px] font-bold mt-1" style={{ color: avatarColor }}>
-                  {levelName} · {xp.toLocaleString()} XP
-                </p>
+              <div className="px-4 py-3.5 border-b" style={{ borderColor: "var(--border-subtle)" }}>
+                <div className="flex items-center gap-2.5 mb-1">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black text-black overflow-hidden"
+                    style={{ background: avatarColor }}>
+                    {avatarUrl ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" /> : initial}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-semibold text-white truncate">{username || user?.email?.split("@")[0]}</p>
+                    <p className="text-[10px]" style={{ color: "var(--text-tertiary)" }}>{user?.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-[10px] font-bold" style={{ color: avatarColor }}>
+                    {levelName} · {xp.toLocaleString()} XP
+                  </span>
+                  {plan !== "free" && (
+                    <span className="text-[9px] font-black px-2 py-0.5 rounded-full"
+                      style={{
+                        background: plan === "premium" ? "rgba(251,191,36,0.15)" : "var(--green-dim)",
+                        color: plan === "premium" ? "#fbbf24" : "var(--green-light)",
+                      }}>
+                      {plan.toUpperCase()}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Links */}
               {[
-                { label: t.topbar.myProfile,         href: "/profil" },
-                { label: t.topbar.settings,          href: "/parametres" },
-                { label: t.topbar.subscription,      href: "/pricing" },
-                { label: t.topbar.notificationsLink, href: "/notifications" },
+                { label: "Mon profil",       href: "/profil",        emoji: "👤" },
+                { label: "Paramètres",       href: "/parametres",    emoji: "⚙️" },
+                { label: "Abonnement",       href: "/pricing",       emoji: "💎" },
+                { label: "Notifications",    href: "/notifications",  emoji: "🔔" },
               ].map(link => (
-                <a key={link.href} href={link.href}
-                  className="flex items-center px-4 py-2.5 text-sm transition-all text-white/60 hover:text-white hover:bg-white/[0.04]">
+                <a key={link.href} href={link.href} onClick={() => setShowUserMenu(false)}
+                  className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] transition-all hover:bg-white/[0.04]"
+                  style={{ color: "var(--text-secondary)" }}>
+                  <span className="text-sm">{link.emoji}</span>
                   {link.label}
                 </a>
               ))}
 
-              <div className="border-t" style={{ borderColor: "var(--border-dim)" }}>
-                <button onClick={handleLogout}
-                  className="w-full flex items-center px-4 py-2.5 text-sm transition-all text-red-400/60 hover:text-red-400 hover:bg-red-500/[0.06]">
-                  {t.topbar.signOut}
-                </button>
-              </div>
+              <div className="border-t mx-3" style={{ borderColor: "var(--border-subtle)" }} />
+
+              <button onClick={handleLogout}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] transition-all text-red-400/60 hover:text-red-400 hover:bg-red-500/[0.05]">
+                <span className="text-sm">🚪</span>
+                Déconnexion
+              </button>
             </div>
           )}
         </div>
