@@ -1,15 +1,16 @@
 "use client"
 
-import { useState, useEffect, ReactNode } from "react"
+import { useState, useEffect, useRef, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { haptic } from "@/lib/capacitor"
-import {
-  Bell, Shield, Palette, Globe, CreditCard, LogOut,
-  ChevronRight, Settings, User,
-} from "lucide-react"
 import { useLanguage } from "@/lib/i18n/context"
+import { useTheme } from "@/lib/theme"
 import LanguagePicker from "@/app/components/LanguagePicker"
+import {
+  Bell, Shield, Palette, CreditCard, LogOut,
+  User, ChevronRight, Zap, Code2, Gift, Sun, Moon,
+} from "lucide-react"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -18,7 +19,6 @@ type AppSettings = {
   notifications_email:   boolean
   notifications_signals: boolean
   notifications_news:    boolean
-  language:              "fr" | "en"
   sound_enabled:         boolean
   compact_mode:          boolean
   default_symbol:        string
@@ -26,12 +26,11 @@ type AppSettings = {
   show_pnl_public:       boolean
 }
 
-const DEFAULT_SETTINGS: AppSettings = {
+const DEFAULTS: AppSettings = {
   notifications_push:    true,
   notifications_email:   true,
   notifications_signals: true,
   notifications_news:    false,
-  language:              "fr",
   sound_enabled:         true,
   compact_mode:          false,
   default_symbol:        "AAPL",
@@ -39,82 +38,86 @@ const DEFAULT_SETTINGS: AppSettings = {
   show_pnl_public:       false,
 }
 
-type Section = "notifications" | "trading" | "privacy" | "appearance" | "account" | "billing"
+const AVATAR_COLORS = [
+  "#4ade80","#60a5fa","#f472b6","#a78bfa",
+  "#fb923c","#34d399","#facc15","#f87171",
+  "#38bdf8","#e879f9","#a3e635","#fb7185",
+]
 
+// ─── Nav sections ────────────────────────────────────────────────────────────
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+const SECTIONS = [
+  { id: "profile",       icon: User,        emoji: "👤", label: "Profil" },
+  { id: "appearance",    icon: Palette,     emoji: "🎨", label: "Apparence" },
+  { id: "notifications", icon: Bell,        emoji: "🔔", label: "Notifications" },
+  { id: "trading",       icon: Zap,         emoji: "⚡", label: "Trading" },
+  { id: "privacy",       icon: Shield,      emoji: "🔒", label: "Confidentialité" },
+  { id: "billing",       icon: CreditCard,  emoji: "💎", label: "Abonnement" },
+  { id: "tools",         icon: Code2,       emoji: "🔧", label: "Outils" },
+]
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
 
 function Toggle({ value, onChange, disabled = false }: {
   value: boolean; onChange: (v: boolean) => void; disabled?: boolean
 }) {
   return (
-    <button type="button"
+    <button
+      type="button"
       onClick={() => !disabled && onChange(!value)}
       disabled={disabled}
-      className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 disabled:opacity-40 focus:outline-none"
-      style={{ background: value ? "#22c55e" : "rgba(255,255,255,0.10)" }}>
-      <span className="inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 mt-0.5"
-        style={{ transform: `translateX(${value ? 24 : 2}px)` }} />
+      className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-all duration-200 disabled:opacity-40"
+      style={{
+        background: value
+          ? "linear-gradient(135deg, #22c55e, #16a34a)"
+          : "rgba(255,255,255,0.10)",
+        boxShadow: value ? "0 2px 8px rgba(34,197,94,0.30)" : "none",
+      }}>
+      <span
+        className="inline-block h-[18px] w-[18px] transform rounded-full bg-white shadow-sm transition-transform duration-200 mt-[3px]"
+        style={{ transform: `translateX(${value ? 22 : 3}px)` }}
+      />
     </button>
   )
 }
 
-function SettingRow({ label, desc, children, saved = false }: {
+function SettingRow({ label, desc, children, saved }: {
   label: string; desc?: string; children: ReactNode; saved?: boolean
 }) {
   return (
-    <div className="flex items-center justify-between py-4 border-b border-white/[0.04] last:border-0">
-      <div className="flex-1 mr-4">
+    <div className="flex items-center justify-between py-4 border-b last:border-0"
+      style={{ borderColor: "var(--border-faint)" }}>
+      <div className="flex-1 mr-5 min-w-0">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold text-white">{label}</p>
-          {saved && <span className="text-[10px] text-green-400 font-bold animate-pulse">✓</span>}
+          <p className="text-[13px] font-semibold text-white">{label}</p>
+          {saved && (
+            <span className="text-[10px] text-green-400 font-bold animate-fade-in">✓ Sauvegardé</span>
+          )}
         </div>
-        {desc && <p className="text-[11px] text-white/30 mt-0.5">{desc}</p>}
+        {desc && <p className="text-[11px] mt-0.5" style={{ color: "var(--text-tertiary)" }}>{desc}</p>}
       </div>
-      {children}
+      <div className="flex-shrink-0">{children}</div>
     </div>
   )
 }
 
-function Card({ children }: { children: ReactNode }) {
+function SectionCard({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className="rounded-2xl overflow-hidden mb-4"
-      style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
+    <div className={`rounded-2xl overflow-hidden mb-3 ${className}`}
+      style={{
+        background: "var(--bg-surface)",
+        border: "1px solid var(--border-subtle)",
+      }}>
       <div className="px-5">{children}</div>
     </div>
   )
 }
 
-// ─── Referral section (preserved) ────────────────────────────────────────────
-function ReferralSection() {
-  const [ref, setRef] = useState<{ code: string; url: string; stats: { total: number; converted: number } } | null>(null)
-  const [copied, setCopied] = useState(false)
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      const token = data.session?.access_token
-      if (!token) return
-      fetch("/api/referral", { headers: { Authorization: `Bearer ${token}` } })
-        .then(r => r.json()).then(setRef).catch(() => {})
-    })
-  }, [])
-  if (!ref) return <p className="text-white/25 text-xs">Chargement...</p>
+function SectionTitle({ emoji, label, id }: { emoji: string; label: string; id: string }) {
   return (
-    <div>
-      <div className="flex items-center gap-2 mb-3">
-        <div className="flex-1 rounded-xl px-3 py-2.5 text-green-400 font-mono text-sm truncate"
-          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-          {ref.url}
-        </div>
-        <button onClick={() => { navigator.clipboard.writeText(ref.url); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
-          className="h-10 px-4 text-xs font-black text-black rounded-xl flex-shrink-0 transition"
-          style={{ background: "#22c55e" }}>
-          {copied ? "✓ Copied" : "Copy"}
-        </button>
-      </div>
-      <div className="flex gap-6">
-        <div><p className="text-xl font-black text-white">{ref.stats.total}</p><p className="text-white/30 text-xs">Referred</p></div>
-        <div><p className="text-xl font-black text-green-400">{ref.stats.converted}</p><p className="text-white/30 text-xs">Converted</p></div>
-      </div>
+    <div id={id} className="flex items-center gap-2.5 mb-4 pt-2">
+      <span className="text-lg">{emoji}</span>
+      <h2 className="text-[16px] font-black text-white">{label}</h2>
     </div>
   )
 }
@@ -123,32 +126,24 @@ function ReferralSection() {
 
 export default function ParametresPage() {
   const router = useRouter()
-  const { t } = useLanguage()
+  const { t }  = useLanguage()
+  const { theme, toggle: toggleTheme } = useTheme()
 
-  const SECTIONS = [
-    { key: "notifications" as Section, label: t.settings.tabs.notifications, icon: Bell       },
-    { key: "trading"       as Section, label: t.settings.tabs.preferences,   icon: CreditCard },
-    { key: "privacy"       as Section, label: t.settings.tabs.security,      icon: Shield     },
-    { key: "appearance"    as Section, label: t.settings.tabs.profile,       icon: Palette    },
-    { key: "account"       as Section, label: t.settings.username,           icon: User       },
-    { key: "billing"       as Section, label: t.settings.tabs.subscription,  icon: CreditCard },
-  ]
+  const [user,         setUser]         = useState<any>(null)
+  const [plan,         setPlan]         = useState("free")
+  const [settings,     setSettings]     = useState<AppSettings>(DEFAULTS)
+  const [saved,        setSaved]        = useState<string | null>(null)
+  const [activeSection,setActiveSection]= useState("profile")
+  const [deleteConfirm,setDeleteConfirm]= useState(false)
+  const [ready,        setReady]        = useState(false)
 
-  const [user, setUser]         = useState<any>(null)
-  const [plan, setPlan]         = useState("free")
-  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
-  const [saved, setSaved]       = useState<string | null>(null)
-  const [activeSection, setActiveSection] = useState<Section>("notifications")
-  const [deleteConfirm, setDeleteConfirm] = useState(false)
-  const [loading, setLoading]   = useState(true)
+  // Profile editing
+  const [editUsername, setEditUsername] = useState("")
+  const [editColor,    setEditColor]    = useState("#4ade80")
+  const [savingProfile,setSavingProfile]= useState(false)
+  const [profileMsg,   setProfileMsg]   = useState("")
 
-  // Avatar / username (preserved from old page)
-  const [editUsername,  setEditUsername]  = useState("")
-  const [editColor,     setEditColor]     = useState("#4ade80")
-  const [savingProfile, setSavingProfile] = useState(false)
-  const [profileMsg,    setProfileMsg]    = useState("")
-
-  const AVATAR_COLORS = ["#4ade80","#60a5fa","#f472b6","#a78bfa","#fb923c","#34d399","#facc15","#f87171"]
+  const contentRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     async function load() {
@@ -157,44 +152,56 @@ export default function ParametresPage() {
       setUser(session.user)
 
       const [profileRes, planRes] = await Promise.allSettled([
-        supabase.from("user_profiles").select("username, avatar_color, settings").eq("id", session.user.id).single(),
+        supabase.from("user_profiles").select("username,avatar_color,settings").eq("id", session.user.id).single(),
         supabase.from("profiles").select("plan").eq("id", session.user.id).single(),
       ])
 
       if (profileRes.status === "fulfilled" && profileRes.value.data) {
         const p = profileRes.value.data
-        setEditUsername(p.username ?? "")
+        setEditUsername(p.username ?? session.user.email?.split("@")[0] ?? "")
         setEditColor(p.avatar_color ?? "#4ade80")
         if (p.settings) {
-          const merged = { ...DEFAULT_SETTINGS, ...p.settings }
-          setSettings(merged)
-          // Apply compact mode on load
-          if (merged.compact_mode) document.body.classList.add("compact-mode")
-          else document.body.classList.remove("compact-mode")
+          setSettings({ ...DEFAULTS, ...p.settings })
         }
       }
       if (planRes.status === "fulfilled" && planRes.value.data?.plan) {
         setPlan(planRes.value.data.plan)
       }
-      setLoading(false)
+      setReady(true)
     }
     load()
   }, [])
+
+  // Scroll spy
+  useEffect(() => {
+    const el = contentRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      entries => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) setActiveSection(entry.target.id)
+        }
+      },
+      { root: el, threshold: 0.3 }
+    )
+    SECTIONS.forEach(s => {
+      const target = document.getElementById(s.id)
+      if (target) observer.observe(target)
+    })
+    return () => observer.disconnect()
+  }, [ready])
 
   async function updateSetting<K extends keyof AppSettings>(key: K, value: AppSettings[K]) {
     haptic("light")
     const next = { ...settings, [key]: value }
     setSettings(next)
     setSaved(key)
-    // Apply compact mode immediately to body
     if (key === "compact_mode") {
-      if (value) document.body.classList.add("compact-mode")
-      else document.body.classList.remove("compact-mode")
+      if (value) document.body.classList.add("compact")
+      else document.body.classList.remove("compact")
     }
-    await supabase.from("user_profiles")
-      .update({ settings: next })
-      .eq("id", user?.id)
-    setTimeout(() => setSaved(null), 1200)
+    await supabase.from("user_profiles").update({ settings: next }).eq("id", user?.id)
+    setTimeout(() => setSaved(null), 1800)
   }
 
   async function saveProfile() {
@@ -206,7 +213,7 @@ export default function ParametresPage() {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
       body: JSON.stringify({ username: editUsername, avatar_color: editColor }),
     })
-    setProfileMsg("✅ Saved")
+    setProfileMsg("Sauvegardé ✓")
     setSavingProfile(false)
     setTimeout(() => setProfileMsg(""), 2500)
   }
@@ -217,413 +224,483 @@ export default function ParametresPage() {
     router.push("/login")
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-transparent">
-        <div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
+  function scrollTo(id: string) {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })
+    setActiveSection(id)
   }
 
-  return (
-    <div className="min-h-screen bg-transparent text-white pb-20">
-
-      {/* Header */}
-      <div className="px-6 py-5 border-b border-white/5">
-        <h1 className="text-2xl font-black text-white">{t.settings.title}</h1>
-        <p className="text-white/30 text-sm mt-0.5">{user?.email}</p>
-      </div>
-
-      {/* Layout */}
-      <div className="flex max-w-4xl mx-auto">
-
-        {/* Sidebar nav */}
-        <nav className="hidden md:block w-52 flex-shrink-0 border-r border-white/5 p-4 space-y-1 sticky top-0 h-screen overflow-y-auto">
-          {SECTIONS.map(s => {
-            const Icon = s.icon
-            return (
-              <button key={s.key} onClick={() => setActiveSection(s.key)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all text-left ${
-                  activeSection === s.key
-                    ? "bg-white/8 text-white border border-white/10"
-                    : "text-white/40 hover:text-white/70 hover:bg-white/4"
-                }`}>
-                <Icon size={15} />
-                {s.label}
-              </button>
-            )
-          })}
-          <div className="pt-4 border-t border-white/5 mt-4">
-            <button onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-all">
-              <LogOut size={15} />
-              {t.nav.logout}
-            </button>
+  // Skeleton pendant le chargement
+  if (!ready) return (
+    <div className="min-h-screen page-enter">
+      <div className="max-w-4xl mx-auto px-6 py-6">
+        <div className="h-8 w-40 skeleton mb-6 rounded-xl" />
+        <div className="flex gap-6">
+          <div className="hidden md:block w-48 flex-shrink-0 space-y-2">
+            {[...Array(7)].map((_, i) => <div key={i} className="h-10 skeleton rounded-xl" />)}
           </div>
-        </nav>
+          <div className="flex-1 space-y-3">
+            {[...Array(5)].map((_, i) => <div key={i} className="h-20 skeleton rounded-2xl" />)}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 
-        {/* Mobile section tabs */}
-        <div className="md:hidden w-full border-b border-white/5 overflow-x-auto">
-          <div className="flex px-4 py-2 gap-1 min-w-max">
+  const initial = (editUsername || user?.email || "?")[0]?.toUpperCase()
+
+  return (
+    <div className="min-h-screen page-enter text-white">
+      <div className="max-w-4xl mx-auto px-4 md:px-6 py-6">
+
+        {/* ── Page header ─────────────────────────────────────── */}
+        <div className="mb-8">
+          <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-1">Paramètres</p>
+          <h1 className="text-[22px] font-black text-white">Mon compte</h1>
+          <p className="text-[13px] mt-0.5" style={{ color: "var(--text-tertiary)" }}>{user?.email}</p>
+        </div>
+
+        <div className="flex gap-6">
+
+          {/* ── Left nav ──────────────────────────────────────── */}
+          <nav className="hidden md:flex flex-col w-48 flex-shrink-0 gap-0.5 sticky top-20 self-start">
             {SECTIONS.map(s => (
-              <button key={s.key} onClick={() => setActiveSection(s.key)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition ${
-                  activeSection === s.key ? "bg-white/10 text-white" : "text-white/35"
-                }`}>
+              <button key={s.id}
+                onClick={() => scrollTo(s.id)}
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium text-left transition-all"
+                style={activeSection === s.id ? {
+                  background: "var(--bg-selected)",
+                  color: "var(--green-light)",
+                  border: "1px solid var(--green-border)",
+                } : {
+                  color: "var(--text-tertiary)",
+                  border: "1px solid transparent",
+                }}>
+                <span className="text-sm">{s.emoji}</span>
                 {s.label}
               </button>
             ))}
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 px-4 md:px-8 py-6 min-w-0">
-
-          {/* ── NOTIFICATIONS ── */}
-          {activeSection === "notifications" && (
-            <div>
-              <h2 className="text-base font-black text-white mb-5">🔔 {t.settings.tabs.notifications}</h2>
-              <Card>
-                <SettingRow label={t.settings.notifications.signals} saved={saved === "notifications_push"}>
-                  <Toggle value={settings.notifications_push} onChange={v => updateSetting("notifications_push", v)} />
-                </SettingRow>
-                <SettingRow label={t.settings.notifications.weekly} saved={saved === "notifications_email"}>
-                  <Toggle value={settings.notifications_email} onChange={v => updateSetting("notifications_email", v)} />
-                </SettingRow>
-                <SettingRow label={t.settings.notifications.signals} saved={saved === "notifications_signals"}>
-                  <Toggle value={settings.notifications_signals} onChange={v => updateSetting("notifications_signals", v)} />
-                </SettingRow>
-                <SettingRow label={t.settings.notifications.news} saved={saved === "notifications_news"}>
-                  <Toggle value={settings.notifications_news} onChange={v => updateSetting("notifications_news", v)} />
-                </SettingRow>
-                <SettingRow label={t.common.refresh} saved={saved === "sound_enabled"}>
-                  <Toggle value={settings.sound_enabled} onChange={v => updateSetting("sound_enabled", v)} />
-                </SettingRow>
-              </Card>
+            <div className="mt-2 pt-2" style={{ borderTop: "1px solid var(--border-faint)" }}>
+              <button onClick={handleLogout}
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium w-full transition-all"
+                style={{ color: "var(--red-light)", opacity: 0.6 }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = "1")}
+                onMouseLeave={e => (e.currentTarget.style.opacity = "0.6")}>
+                <LogOut size={14} />
+                Déconnexion
+              </button>
             </div>
-          )}
+          </nav>
 
-          {/* ── TRADING ── */}
-          {activeSection === "trading" && (
-            <div>
-              <h2 className="text-base font-black text-white mb-5">💼 {t.settings.tabs.preferences}</h2>
-              <Card>
-                <SettingRow label="Default asset" desc="Asset shown when the dashboard opens">
-                  <input value={settings.default_symbol}
-                    onChange={e => updateSetting("default_symbol", e.target.value.toUpperCase())}
-                    className="w-20 h-8 text-center text-xs font-bold rounded-lg outline-none text-white"
-                    style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)" }}
-                    maxLength={8} />
-                </SettingRow>
-                <SettingRow label={`Risk per trade: ${settings.risk_per_trade}%`} desc="Default percentage of capital at risk">
-                  <div className="flex items-center gap-2">
-                    <input type="range" min={0.5} max={10} step={0.5}
-                      value={settings.risk_per_trade}
-                      onChange={e => updateSetting("risk_per_trade", Number(e.target.value))}
-                      className="w-24" style={{ accentColor: "#22c55e" }} />
-                    <span className="text-xs font-bold text-green-400 w-8">{settings.risk_per_trade}%</span>
+          {/* ── Content ───────────────────────────────────────── */}
+          <div ref={contentRef} className="flex-1 min-w-0 space-y-10 overflow-y-auto">
+
+            {/* ── PROFIL ──────────────────────────────────────── */}
+            <section>
+              <SectionTitle id="profile" emoji="👤" label="Profil" />
+
+              {/* Avatar + Username */}
+              <div className="rounded-2xl p-5 mb-3" style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
+                <div className="flex items-center gap-4 mb-5">
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-black text-black flex-shrink-0 ring-2"
+                    style={{ background: editColor, ringColor: editColor }}>
+                    {initial}
                   </div>
-                </SettingRow>
-                <SettingRow label="Mode compact" desc="Interface plus dense avec moins d'espacement" saved={saved === "compact_mode"}>
-                  <Toggle value={settings.compact_mode} onChange={v => updateSetting("compact_mode", v)} />
-                </SettingRow>
-              </Card>
-
-              <div className="rounded-2xl p-5"
-                style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.12)" }}>
-                <p className="text-sm font-black text-white mb-1">🔄 Reset portfolio</p>
-                <p className="text-xs text-white/40 mb-3">Resets your virtual capital to $100,000 and deletes all orders. Irreversible.</p>
-                <button onClick={() => {
-                  if (!confirm("Reset your portfolio to $100,000? All your orders will be deleted.")) return
-                  supabase.from("trading_accounts").update({ cash: 100000 }).eq("user_id", user.id)
-                  supabase.from("orders").delete().eq("user_id", user.id)
-                }}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-red-400 border border-red-500/20 hover:bg-red-500/10 transition">
-                  Reset → $100,000
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ── PRIVACY ── */}
-          {activeSection === "privacy" && (
-            <div>
-              <h2 className="text-base font-black text-white mb-5">🔒 {t.settings.tabs.security}</h2>
-              <Card>
-                <SettingRow label="Afficher mon P&L publiquement" desc="Visible dans le classement social" saved={saved === "show_pnl_public"}>
-                  <Toggle value={settings.show_pnl_public} onChange={v => updateSetting("show_pnl_public", v)} />
-                </SettingRow>
-              </Card>
-
-              <div className="rounded-2xl p-5 mb-4"
-                style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-3">Personal data</p>
-                <div className="space-y-0">
-                  <button className="flex items-center justify-between w-full py-3 text-sm text-white/50 hover:text-white transition border-b border-white/[0.04]">
-                    <span>Download my data</span>
-                    <ChevronRight size={14} />
-                  </button>
-                  <button onClick={() => setDeleteConfirm(true)}
-                    className="flex items-center justify-between w-full py-3 text-sm text-red-400/60 hover:text-red-400 transition">
-                    <span>Supprimer mon compte</span>
-                    <ChevronRight size={14} />
-                  </button>
-                </div>
-              </div>
-
-              {deleteConfirm && (
-                <div className="rounded-2xl p-5"
-                  style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.20)" }}>
-                  <p className="text-sm font-black text-white mb-2">⚠️ Supprimer mon compte</p>
-                  <p className="text-xs text-white/50 mb-4">Cette action est irréversible. Toutes tes données seront supprimées définitivement.</p>
-                  <div className="flex gap-2">
-                    <button onClick={() => setDeleteConfirm(false)}
-                      className="flex-1 py-2 rounded-lg text-xs font-semibold text-white/40 border border-white/10">{t.common.cancel}</button>
-                    <button onClick={() => alert("Contacte support@tradex.io pour supprimer ton compte.")}
-                      className="flex-1 py-2 rounded-lg text-xs font-bold text-white bg-red-500/20 border border-red-500/30">
-                      {t.settings.security.deleteAccount}
-                    </button>
+                  <div>
+                    <p className="text-[15px] font-black text-white">{editUsername || user?.email?.split("@")[0]}</p>
+                    <p className="text-[11px] mt-0.5" style={{ color: "var(--text-tertiary)" }}>{user?.email}</p>
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full"
+                        style={{
+                          background: plan === "premium" ? "rgba(251,191,36,0.15)" : plan === "pro" ? "var(--green-dim)" : "var(--bg-active)",
+                          color: plan === "premium" ? "#fbbf24" : plan === "pro" ? "var(--green-light)" : "var(--text-secondary)",
+                          border: `1px solid ${plan === "premium" ? "rgba(251,191,36,0.25)" : plan === "pro" ? "var(--green-border)" : "var(--border-default)"}`,
+                        }}>
+                        {plan === "free" ? "Free" : plan === "pro" ? "Pro ⭐" : "Premium 💎"}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              )}
-            </div>
-          )}
 
-          {/* ── APPEARANCE ── */}
-          {activeSection === "appearance" && (
-            <div>
-              <h2 className="text-base font-black text-white mb-5">🎨 {t.settings.tabs.profile}</h2>
-
-              {/* Username + Avatar color */}
-              <div className="rounded-2xl p-5 mb-4"
-                style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-4">{t.settings.tabs.profile}</p>
+                {/* Username input */}
                 <div className="mb-4">
-                  <label className="text-xs text-white/40 mb-1.5 block">{t.settings.username}</label>
-                  <input value={editUsername} onChange={e => setEditUsername(e.target.value)}
+                  <label className="text-[11px] font-bold uppercase tracking-widest block mb-1.5" style={{ color: "var(--text-tertiary)" }}>
+                    Pseudo
+                  </label>
+                  <input
+                    value={editUsername}
+                    onChange={e => setEditUsername(e.target.value)}
                     maxLength={20}
-                    className="w-full px-3 py-2.5 rounded-xl text-sm text-white outline-none"
-                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }} />
+                    placeholder="Ton pseudo"
+                    className="w-full px-3 py-2.5 rounded-xl text-[13px] text-white outline-none transition-all"
+                    style={{
+                      background: "var(--bg-active)",
+                      border: "1px solid var(--border-default)",
+                    }}
+                    onFocus={e => (e.target.style.borderColor = "var(--border-focus)")}
+                    onBlur={e => (e.target.style.borderColor = "var(--border-default)")}
+                  />
                 </div>
-                <div className="mb-4">
-                  <label className="text-xs text-white/40 mb-2 block">{t.settings.avatar}</label>
+
+                {/* Color picker */}
+                <div className="mb-5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest block mb-2" style={{ color: "var(--text-tertiary)" }}>
+                    Couleur d'avatar
+                  </label>
                   <div className="flex gap-2 flex-wrap">
                     {AVATAR_COLORS.map(c => (
                       <button key={c} onClick={() => setEditColor(c)}
-                        className="w-8 h-8 rounded-full border-2 transition-transform hover:scale-110"
+                        className="w-8 h-8 rounded-full transition-all hover:scale-110"
                         style={{
                           background: c,
-                          borderColor: editColor === c ? "white" : "transparent",
-                          transform: editColor === c ? "scale(1.15)" : "scale(1)",
+                          transform: editColor === c ? "scale(1.2)" : "scale(1)",
+                          outline: editColor === c ? `3px solid white` : "none",
+                          outlineOffset: "2px",
                         }} />
                     ))}
                   </div>
                 </div>
+
                 <div className="flex items-center gap-3">
                   <button onClick={saveProfile} disabled={savingProfile}
-                    className="px-4 py-2 rounded-xl text-xs font-black text-black transition"
-                    style={{ background: "#22c55e" }}>
-                    {savingProfile ? "..." : t.settings.saveProfile}
+                    className="px-5 py-2.5 rounded-xl text-[13px] font-black text-black transition-all hover:scale-[1.01] disabled:opacity-50"
+                    style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}>
+                    {savingProfile ? "Sauvegarde…" : "Sauvegarder"}
                   </button>
-                  {profileMsg && <span className="text-xs text-green-400 font-bold">{profileMsg}</span>}
+                  {profileMsg && (
+                    <span className="text-[12px] text-green-400 font-bold animate-fade-in">{profileMsg}</span>
+                  )}
                 </div>
               </div>
 
-              <Card>
-                <SettingRow label={t.settings.language}>
+              {/* Account info */}
+              <SectionCard>
+                {[
+                  { label: "Email",           value: user?.email },
+                  { label: "Compte créé le",  value: user?.created_at ? new Date(user.created_at).toLocaleDateString("fr-FR") : "—" },
+                  { label: "Connexion via",   value: user?.app_metadata?.provider ?? "email" },
+                ].map(item => (
+                  <SettingRow key={item.label} label={item.label}>
+                    <span className="text-[13px] font-semibold" style={{ color: "var(--text-secondary)" }}>{item.value}</span>
+                  </SettingRow>
+                ))}
+              </SectionCard>
+            </section>
+
+            {/* ── APPARENCE ───────────────────────────────────── */}
+            <section>
+              <SectionTitle id="appearance" emoji="🎨" label="Apparence" />
+              <SectionCard>
+                <SettingRow label="Thème" desc="Clair ou sombre selon ta préférence">
+                  <button onClick={toggleTheme}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] font-bold transition-all hover:scale-[1.02]"
+                    style={{
+                      background: "var(--bg-active)",
+                      border: "1px solid var(--border-default)",
+                      color: "var(--text-secondary)",
+                    }}>
+                    {theme === "dark" ? <Moon size={13} /> : <Sun size={13} />}
+                    {theme === "dark" ? "Mode sombre" : "Mode clair"}
+                  </button>
+                </SettingRow>
+                <SettingRow label="Langue">
                   <LanguagePicker />
                 </SettingRow>
-              </Card>
-            </div>
-          )}
+                <SettingRow label="Mode compact" desc="Interface plus dense" saved={saved === "compact_mode"}>
+                  <Toggle value={settings.compact_mode} onChange={v => updateSetting("compact_mode", v)} />
+                </SettingRow>
+              </SectionCard>
+            </section>
 
-          {/* ── ACCOUNT ── */}
-          {activeSection === "account" && (
-            <div>
-              <h2 className="text-base font-black text-white mb-5">👤 {t.settings.tabs.profile}</h2>
+            {/* ── NOTIFICATIONS ───────────────────────────────── */}
+            <section>
+              <SectionTitle id="notifications" emoji="🔔" label="Notifications" />
+              <SectionCard>
+                <SettingRow label="Notifications push" desc="Alertes sur navigateur et mobile" saved={saved === "notifications_push"}>
+                  <Toggle value={settings.notifications_push} onChange={v => updateSetting("notifications_push", v)} />
+                </SettingRow>
+                <SettingRow label="Emails marketing" desc="Nouveautés et mises à jour Tradex" saved={saved === "notifications_email"}>
+                  <Toggle value={settings.notifications_email} onChange={v => updateSetting("notifications_email", v)} />
+                </SettingRow>
+                <SettingRow label="Alertes signaux IA" desc="Notifié quand un STRONG BUY est détecté" saved={saved === "notifications_signals"}>
+                  <Toggle value={settings.notifications_signals} onChange={v => updateSetting("notifications_signals", v)} />
+                </SettingRow>
+                <SettingRow label="Actualités importantes" desc="Événements macro impactant ton portfolio" saved={saved === "notifications_news"}>
+                  <Toggle value={settings.notifications_news} onChange={v => updateSetting("notifications_news", v)} />
+                </SettingRow>
+                <SettingRow label="Sons" desc="Feedback sonore pour les actions" saved={saved === "sound_enabled"}>
+                  <Toggle value={settings.sound_enabled} onChange={v => updateSetting("sound_enabled", v)} />
+                </SettingRow>
+              </SectionCard>
+            </section>
 
-              <div className="rounded-2xl overflow-hidden mb-4"
-                style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <div className="px-5 divide-y divide-white/[0.04]">
-                  {[
-                    { label: "Email",          value: user?.email },
-                    { label: "Account created", value: user?.created_at ? new Date(user.created_at).toLocaleDateString("en-US") : "—" },
-                    { label: "Current plan",   value: plan.charAt(0).toUpperCase() + plan.slice(1) },
-                    { label: "Login via",      value: user?.app_metadata?.provider ?? "email" },
-                  ].map(item => (
-                    <div key={item.label} className="flex justify-between items-center py-4">
-                      <span className="text-sm text-white/40">{item.label}</span>
-                      <span className="text-sm font-semibold text-white">{item.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {/* ── TRADING ─────────────────────────────────────── */}
+            <section>
+              <SectionTitle id="trading" emoji="⚡" label="Trading" />
+              <SectionCard>
+                <SettingRow label="Actif par défaut" desc="Actif affiché à l'ouverture du dashboard">
+                  <input
+                    value={settings.default_symbol}
+                    onChange={e => updateSetting("default_symbol", e.target.value.toUpperCase())}
+                    maxLength={8}
+                    className="w-20 h-8 text-center text-[12px] font-bold rounded-xl outline-none text-white transition-all"
+                    style={{
+                      background: "var(--bg-active)",
+                      border: "1px solid var(--border-default)",
+                    }}
+                    onFocus={e => (e.target.style.borderColor = "var(--border-focus)")}
+                    onBlur={e => (e.target.style.borderColor = "var(--border-default)")}
+                  />
+                </SettingRow>
+                <SettingRow
+                  label={`Risque par trade : ${settings.risk_per_trade}%`}
+                  desc="Pourcentage du capital à risquer par défaut"
+                  saved={saved === "risk_per_trade"}>
+                  <div className="flex items-center gap-3">
+                    <input type="range" min={0.5} max={10} step={0.5}
+                      value={settings.risk_per_trade}
+                      onChange={e => updateSetting("risk_per_trade", Number(e.target.value))}
+                      className="w-28"
+                      style={{ accentColor: "var(--green)" }} />
+                    <span className="text-[12px] font-black w-8 tabular-nums" style={{ color: "var(--green-light)" }}>
+                      {settings.risk_per_trade}%
+                    </span>
+                  </div>
+                </SettingRow>
+              </SectionCard>
 
-              {/* Password reset */}
-              <div className="rounded-2xl p-5 mb-4"
-                style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <p className="text-sm font-black text-white mb-3">{t.settings.security.changePassword}</p>
-                <button onClick={async () => {
-                  const { error } = await supabase.auth.resetPasswordForEmail(user?.email, {
-                    redirectTo: `${window.location.origin}/reset-password`
-                  })
-                  if (!error) alert("Email sent! Check your inbox.")
-                }}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-white/50 hover:text-white border border-white/10 hover:border-white/20 transition">
-                  📧 Send reset link
+              {/* Reset portfolio */}
+              <div className="rounded-2xl p-5"
+                style={{ background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.12)" }}>
+                <p className="text-[13px] font-black text-white mb-1">🔄 Remettre le portfolio à zéro</p>
+                <p className="text-[11px] mb-3" style={{ color: "var(--text-tertiary)" }}>
+                  Réinitialise ton capital virtuel à $100,000 et efface tous tes ordres. Irréversible.
+                </p>
+                <button
+                  onClick={() => {
+                    if (!confirm("Remettre le portfolio à $100,000 ? Tous tes ordres seront supprimés.")) return
+                    supabase.from("trading_accounts").update({ cash: 100000 }).eq("user_id", user.id)
+                    supabase.from("orders").delete().eq("user_id", user.id)
+                  }}
+                  className="px-4 py-2 rounded-xl text-[12px] font-bold transition-all hover:scale-[1.01]"
+                  style={{
+                    background: "rgba(239,68,68,0.08)",
+                    border: "1px solid rgba(239,68,68,0.22)",
+                    color: "var(--red-light)",
+                  }}>
+                  Reset → $100,000
                 </button>
               </div>
+            </section>
 
-              {/* Parrainage */}
-              <div className="rounded-2xl p-5"
-                style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <p className="text-sm font-black text-white mb-3">🎁 Parrainage</p>
-                <ReferralSection />
-              </div>
-            </div>
-          )}
+            {/* ── CONFIDENTIALITÉ ─────────────────────────────── */}
+            <section>
+              <SectionTitle id="privacy" emoji="🔒" label="Confidentialité & Sécurité" />
+              <SectionCard>
+                <SettingRow
+                  label="Afficher mon P&L publiquement"
+                  desc="Visible dans le classement et les profils publics"
+                  saved={saved === "show_pnl_public"}>
+                  <Toggle value={settings.show_pnl_public} onChange={v => updateSetting("show_pnl_public", v)} />
+                </SettingRow>
+              </SectionCard>
 
-          {/* ── BILLING ── */}
-          {activeSection === "billing" && (
-            <div>
-              <h2 className="text-base font-black text-white mb-5">💎 {t.settings.tabs.subscription}</h2>
+              <SectionCard>
+                <SettingRow label="Changer de mot de passe">
+                  <button
+                    onClick={async () => {
+                      await supabase.auth.resetPasswordForEmail(user?.email, {
+                        redirectTo: `${window.location.origin}/reset-password`,
+                      })
+                      alert("Email envoyé ! Vérifie ta boîte mail.")
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-bold transition-all hover:scale-[1.02]"
+                    style={{
+                      background: "var(--bg-active)",
+                      border: "1px solid var(--border-default)",
+                      color: "var(--text-secondary)",
+                    }}>
+                    📧 Envoyer le lien
+                  </button>
+                </SettingRow>
+                <SettingRow label="Télécharger mes données">
+                  <button
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-bold transition-all hover:scale-[1.02]"
+                    style={{
+                      background: "var(--bg-active)",
+                      border: "1px solid var(--border-default)",
+                      color: "var(--text-secondary)",
+                    }}>
+                    <ChevronRight size={13} />
+                    Exporter
+                  </button>
+                </SettingRow>
+              </SectionCard>
 
-              {/* Current plan */}
-              <div className="rounded-2xl p-5 mb-4"
-                style={{
-                  background: plan !== "free" ? "rgba(34,197,94,0.06)" : "rgba(255,255,255,0.03)",
-                  border: `1px solid ${plan !== "free" ? "rgba(34,197,94,0.20)" : "rgba(255,255,255,0.08)"}`,
-                }}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-black text-white">
-                      Plan {plan === "free" ? "Free" : plan === "pro" ? "Pro ⭐" : "Premium 💎"}
+              {/* Danger zone */}
+              <div className="rounded-2xl p-5" style={{ background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.12)" }}>
+                <p className="text-[11px] font-black uppercase tracking-widest mb-3" style={{ color: "rgba(239,68,68,0.5)" }}>
+                  Zone de danger
+                </p>
+                {!deleteConfirm ? (
+                  <button onClick={() => setDeleteConfirm(true)}
+                    className="text-[13px] font-semibold transition-all"
+                    style={{ color: "rgba(239,68,68,0.55)" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "var(--red-light)")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "rgba(239,68,68,0.55)")}>
+                    Supprimer mon compte →
+                  </button>
+                ) : (
+                  <div className="animate-fade-in">
+                    <p className="text-[13px] font-black text-white mb-1">⚠️ Confirmer la suppression</p>
+                    <p className="text-[11px] mb-3" style={{ color: "var(--text-tertiary)" }}>
+                      Action irréversible. Toutes tes données seront définitivement supprimées.
                     </p>
-                    <p className="text-xs text-white/40 mt-0.5">
+                    <div className="flex gap-2">
+                      <button onClick={() => setDeleteConfirm(false)}
+                        className="flex-1 py-2 rounded-xl text-[12px] font-semibold transition-all"
+                        style={{ background: "var(--bg-active)", color: "var(--text-secondary)", border: "1px solid var(--border-default)" }}>
+                        Annuler
+                      </button>
+                      <button onClick={() => alert("Contacte support@tradex.io pour supprimer ton compte.")}
+                        className="flex-1 py-2 rounded-xl text-[12px] font-bold transition-all"
+                        style={{ background: "rgba(239,68,68,0.12)", color: "var(--red-light)", border: "1px solid rgba(239,68,68,0.25)" }}>
+                        Supprimer le compte
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* ── ABONNEMENT ──────────────────────────────────── */}
+            <section>
+              <SectionTitle id="billing" emoji="💎" label="Abonnement" />
+
+              {/* Current plan card */}
+              <div className="rounded-2xl p-5 mb-3"
+                style={{
+                  background: plan !== "free" ? "rgba(34,197,94,0.06)" : "var(--bg-surface)",
+                  border: `1px solid ${plan !== "free" ? "var(--green-border)" : "var(--border-subtle)"}`,
+                  boxShadow: plan !== "free" ? "0 0 32px var(--green-glow)" : "none",
+                }}>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[15px] font-black text-white">
+                      {plan === "free" ? "Plan Gratuit" : plan === "pro" ? "Plan Pro ⭐" : "Plan Premium 💎"}
+                    </p>
+                    <p className="text-[12px] mt-1" style={{ color: "var(--text-tertiary)" }}>
                       {plan === "free"
-                        ? "3 signals/day · Beginner courses"
+                        ? "3 signaux/jour · Cours débutant · Paper trading"
                         : plan === "pro"
-                          ? "Unlimited signals · Screener · Alerts"
-                          : "All Pro + API + Priority support"}
+                          ? "Signaux illimités · 160+ actifs · Alertes · Tous les cours"
+                          : "Tout Pro + API publique · Rapport IA hebdo · Support prioritaire"}
                     </p>
                   </div>
                   {plan === "free" && (
                     <button onClick={() => router.push("/pricing")}
-                      className="px-4 py-2 rounded-xl text-xs font-black text-black transition hover:scale-[1.02]"
-                      style={{ background: "#22c55e" }}>
-                      {t.settings.subscription.upgrade} →
+                      className="flex-shrink-0 px-4 py-2.5 rounded-xl text-[12px] font-black text-black transition-all hover:scale-[1.02]"
+                      style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)" }}>
+                      Passer à Pro →
                     </button>
                   )}
                 </div>
                 {plan !== "free" && (
                   <div className="flex gap-2 mt-4">
-                    <button className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white/40 border border-white/10 hover:text-white transition">
-                      {t.settings.subscription.manageBilling}
+                    <button className="px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-all hover:scale-[1.01]"
+                      style={{ background: "var(--bg-active)", border: "1px solid var(--border-default)", color: "var(--text-secondary)" }}>
+                      Gérer l'abonnement
                     </button>
-                    <button className="px-3 py-1.5 rounded-lg text-xs font-semibold text-red-400/60 border border-red-500/15 hover:text-red-400 hover:bg-red-500/10 transition">
-                      {t.settings.subscription.cancel}
+                    <button className="px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-all hover:scale-[1.01]"
+                      style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)", color: "rgba(239,68,68,0.7)" }}>
+                      Annuler
                     </button>
                   </div>
                 )}
               </div>
 
-              {/* Plans comparison (free only) */}
+              {/* Plan comparison (free users) */}
               {plan === "free" && (
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {[
-                    { name: "Pro ⭐", price: "19€/month", color: "#22c55e",
-                      features: ["Unlimited signals", "160+ asset screener", "Unlimited alerts", "All courses", "Backtest"] },
-                    { name: "Premium 💎", price: "49€/month", color: "#fbbf24",
-                      features: ["All Pro included", "Public API", "Weekly AI report", "Priority support"] },
+                    {
+                      name: "Pro ⭐",
+                      price: "19€",
+                      period: "/mois",
+                      color: "#22c55e",
+                      bg: "rgba(34,197,94,0.05)",
+                      border: "rgba(34,197,94,0.18)",
+                      features: ["Signaux illimités", "160+ actifs screener", "Alertes illimitées", "Tous les cours", "Backtest & Replay"],
+                    },
+                    {
+                      name: "Premium 💎",
+                      price: "49€",
+                      period: "/mois",
+                      color: "#fbbf24",
+                      bg: "rgba(251,191,36,0.05)",
+                      border: "rgba(251,191,36,0.18)",
+                      features: ["Tout Pro inclus", "API publique", "Rapport IA hebdo", "Support prioritaire 24h", "Onboarding dédié"],
+                    },
                   ].map(p => (
                     <div key={p.name} className="rounded-2xl p-4"
-                      style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
-                      <div className="flex items-center justify-between mb-3">
+                      style={{ background: p.bg, border: `1px solid ${p.border}` }}>
+                      <div className="flex items-baseline justify-between mb-3">
                         <div>
-                          <p className="text-sm font-black" style={{ color: p.color }}>{p.name}</p>
-                          <p className="text-lg font-black text-white">{p.price}</p>
+                          <p className="text-[13px] font-black" style={{ color: p.color }}>{p.name}</p>
+                          <div className="flex items-baseline gap-0.5 mt-0.5">
+                            <span className="text-[22px] font-black text-white">{p.price}</span>
+                            <span className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>{p.period}</span>
+                          </div>
                         </div>
                         <button onClick={() => router.push("/pricing")}
-                          className="px-4 py-2 rounded-xl text-xs font-black transition hover:scale-[1.02]"
-                          style={{ background: `${p.color}15`, color: p.color, border: `1px solid ${p.color}25` }}>
+                          className="px-3 py-1.5 rounded-xl text-[11px] font-black transition-all hover:scale-[1.02]"
+                          style={{ background: `${p.color}18`, color: p.color, border: `1px solid ${p.color}28` }}>
                           Choisir →
                         </button>
                       </div>
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="space-y-1.5">
                         {p.features.map(f => (
-                          <span key={f} className="text-[10px] text-white/50 px-2 py-0.5 rounded-full"
-                            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                            ✓ {f}
-                          </span>
+                          <div key={f} className="flex items-center gap-2 text-[11px]" style={{ color: "var(--text-secondary)" }}>
+                            <span style={{ color: p.color }}>✓</span> {f}
+                          </div>
                         ))}
                       </div>
                     </div>
                   ))}
                 </div>
               )}
-            </div>
-          )}
+            </section>
 
-        </div>
+            {/* ── OUTILS ──────────────────────────────────────── */}
+            <section>
+              <SectionTitle id="tools" emoji="🔧" label="Outils avancés" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {[
+                  { href: "/api-docs",  icon: "🔌", title: "API Publique",       desc: "Intègre les signaux dans tes outils",      color: "#60a5fa", bg: "rgba(96,165,250,0.06)",   border: "rgba(96,165,250,0.18)" },
+                  { href: "/widget",    icon: "🧩", title: "Widget embarquable", desc: "Ajoute Tradex sur ton site ou blog",         color: "#a78bfa", bg: "rgba(167,139,250,0.06)", border: "rgba(167,139,250,0.18)" },
+                  { href: "/referral",  icon: "🎁", title: "Parrainage",         desc: "Invite tes amis, gagne 1 mois Pro",          color: "#4ade80", bg: "rgba(34,197,94,0.06)",   border: "rgba(34,197,94,0.18)" },
+                  { href: "/brief",     icon: "☀️", title: "Tradex Brief",       desc: "Briefing marché chaque matin à 7h",          color: "#fbbf24", bg: "rgba(251,191,36,0.06)",  border: "rgba(251,191,36,0.18)" },
+                  { href: "/duel",      icon: "🥊", title: "Duels de trading",   desc: "Défie tes amis sur des compétitions",        color: "#f87171", bg: "rgba(239,68,68,0.06)",   border: "rgba(239,68,68,0.18)" },
+                  { href: "/backtest",  icon: "📈", title: "Backtesting",        desc: "Teste tes stratégies sur données réelles",   color: "#34d399", bg: "rgba(52,211,153,0.06)",  border: "rgba(52,211,153,0.18)" },
+                ].map(item => (
+                  <a key={item.href} href={item.href}
+                    className="flex items-center gap-3 px-4 py-4 rounded-2xl transition-all hover:scale-[1.01] hover:brightness-110 group"
+                    style={{ background: item.bg, border: `1px solid ${item.border}` }}>
+                    <span className="text-xl flex-shrink-0">{item.icon}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-black" style={{ color: item.color }}>{item.title}</p>
+                      <p className="text-[11px] mt-0.5" style={{ color: "var(--text-tertiary)" }}>{item.desc}</p>
+                    </div>
+                    <ChevronRight size={14} className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: item.color }} />
+                  </a>
+                ))}
+              </div>
+            </section>
 
-        {/* ── Outils avancés (toujours visibles) ─── */}
-        <div className="mt-6 max-w-2xl mx-auto px-4 pb-8">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.2)" }}>
-            Outils avancés
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {[
-              {
-                href: "/api-docs",
-                icon: "🔌",
-                title: "API Publique",
-                desc: "Intègre les signaux Tradex dans tes outils",
-                color: "#60a5fa",
-                bg: "rgba(96,165,250,0.08)",
-                border: "rgba(96,165,250,0.18)",
-              },
-              {
-                href: "/widget",
-                icon: "🧩",
-                title: "Widget embarquable",
-                desc: "Ajoute Tradex sur ton site ou blog",
-                color: "#a78bfa",
-                bg: "rgba(167,139,250,0.08)",
-                border: "rgba(167,139,250,0.18)",
-              },
-              {
-                href: "/referral",
-                icon: "🎁",
-                title: "Programme de parrainage",
-                desc: "Invite des amis et gagne 1 mois Pro",
-                color: "#4ade80",
-                bg: "rgba(34,197,94,0.08)",
-                border: "rgba(34,197,94,0.18)",
-              },
-              {
-                href: "/brief",
-                icon: "☀️",
-                title: "Tradex Brief",
-                desc: "Briefing marché chaque matin à 7h",
-                color: "#fbbf24",
-                bg: "rgba(251,191,36,0.08)",
-                border: "rgba(251,191,36,0.18)",
-              },
-            ].map(item => (
-              <a key={item.href} href={item.href}
-                className="flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all hover:scale-[1.01] hover:brightness-110"
-                style={{ background: item.bg, border: `1px solid ${item.border}` }}>
-                <span className="text-xl flex-shrink-0">{item.icon}</span>
-                <div className="min-w-0">
-                  <p className="text-sm font-black" style={{ color: item.color }}>{item.title}</p>
-                  <p className="text-[11px] text-white/35 mt-0.5">{item.desc}</p>
-                </div>
-                <span className="ml-auto text-white/20 text-sm flex-shrink-0">→</span>
-              </a>
-            ))}
+            {/* ── Bottom padding ─── */}
+            <div className="h-12" />
+
           </div>
         </div>
-
       </div>
     </div>
   )
