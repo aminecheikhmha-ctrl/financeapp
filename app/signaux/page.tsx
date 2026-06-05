@@ -702,6 +702,12 @@ export default function Signaux() {
           <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl font-black text-white">{t.signals.title}</h1>
+              {/* Signal Feed button */}
+              <a href="/feed"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all hover:scale-[1.02]"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.45)" }}>
+                📱 Signal Feed
+              </a>
 
               {/* Tabs */}
               <div className="flex rounded-xl overflow-hidden" style={{ border: `1px solid ${D.border}` }}>

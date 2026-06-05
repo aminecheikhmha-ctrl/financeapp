@@ -565,6 +565,65 @@ export default function ParametresPage() {
           )}
 
         </div>
+
+        {/* ── Outils avancés (toujours visibles) ─── */}
+        <div className="mt-6 max-w-2xl mx-auto px-4 pb-8">
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.2)" }}>
+            Outils avancés
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {[
+              {
+                href: "/api-docs",
+                icon: "🔌",
+                title: "API Publique",
+                desc: "Intègre les signaux Tradex dans tes outils",
+                color: "#60a5fa",
+                bg: "rgba(96,165,250,0.08)",
+                border: "rgba(96,165,250,0.18)",
+              },
+              {
+                href: "/widget",
+                icon: "🧩",
+                title: "Widget embarquable",
+                desc: "Ajoute Tradex sur ton site ou blog",
+                color: "#a78bfa",
+                bg: "rgba(167,139,250,0.08)",
+                border: "rgba(167,139,250,0.18)",
+              },
+              {
+                href: "/referral",
+                icon: "🎁",
+                title: "Programme de parrainage",
+                desc: "Invite des amis et gagne 1 mois Pro",
+                color: "#4ade80",
+                bg: "rgba(34,197,94,0.08)",
+                border: "rgba(34,197,94,0.18)",
+              },
+              {
+                href: "/brief",
+                icon: "☀️",
+                title: "Tradex Brief",
+                desc: "Briefing marché chaque matin à 7h",
+                color: "#fbbf24",
+                bg: "rgba(251,191,36,0.08)",
+                border: "rgba(251,191,36,0.18)",
+              },
+            ].map(item => (
+              <a key={item.href} href={item.href}
+                className="flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all hover:scale-[1.01] hover:brightness-110"
+                style={{ background: item.bg, border: `1px solid ${item.border}` }}>
+                <span className="text-xl flex-shrink-0">{item.icon}</span>
+                <div className="min-w-0">
+                  <p className="text-sm font-black" style={{ color: item.color }}>{item.title}</p>
+                  <p className="text-[11px] text-white/35 mt-0.5">{item.desc}</p>
+                </div>
+                <span className="ml-auto text-white/20 text-sm flex-shrink-0">→</span>
+              </a>
+            ))}
+          </div>
+        </div>
+
       </div>
     </div>
   )

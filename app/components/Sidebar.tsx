@@ -20,9 +20,9 @@ import { useTheme } from "@/lib/theme"
 // ── Primary nav (always visible) ──────────────────────────────
 const PRIMARY_NAV = [
   { href: "/dashboard",  icon: LayoutDashboard, label: "Dashboard",    badge: null },
-  { href: "/signaux",    icon: TrendingUp,       label: "Signaux",      badge: "LIVE" as const },
+  { href: "/signaux",    icon: TrendingUp,       label: "Signaux IA",   badge: "LIVE" as const },
+  { href: "/analyses",   icon: BarChart2,        label: "Analyses",     badge: null },
   { href: "/portfolio",  icon: Briefcase,        label: "Portfolio",    badge: null },
-  { href: "/feed",       icon: Rss,              label: "Signal Feed",  badge: null },
   { href: "/coach",      icon: Bot,              label: "Coach IA",     badge: null },
   { href: "/apprendre",  icon: BookOpen,         label: "Académie",     badge: null },
   { href: "/forum",      icon: MessageSquare,    label: "Forum",        badge: null },
@@ -34,9 +34,7 @@ const SECONDARY_NAV = [
   { group: "Trading",
     items: [
       { href: "/watchlist",  icon: Star,          label: "Watchlist" },
-      { href: "/analyses",   icon: BarChart2,     label: "Analyses" },
       { href: "/compare",    icon: GitCompare,    label: "Comparateur" },
-      { href: "/scanner",    icon: TrendingUp,    label: "Scanner" },
       { href: "/backtest",   icon: FlaskConical,  label: "Backtest" },
       { href: "/replay",     icon: History,       label: "Replay" },
       { href: "/calendrier", icon: CalendarDays,  label: "Calendrier" },
@@ -48,20 +46,18 @@ const SECONDARY_NAV = [
       { href: "/duel",       icon: Swords,        label: "Duels" },
       { href: "/room",       icon: Radio,         label: "Trading Room" },
       { href: "/social",     icon: Users,         label: "Social" },
+      { href: "/referral",   icon: Gift,          label: "Parrainage" },
+      { href: "/brief",      icon: Bell,          label: "Tradex Brief" },
     ]
   },
   { group: "Outils",
     items: [
       { href: "/reports",    icon: FileText,      label: "Rapports" },
-      { href: "/brief",      icon: Bell,          label: "Tradex Brief" },
-      { href: "/widget",     icon: Code2,         label: "Widget" },
-      { href: "/api-docs",   icon: Code2,         label: "API" },
     ]
   },
 ]
 
 const BOTTOM_NAV = [
-  { href: "/referral",     icon: Gift,     label: "Parrainage" },
   { href: "/notifications",icon: Bell,     label: "Notifications" },
   { href: "/parametres",   icon: Settings, label: "Paramètres" },
 ]
