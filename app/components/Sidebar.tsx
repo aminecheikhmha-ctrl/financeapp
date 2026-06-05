@@ -10,7 +10,7 @@ import {
   LayoutDashboard, TrendingUp, Briefcase, BookOpen,
   Newspaper, MessageSquare, BarChart2, Star,
   GitCompare, Trophy, Settings, LogOut, ChevronLeft, ChevronRight,
-  Bot, FileText, Bell, Zap, Users, ScanLine, FlaskConical, History,
+  Bot, FileText, Bell, Zap, Users, FlaskConical, History,
 } from "lucide-react"
 import { useLanguage } from "@/lib/i18n/context"
 import LanguagePicker from "@/app/components/LanguagePicker"
@@ -38,7 +38,6 @@ export default function Sidebar() {
     { href: "/forum",        icon: MessageSquare,    label: t.nav.forum,         group: "apprendre" as const },
     { href: "/coach",        icon: Bot,              label: t.nav.coach,         group: "apprendre" as const },
     { href: "/social",       icon: Users,            label: t.nav.social,        group: "apprendre" as const, soon: true },
-    { href: "/scanner",      icon: ScanLine,         label: "Scanner",           group: "outils"    as const },
     { href: "/backtest",     icon: FlaskConical,     label: "Backtest",          group: "outils"    as const },
     { href: "/replay",       icon: History,          label: "Replay",            group: "outils"    as const },
     { href: "/reports",      icon: FileText,         label: t.nav.reports,       group: "outils"    as const },
