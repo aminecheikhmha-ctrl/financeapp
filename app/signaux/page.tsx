@@ -681,18 +681,46 @@ export default function Signaux() {
 
               {/* KPI cards */}
               <div className="flex gap-3 flex-1">
-                {[
-                  { label: "⚡ Forts",   value: s.fort,           color: s.fort > 0 ? "#f97316" : "var(--text-muted)",   bg: s.fort > 0 ? "rgba(249,115,22,0.08)" : "var(--bg-surface)", border: s.fort > 0 ? "rgba(249,115,22,0.20)" : "var(--border-subtle)" },
-                  { label: "📈 Achats",  value: s.achats,         color: "#4ade80",  bg: "rgba(34,197,94,0.06)",  border: "rgba(34,197,94,0.14)" },
-                  { label: "📉 Ventes",  value: s.ventes,         color: "#f87171",  bg: "rgba(239,68,68,0.06)",  border: "rgba(239,68,68,0.14)" },
-                  { label: "Score moy.", value: `${s.avg_confluence.toFixed(0)}%`, color: "var(--blue-light)", bg: "var(--bg-surface)", border: "var(--border-subtle)" },
-                ].map(k => (
-                  <div key={k.label} className="flex-1 rounded-xl px-3 py-2.5 min-w-0"
-                    style={{ background: k.bg, border: `1px solid ${k.border}` }}>
-                    <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: "var(--text-muted)" }}>{k.label}</p>
-                    <p className="text-[20px] font-black tabular-nums leading-none" style={{ color: k.color }}>{k.value}</p>
+                {/* Forts */}
+                <div className="flex-1 rounded-xl px-3 py-2.5 min-w-0"
+                  style={{ background: s.fort > 0 ? "rgba(249,115,22,0.08)" : "var(--bg-surface)", border: `1px solid ${s.fort > 0 ? "rgba(249,115,22,0.20)" : "var(--border-subtle)"}` }}>
+                  <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: "var(--text-muted)" }}>⚡ Forts</p>
+                  <p className="text-[20px] font-black tabular-nums leading-none mb-1.5" style={{ color: s.fort > 0 ? "#f97316" : "var(--text-muted)" }}>{s.fort}</p>
+                  <div className="h-1 rounded-full overflow-hidden" style={{ background: "var(--bg-active)" }}>
+                    <div className="h-full rounded-full" style={{ width: `${s.total > 0 ? (s.fort / s.total) * 100 : 0}%`, background: "#f97316" }} />
                   </div>
-                ))}
+                  <p className="text-[9px] mt-1" style={{ color: "var(--text-muted)" }}>{s.total > 0 ? `${((s.fort / s.total) * 100).toFixed(0)}% du total` : "—"}</p>
+                </div>
+                {/* Achats */}
+                <div className="flex-1 rounded-xl px-3 py-2.5 min-w-0"
+                  style={{ background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.14)" }}>
+                  <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: "var(--text-muted)" }}>📈 Achats</p>
+                  <p className="text-[20px] font-black tabular-nums leading-none mb-1.5" style={{ color: "#4ade80" }}>{s.achats}</p>
+                  <div className="h-1 rounded-full overflow-hidden" style={{ background: "var(--bg-active)" }}>
+                    <div className="h-full rounded-full" style={{ width: `${s.total > 0 ? (s.achats / s.total) * 100 : 0}%`, background: "#4ade80" }} />
+                  </div>
+                  <p className="text-[9px] mt-1" style={{ color: "var(--text-muted)" }}>{s.total > 0 ? `${((s.achats / s.total) * 100).toFixed(0)}% haussiers` : "—"}</p>
+                </div>
+                {/* Ventes */}
+                <div className="flex-1 rounded-xl px-3 py-2.5 min-w-0"
+                  style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.14)" }}>
+                  <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: "var(--text-muted)" }}>📉 Ventes</p>
+                  <p className="text-[20px] font-black tabular-nums leading-none mb-1.5" style={{ color: "#f87171" }}>{s.ventes}</p>
+                  <div className="h-1 rounded-full overflow-hidden" style={{ background: "var(--bg-active)" }}>
+                    <div className="h-full rounded-full" style={{ width: `${s.total > 0 ? (s.ventes / s.total) * 100 : 0}%`, background: "#f87171" }} />
+                  </div>
+                  <p className="text-[9px] mt-1" style={{ color: "var(--text-muted)" }}>{s.total > 0 ? `${((s.ventes / s.total) * 100).toFixed(0)}% baissiers` : "—"}</p>
+                </div>
+                {/* Score moy */}
+                <div className="flex-1 rounded-xl px-3 py-2.5 min-w-0"
+                  style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
+                  <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: "var(--text-muted)" }}>Score moy.</p>
+                  <p className="text-[20px] font-black tabular-nums leading-none mb-1.5" style={{ color: "var(--blue-light)" }}>{s.avg_confluence.toFixed(0)}%</p>
+                  <div className="h-1 rounded-full overflow-hidden" style={{ background: "var(--bg-active)" }}>
+                    <div className="h-full rounded-full" style={{ width: `${s.avg_confluence}%`, background: s.avg_confluence >= 65 ? "#22c55e" : s.avg_confluence >= 50 ? "#f59e0b" : "#ef4444" }} />
+                  </div>
+                  <p className="text-[9px] mt-1" style={{ color: "var(--text-muted)" }}>{s.avg_confluence >= 65 ? "Confluence forte" : s.avg_confluence >= 50 ? "Confluence correcte" : "Confluence faible"}</p>
+                </div>
               </div>
 
               {/* Sentiment gauge */}
