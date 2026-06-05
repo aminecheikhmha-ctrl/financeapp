@@ -172,23 +172,24 @@ export default function ParametresPage() {
     load()
   }, [])
 
-  // Scroll spy
+  // Scroll spy — track which section is closest to top of viewport
   useEffect(() => {
-    const el = contentRef.current
-    if (!el) return
-    const observer = new IntersectionObserver(
-      entries => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) setActiveSection(entry.target.id)
-        }
-      },
-      { root: el, threshold: 0.3 }
-    )
-    SECTIONS.forEach(s => {
-      const target = document.getElementById(s.id)
-      if (target) observer.observe(target)
-    })
-    return () => observer.disconnect()
+    if (!ready) return
+    function onScroll() {
+      let closest = SECTIONS[0].id
+      let minDist = Infinity
+      for (const s of SECTIONS) {
+        const el = document.getElementById(s.id)
+        if (!el) continue
+        const rect = el.getBoundingClientRect()
+        // Distance from top of viewport (favour sections near top)
+        const dist = Math.abs(rect.top - 80)
+        if (dist < minDist) { minDist = dist; closest = s.id }
+      }
+      setActiveSection(closest)
+    }
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => window.removeEventListener("scroll", onScroll)
   }, [ready])
 
   async function updateSetting<K extends keyof AppSettings>(key: K, value: AppSettings[K]) {
@@ -675,12 +676,10 @@ export default function ParametresPage() {
               <SectionTitle id="tools" emoji="🔧" label="Outils avancés" />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {[
-                  { href: "/api-docs",  icon: "🔌", title: "API Publique",       desc: "Intègre les signaux dans tes outils",      color: "#60a5fa", bg: "rgba(96,165,250,0.06)",   border: "rgba(96,165,250,0.18)" },
-                  { href: "/widget",    icon: "🧩", title: "Widget embarquable", desc: "Ajoute Tradex sur ton site ou blog",         color: "#a78bfa", bg: "rgba(167,139,250,0.06)", border: "rgba(167,139,250,0.18)" },
-                  { href: "/referral",  icon: "🎁", title: "Parrainage",         desc: "Invite tes amis, gagne 1 mois Pro",          color: "#4ade80", bg: "rgba(34,197,94,0.06)",   border: "rgba(34,197,94,0.18)" },
-                  { href: "/brief",     icon: "☀️", title: "Tradex Brief",       desc: "Briefing marché chaque matin à 7h",          color: "#fbbf24", bg: "rgba(251,191,36,0.06)",  border: "rgba(251,191,36,0.18)" },
-                  { href: "/duel",      icon: "🥊", title: "Duels de trading",   desc: "Défie tes amis sur des compétitions",        color: "#f87171", bg: "rgba(239,68,68,0.06)",   border: "rgba(239,68,68,0.18)" },
-                  { href: "/backtest",  icon: "📈", title: "Backtesting",        desc: "Teste tes stratégies sur données réelles",   color: "#34d399", bg: "rgba(52,211,153,0.06)",  border: "rgba(52,211,153,0.18)" },
+                  { href: "/api-docs", icon: "🔌", title: "API Publique",       desc: "Intègre les signaux dans tes outils",   color: "#60a5fa", bg: "rgba(96,165,250,0.06)",   border: "rgba(96,165,250,0.18)" },
+                  { href: "/widget",   icon: "🧩", title: "Widget embarquable", desc: "Ajoute Tradex sur ton site ou blog",    color: "#a78bfa", bg: "rgba(167,139,250,0.06)", border: "rgba(167,139,250,0.18)" },
+                  { href: "/referral", icon: "🎁", title: "Parrainage",         desc: "Invite tes amis, gagne 1 mois Pro",    color: "#4ade80", bg: "rgba(34,197,94,0.06)",   border: "rgba(34,197,94,0.18)" },
+                  { href: "/brief",    icon: "☀️", title: "Tradex Brief",       desc: "Briefing marché chaque matin à 7h",    color: "#fbbf24", bg: "rgba(251,191,36,0.06)",  border: "rgba(251,191,36,0.18)" },
                 ].map(item => (
                   <a key={item.href} href={item.href}
                     className="flex items-center gap-3 px-4 py-4 rounded-2xl transition-all hover:scale-[1.01] hover:brightness-110 group"
