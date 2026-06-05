@@ -11,6 +11,7 @@ import {
   Newspaper, MessageSquare, BarChart2, Star,
   GitCompare, Trophy, Settings, LogOut, ChevronLeft, ChevronRight,
   Bot, FileText, Bell, Zap, Users, FlaskConical, History,
+  Swords, CalendarDays, Rss, Code2, Radio, GiftIcon,
 } from "lucide-react"
 import { useLanguage } from "@/lib/i18n/context"
 import LanguagePicker from "@/app/components/LanguagePicker"
@@ -40,8 +41,16 @@ export default function Sidebar() {
     { href: "/social",       icon: Users,            label: t.nav.social,        group: "apprendre" as const, soon: true },
     { href: "/backtest",     icon: FlaskConical,     label: "Backtest",          group: "outils"    as const },
     { href: "/replay",       icon: History,          label: "Replay",            group: "outils"    as const },
+    { href: "/calendrier",   icon: CalendarDays,     label: "Calendrier",        group: "outils"    as const },
     { href: "/reports",      icon: FileText,         label: t.nav.reports,       group: "outils"    as const },
     { href: "/compare",      icon: GitCompare,       label: t.nav.compare,       group: "outils"    as const },
+    { href: "/feed",         icon: Rss,              label: "Signal Feed",       group: "principal" as const },
+    { href: "/duel",         icon: Swords,           label: "Duels",             group: "principal" as const },
+    { href: "/classement",   icon: Trophy,           label: "Classement",        group: "principal" as const },
+    { href: "/room",         icon: Radio,            label: "Trading Room",      group: "apprendre" as const },
+    { href: "/brief",        icon: Bell,             label: "Tradex Brief",      group: "apprendre" as const },
+    { href: "/referral",     icon: GiftIcon,         label: "Parrainage",        group: "compte"    as const },
+    { href: "/api-docs",     icon: Code2,            label: "API Publique",      group: "outils"    as const },
     { href: "/profil",       icon: Trophy,           label: t.nav.profile,       group: "compte"    as const },
     { href: "/notifications",icon: Bell,             label: t.nav.notifications, group: "compte"    as const },
     { href: "/parametres",   icon: Settings,         label: t.nav.settings,      group: "compte"    as const },

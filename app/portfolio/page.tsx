@@ -8,6 +8,7 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer, Line, LineChart,
 } from "recharts"
 import { TrendingUp, TrendingDown, ArrowUpRight, Share2, Download, RefreshCw } from "lucide-react"
+import SharePnLCard from "@/app/components/SharePnLCard"
 import ShareTradeCard from "@/app/components/ShareTradeCard"
 import { useLanguage } from "@/lib/i18n/context"
 
@@ -323,6 +324,7 @@ export default function PortfolioPage() {
   const [token, setToken] = useState<string>("")
   const [loading, setLoading] = useState(true)
   const [shareTrade, setShareTrade] = useState<Order | null>(null)
+  const [showShareCard, setShowShareCard] = useState(false)
   const [timeframe, setTimeframe] = useState<"1W" | "1M" | "3M" | "ALL">("1M")
   const [sortOrders, setSortOrders] = useState<"date" | "pnl" | "symbol">("date")
 
@@ -526,6 +528,12 @@ export default function PortfolioPage() {
               className="w-9 h-9 rounded-xl flex items-center justify-center text-white/30 hover:text-white hover:bg-white/8 transition"
               style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
               <RefreshCw size={14} />
+            </button>
+            <button onClick={() => setShowShareCard(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all hover:scale-[1.02]"
+              style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)", color: "#4ade80" }}>
+              <Share2 size={13} />
+              Partager
             </button>
             <button onClick={() => router.push("/reports")}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white/50 hover:text-white transition"
@@ -1093,6 +1101,19 @@ export default function PortfolioPage() {
       {/* ── Share trade modal ─────────────────────────────────────────────── */}
       {shareTrade && (
         <ShareTradeCard order={shareTrade} onClose={() => setShareTrade(null)} />
+      )}
+      {showShareCard && account && stats && (
+        <SharePnLCard
+          username={account.username ?? account.email?.split("@")[0] ?? "Trader"}
+          portfolioValue={account.cash + positions.reduce((s: number, p: any) => s + (p.qty * p.current_price || p.qty * p.avg_price), 0)}
+          totalPnl={stats.totalPnl}
+          totalPnlPct={stats.totalPnlPct}
+          winRate={stats.winRate}
+          trades={closedTrades.length}
+          bestSymbol={stats.bestTrade?.symbol}
+          avatarColor={account.avatar_color ?? "#22c55e"}
+          onClose={() => setShowShareCard(false)}
+        />
       )}
     </div>
   )
