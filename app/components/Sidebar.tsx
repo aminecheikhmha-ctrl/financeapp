@@ -8,25 +8,24 @@ import { getTotalChapters } from "@/lib/courses"
 import { cn } from "@/lib/utils"
 import {
   LayoutDashboard, TrendingUp, Briefcase, BookOpen,
-  Newspaper, MessageSquare, BarChart2, Star, Bot,
+  Newspaper, BarChart2, Star, Bot,
   GitCompare, Settings, LogOut, ChevronLeft, ChevronRight,
   FileText, Bell, Zap, Users, FlaskConical, History,
-  Swords, CalendarDays, Rss, Code2, Radio, Gift,
-  ChevronDown, Trophy, Plus,
+  CalendarDays, ChevronDown, Trophy, Plus,
 } from "lucide-react"
 import { useLanguage } from "@/lib/i18n/context"
 import { useTheme } from "@/lib/theme"
 
 // ── Primary nav (always visible) ──────────────────────────────
 const PRIMARY_NAV = [
-  { href: "/dashboard",  icon: LayoutDashboard, label: "Dashboard",    badge: null },
-  { href: "/signaux",    icon: TrendingUp,       label: "Signaux IA",   badge: "LIVE" as const },
-  { href: "/analyses",   icon: BarChart2,        label: "Analyses",     badge: null },
-  { href: "/portfolio",  icon: Briefcase,        label: "Portfolio",    badge: null },
-  { href: "/coach",      icon: Bot,              label: "Coach IA",     badge: null },
-  { href: "/apprendre",  icon: BookOpen,         label: "Académie",     badge: null },
-  { href: "/forum",      icon: MessageSquare,    label: "Forum",        badge: null },
-  { href: "/news",       icon: Newspaper,        label: "News",         badge: null },
+  { href: "/dashboard",   icon: LayoutDashboard, label: "Dashboard",   badge: null },
+  { href: "/signaux",     icon: TrendingUp,       label: "Signaux IA",  badge: "LIVE" as const },
+  { href: "/analyses",    icon: BarChart2,        label: "Analyses",    badge: null },
+  { href: "/portfolio",   icon: Briefcase,        label: "Portfolio",   badge: null },
+  { href: "/coach",       icon: Bot,              label: "Coach IA",    badge: null },
+  { href: "/apprendre",   icon: BookOpen,         label: "Académie",    badge: null },
+  { href: "/communaute",  icon: Users,            label: "Communauté",  badge: null },
+  { href: "/news",        icon: Newspaper,        label: "News",        badge: null },
 ]
 
 // ── Secondary nav (in "Plus" section) ─────────────────────────
@@ -40,19 +39,10 @@ const SECONDARY_NAV = [
       { href: "/calendrier", icon: CalendarDays,  label: "Calendrier" },
     ]
   },
-  { group: "Communauté",
-    items: [
-      { href: "/classement", icon: Trophy,        label: "Classement" },
-      { href: "/duel",       icon: Swords,        label: "Duels" },
-      { href: "/room",       icon: Radio,         label: "Trading Room" },
-      { href: "/social",     icon: Users,         label: "Social" },
-      { href: "/referral",   icon: Gift,          label: "Parrainage" },
-      { href: "/brief",      icon: Bell,          label: "Tradex Brief" },
-    ]
-  },
   { group: "Outils",
     items: [
       { href: "/reports",    icon: FileText,      label: "Rapports" },
+      { href: "/brief",      icon: Bell,          label: "Tradex Brief" },
     ]
   },
 ]
