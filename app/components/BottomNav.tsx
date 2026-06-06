@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import {
   LayoutDashboard, TrendingUp, Briefcase, BookOpen,
-  MoreHorizontal, MessageSquare, FileText, Bot, Settings,
-  LogOut, Newspaper, Star, GitCompare, Users,
+  MoreHorizontal, MessageSquare, Bot, Settings,
+  LogOut, Newspaper, Star, GitCompare,
 } from "lucide-react"
 import { haptic } from "@/lib/capacitor"
 import { supabase } from "@/lib/supabase"
@@ -30,9 +30,7 @@ export default function BottomNav() {
     { href: "/news",         icon: Newspaper,      label: t.nav.news },
     { href: "/forum",        icon: MessageSquare,  label: t.nav.forum },
     { href: "/compare",      icon: GitCompare,     label: t.nav.compare },
-    { href: "/reports",      icon: FileText,       label: t.nav.reports },
     { href: "/coach",        icon: Bot,            label: t.nav.coach },
-    { href: "/social",       icon: Users,          label: t.nav.social },
     { href: "/parametres",   icon: Settings,       label: t.nav.settings },
   ]
 

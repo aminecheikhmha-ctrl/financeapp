@@ -1844,7 +1844,7 @@ function DashboardContent() {
                   </div>
                 )}
 
-                <a href="/reports" className="block text-center text-[10px] text-green-400 font-bold hover:text-green-300 transition pt-1">
+                <a href="/portfolio" className="block text-center text-[10px] text-green-400 font-bold hover:text-green-300 transition pt-1">
                   Rapport complet →
                 </a>
               </div>

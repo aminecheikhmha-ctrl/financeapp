@@ -667,10 +667,10 @@ export default function Signaux() {
                 style={{ border: "1px solid var(--border-default)", color: "var(--text-muted)", background: "var(--bg-surface)" }}>
                 <span className={`text-base ${loading ? "animate-spin" : ""}`}>↻</span>
               </button>
-              <a href="/feed"
+              <a href="/news"
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-bold transition-all hover:scale-[1.02]"
                 style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", color: "var(--text-muted)" }}>
-                📱 Feed
+                📰 News
               </a>
             </div>
           </div>

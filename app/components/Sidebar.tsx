@@ -10,40 +10,37 @@ import {
   LayoutDashboard, TrendingUp, Briefcase, BookOpen,
   Newspaper, BarChart2, Star, Bot,
   GitCompare, Settings, LogOut, ChevronLeft, ChevronRight,
-  FileText, Bell, Zap, Users, FlaskConical, History,
-  CalendarDays, ChevronDown, Trophy, Plus,
+  Bell, Zap, Users, MessageSquare,
 } from "lucide-react"
 import { useLanguage } from "@/lib/i18n/context"
 import { useTheme } from "@/lib/theme"
 
-// ── Primary nav (always visible) ──────────────────────────────
-const PRIMARY_NAV = [
-  { href: "/dashboard",   icon: LayoutDashboard, label: "Dashboard",   badge: null },
-  { href: "/signaux",     icon: TrendingUp,       label: "Signaux IA",  badge: "LIVE" as const },
-  { href: "/analyses",    icon: BarChart2,        label: "Analyses",    badge: null },
-  { href: "/portfolio",   icon: Briefcase,        label: "Portfolio",   badge: null },
-  { href: "/coach",       icon: Bot,              label: "Coach IA",    badge: null },
-  { href: "/apprendre",   icon: BookOpen,         label: "Académie",    badge: null },
-  { href: "/communaute",  icon: Users,            label: "Communauté",  badge: null },
-  { href: "/news",        icon: Newspaper,        label: "News",        badge: null },
-]
-
-// ── Secondary nav (in "Plus" section) ─────────────────────────
-const SECONDARY_NAV = [
-  { group: "Trading",
+// ── Nav groups ────────────────────────────────────────────────
+const NAV_GROUPS = [
+  {
+    label: "TRADE",
     items: [
-      { href: "/watchlist",  icon: Star,          label: "Watchlist" },
-      { href: "/compare",    icon: GitCompare,    label: "Comparateur" },
-      { href: "/backtest",   icon: FlaskConical,  label: "Backtest" },
-      { href: "/replay",     icon: History,       label: "Replay" },
-      { href: "/calendrier", icon: CalendarDays,  label: "Calendrier" },
-    ]
+      { href: "/dashboard",  icon: LayoutDashboard, label: "Dashboard",  badge: null },
+      { href: "/signaux",    icon: TrendingUp,      label: "Signaux IA", badge: "LIVE" as const },
+      { href: "/analyses",   icon: BarChart2,       label: "Analyses",   badge: null },
+      { href: "/portfolio",  icon: Briefcase,       label: "Portfolio",  badge: null },
+      { href: "/news",       icon: Newspaper,       label: "Actualités", badge: null },
+    ],
   },
-  { group: "Outils",
+  {
+    label: "APPRENDRE",
     items: [
-      { href: "/reports",    icon: FileText,      label: "Rapports" },
-      { href: "/brief",      icon: Bell,          label: "Tradex Brief" },
-    ]
+      { href: "/apprendre",  icon: BookOpen,        label: "Académie",   badge: null },
+      { href: "/forum",      icon: MessageSquare,   label: "Forum",      badge: null },
+      { href: "/coach",      icon: Bot,             label: "Coach IA",   badge: null },
+    ],
+  },
+  {
+    label: "OUTILS",
+    items: [
+      { href: "/watchlist",  icon: Star,            label: "Watchlist",  badge: null },
+      { href: "/compare",    icon: GitCompare,      label: "Comparer",   badge: null },
+    ],
   },
 ]
 
@@ -58,7 +55,7 @@ export default function Sidebar() {
   const { theme, toggle: toggleTheme } = useTheme()
 
   const [expanded,      setExpanded]      = useState(true)
-  const [moreOpen,      setMoreOpen]      = useState(false)
+  const [moreOpen,      setMoreOpen]      = useState(false) // kept for compat but unused
   const [user,          setUser]          = useState<any>(null)
   const [plan,          setPlan]          = useState("free")
   const [profile,       setProfile]       = useState<{ username: string; xp: number; avatar_color: string } | null>(null)
@@ -151,8 +148,6 @@ export default function Sidebar() {
     return pathname === href || (href !== "/" && pathname.startsWith(href + "/"))
   }
 
-  // Check if any secondary item is active (to show "Plus" as active)
-  const anySecondaryActive = SECONDARY_NAV.flatMap(g => g.items).some(i => isActive(i.href))
 
   return (
     <aside
@@ -193,163 +188,101 @@ export default function Sidebar() {
         )}
       </button>
 
-      {/* ── Primary Nav ──────────────────────────────────────── */}
+      {/* ── Nav groups ───────────────────────────────────────── */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide"
         style={{ padding: "8px 6px" }}>
 
-        <div className="space-y-0.5">
-          {PRIMARY_NAV.map(item => {
-            const active = isActive(item.href)
-            const Icon   = item.icon
-            const showDot = (item.href === "/signaux" && strongCount > 0) ||
-                            (item.href === "/notifications" && unreadNotifs > 0)
-            return (
-              <a key={item.href} href={item.href}
-                className={cn(
-                  "relative flex items-center gap-2.5 rounded-xl group",
-                  "transition-all duration-150",
-                  expanded ? "px-3 py-2" : "justify-center py-2.5 px-0",
-                  active
-                    ? "text-green-400"
-                    : "text-white/38 hover:text-white/75"
-                )}
-                style={active ? {
-                  background: "rgba(34,197,94,0.08)",
-                  border: "1px solid rgba(34,197,94,0.14)",
-                } : {
-                  background: "transparent",
-                  border: "1px solid transparent",
-                  ...(expanded ? {} : {}),
-                }}>
-
-                {/* Active bar */}
-                {active && expanded && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] rounded-r-full"
-                    style={{ background: "var(--green-light)" }} />
-                )}
-
-                {/* Icon */}
-                <div className="relative flex-shrink-0">
-                  <Icon size={16} strokeWidth={active ? 2.2 : 1.8} />
-                  {/* LIVE badge */}
-                  {item.badge === "LIVE" && (
-                    <span className="absolute -top-[5px] -right-[5px] text-[6px] font-black px-1 rounded-full text-black leading-[10px]"
-                      style={{ background: "#4ade80" }}>
-                      LIVE
-                    </span>
-                  )}
-                  {/* Notification dot */}
-                  {showDot && !item.badge && (
-                    <span className="absolute -top-[4px] -right-[4px] w-[8px] h-[8px] rounded-full bg-red-500 border border-[var(--bg-canvas)]" />
-                  )}
-                </div>
-
-                {/* Label */}
-                {expanded && (
-                  <span className={cn("text-[13px] font-medium truncate flex-1", active && "font-semibold")}>
-                    {item.label}
-                  </span>
-                )}
-
-                {/* Badges (expanded) */}
-                {expanded && item.href === "/signaux" && strongCount > 0 && (
-                  <span className="ml-auto text-[9px] font-black px-1.5 py-0.5 rounded-full text-black"
-                    style={{ background: "#4ade80" }}>
-                    {strongCount > 9 ? "9+" : strongCount}
-                  </span>
-                )}
-                {expanded && item.href === "/apprendre" && learnProgress > 0 && (
-                  <span className="ml-auto text-[9px] font-semibold" style={{ color: "var(--green-light)" }}>
-                    {learnProgress}%
-                  </span>
-                )}
-                {expanded && item.href === "/notifications" && unreadNotifs > 0 && (
-                  <span className="ml-auto text-[9px] font-black px-1.5 py-0.5 rounded-full text-white bg-red-500">
-                    {unreadNotifs > 9 ? "9+" : unreadNotifs}
-                  </span>
-                )}
-
-                {/* Tooltip (collapsed) */}
-                {!expanded && (
-                  <div className="absolute left-full ml-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-white whitespace-nowrap z-50 opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity"
-                    style={{
-                      background: "var(--bg-elevated)",
-                      border: "1px solid var(--border-default)",
-                      boxShadow: "var(--shadow-md)",
-                    }}>
-                    {item.label}
-                  </div>
-                )}
-              </a>
-            )
-          })}
-
-          {/* ── Plus / More button ──────────────────────────── */}
-          <button
-            onClick={() => expanded && setMoreOpen(m => !m)}
-            className={cn(
-              "relative flex items-center gap-2.5 rounded-xl w-full",
-              "transition-all duration-150 group",
-              expanded ? "px-3 py-2" : "justify-center py-2.5 px-0",
-              (moreOpen || anySecondaryActive)
-                ? "text-white/70"
-                : "text-white/30 hover:text-white/60"
-            )}
-            style={{
-              background: (moreOpen || anySecondaryActive) ? "rgba(255,255,255,0.05)" : "transparent",
-              border: "1px solid transparent",
-            }}>
-            <div className="relative flex-shrink-0">
-              <Plus size={15} strokeWidth={1.8} />
-              {anySecondaryActive && (
-                <span className="absolute -top-[4px] -right-[4px] w-[7px] h-[7px] rounded-full"
-                  style={{ background: "var(--green)" }} />
+        <div className="space-y-4">
+          {NAV_GROUPS.map(group => (
+            <div key={group.label}>
+              {/* Group label (only when expanded) */}
+              {expanded && (
+                <p className="px-3 pb-1 text-[9px] font-black uppercase tracking-[0.12em]"
+                  style={{ color: "var(--text-muted)" }}>
+                  {group.label}
+                </p>
               )}
-            </div>
-            {expanded && (
-              <>
-                <span className="text-[13px] font-medium flex-1 text-left">Plus</span>
-                <ChevronDown size={12} className={cn("transition-transform", moreOpen && "rotate-180")} />
-              </>
-            )}
-            {!expanded && (
-              <div className="absolute left-full ml-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-white whitespace-nowrap z-50 opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity"
-                style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", boxShadow: "var(--shadow-md)" }}>
-                Plus
-              </div>
-            )}
-          </button>
+              {!expanded && <div className="h-px mx-2 mb-1" style={{ background: "var(--border-faint)" }} />}
 
-          {/* ── Secondary nav (expanded) ────────────────────── */}
-          {expanded && moreOpen && (
-            <div className="mt-1 mb-1 rounded-xl overflow-hidden animate-fade-in"
-              style={{ background: "rgba(255,255,255,0.025)", border: "1px solid var(--border-faint)" }}>
-              {SECONDARY_NAV.map(group => (
-                <div key={group.group}>
-                  <p className="px-3 pt-3 pb-1 text-[10px] font-bold uppercase tracking-widest"
-                    style={{ color: "var(--text-muted)" }}>
-                    {group.group}
-                  </p>
-                  {group.items.map(item => {
-                    const active = isActive(item.href)
-                    const Icon   = item.icon
-                    return (
-                      <a key={item.href} href={item.href}
-                        className={cn(
-                          "flex items-center gap-2.5 px-3 py-1.5 text-[12px] font-medium transition-all",
-                          active ? "text-green-400" : "text-white/40 hover:text-white/70 hover:bg-white/[0.03]"
+              <div className="space-y-0.5">
+                {group.items.map(item => {
+                  const active = isActive(item.href)
+                  const Icon   = item.icon
+                  const showDot = item.href === "/signaux" && strongCount > 0
+
+                  return (
+                    <a key={item.href} href={item.href}
+                      className={cn(
+                        "relative flex items-center gap-2.5 rounded-xl group",
+                        "transition-all duration-150",
+                        expanded ? "px-3 py-2" : "justify-center py-2.5 px-0",
+                        active ? "text-green-400" : "text-white/38 hover:text-white/75"
+                      )}
+                      style={active ? {
+                        background: "rgba(34,197,94,0.08)",
+                        border: "1px solid rgba(34,197,94,0.14)",
+                      } : {
+                        background: "transparent",
+                        border: "1px solid transparent",
+                      }}>
+
+                      {/* Active bar */}
+                      {active && expanded && (
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] rounded-r-full"
+                          style={{ background: "var(--green-light)" }} />
+                      )}
+
+                      {/* Icon */}
+                      <div className="relative flex-shrink-0">
+                        <Icon size={16} strokeWidth={active ? 2.2 : 1.8} />
+                        {item.badge === "LIVE" && (
+                          <span className="absolute -top-[5px] -right-[5px] text-[6px] font-black px-1 rounded-full text-black leading-[10px]"
+                            style={{ background: "#4ade80" }}>
+                            LIVE
+                          </span>
                         )}
-                        style={active ? { background: "rgba(34,197,94,0.07)" } : {}}>
-                        <Icon size={13} strokeWidth={active ? 2.2 : 1.8} />
-                        {item.label}
-                      </a>
-                    )
-                  })}
-                </div>
-              ))}
-              <div className="h-2" />
+                        {showDot && !item.badge && (
+                          <span className="absolute -top-[4px] -right-[4px] w-[8px] h-[8px] rounded-full bg-red-500 border border-[var(--bg-canvas)]" />
+                        )}
+                      </div>
+
+                      {/* Label */}
+                      {expanded && (
+                        <span className={cn("text-[13px] font-medium truncate flex-1", active && "font-semibold")}>
+                          {item.label}
+                        </span>
+                      )}
+
+                      {/* Badges */}
+                      {expanded && item.href === "/signaux" && strongCount > 0 && (
+                        <span className="ml-auto text-[9px] font-black px-1.5 py-0.5 rounded-full text-black"
+                          style={{ background: "#4ade80" }}>
+                          {strongCount > 9 ? "9+" : strongCount}
+                        </span>
+                      )}
+                      {expanded && item.href === "/apprendre" && learnProgress > 0 && (
+                        <span className="ml-auto text-[9px] font-semibold" style={{ color: "var(--green-light)" }}>
+                          {learnProgress}%
+                        </span>
+                      )}
+
+                      {/* Tooltip (collapsed) */}
+                      {!expanded && (
+                        <div className="absolute left-full ml-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-white whitespace-nowrap z-50 opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity"
+                          style={{
+                            background: "var(--bg-elevated)",
+                            border: "1px solid var(--border-default)",
+                            boxShadow: "var(--shadow-md)",
+                          }}>
+                          {item.label}
+                        </div>
+                      )}
+                    </a>
+                  )
+                })}
+              </div>
             </div>
-          )}
+          ))}
         </div>
       </nav>
 
@@ -391,7 +324,10 @@ export default function Sidebar() {
             <span className="text-sm">{theme === "dark" ? "☀️" : "🌙"}</span>
           </button>
 
-          {BOTTOM_NAV.map(item => {
+          {[
+            { href: "/notifications", icon: Bell,     label: "Notifications" },
+            { href: "/parametres",    icon: Settings,  label: "Paramètres" },
+          ].map(item => {
             const Icon   = item.icon
             const active = isActive(item.href)
             return (

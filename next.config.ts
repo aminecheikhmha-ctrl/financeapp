@@ -71,8 +71,22 @@ const nextConfig: NextConfig = {
 
   async redirects() {
     return [
-      { source: "/home", destination: "/",          permanent: true },
-      { source: "/app",  destination: "/dashboard", permanent: true },
+      { source: "/home",          destination: "/",           permanent: true  },
+      { source: "/app",           destination: "/dashboard",  permanent: true  },
+      // Pages fusionnées / supprimées
+      { source: "/scanner",       destination: "/signaux",    permanent: true  },
+      { source: "/calendrier",    destination: "/analyses",   permanent: true  },
+      { source: "/brief",         destination: "/coach",      permanent: true  },
+      { source: "/classement",    destination: "/profil",     permanent: true  },
+      { source: "/reports",       destination: "/portfolio",  permanent: true  },
+      { source: "/referral",      destination: "/parametres", permanent: true  },
+      { source: "/communaute",    destination: "/forum",      permanent: true  },
+      { source: "/feed",          destination: "/news",       permanent: true  },
+      { source: "/social",        destination: "/forum",      permanent: true  },
+      { source: "/room",          destination: "/dashboard",  permanent: false },
+      { source: "/duel",          destination: "/dashboard",  permanent: false },
+      { source: "/replay",        destination: "/dashboard",  permanent: false },
+      { source: "/widget/:path*", destination: "/dashboard",  permanent: false },
     ]
   },
 }

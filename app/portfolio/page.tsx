@@ -535,7 +535,7 @@ export default function PortfolioPage() {
               <Share2 size={13} />
               Partager
             </button>
-            <button onClick={() => router.push("/reports")}
+            <button onClick={() => router.push("/portfolio?tab=rapports")}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white/50 hover:text-white transition"
               style={{ border: "1px solid rgba(255,255,255,0.10)" }}>
               <Download size={13} />
