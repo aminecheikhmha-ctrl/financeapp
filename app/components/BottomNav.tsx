@@ -28,7 +28,7 @@ export default function BottomNav() {
   const MENU_ITEMS = [
     { href: "/watchlist",    icon: Star,           label: t.nav.watchlist },
     { href: "/news",         icon: Newspaper,      label: t.nav.news },
-    { href: "/forum",        icon: MessageSquare,  label: t.nav.forum },
+    { href: "/communaute",   icon: MessageSquare,  label: "Communauté" },
     { href: "/compare",      icon: GitCompare,     label: t.nav.compare },
     { href: "/coach",        icon: Bot,            label: t.nav.coach },
     { href: "/parametres",   icon: Settings,       label: t.nav.settings },

@@ -31,7 +31,7 @@ const NAV_GROUPS = [
     label: "APPRENDRE",
     items: [
       { href: "/apprendre",  icon: BookOpen,        label: "Académie",   badge: null },
-      { href: "/forum",      icon: MessageSquare,   label: "Forum",      badge: null },
+      { href: "/communaute", icon: MessageSquare,   label: "Communauté", badge: null },
       { href: "/coach",      icon: Bot,             label: "Coach IA",   badge: null },
     ],
   },
