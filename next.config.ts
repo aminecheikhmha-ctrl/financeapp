@@ -76,17 +76,14 @@ const nextConfig: NextConfig = {
       // Pages fusionnées / supprimées
       { source: "/scanner",       destination: "/signaux",    permanent: true  },
       { source: "/calendrier",    destination: "/analyses",   permanent: true  },
-      { source: "/brief",         destination: "/coach",      permanent: true  },
       { source: "/classement",    destination: "/communaute", permanent: true  },
       { source: "/reports",       destination: "/portfolio",  permanent: true  },
-      { source: "/referral",      destination: "/parametres", permanent: true  },
       { source: "/forum",         destination: "/communaute", permanent: true  },
       { source: "/feed",          destination: "/news",       permanent: true  },
       { source: "/social",        destination: "/communaute", permanent: true  },
       { source: "/room",          destination: "/communaute", permanent: false },
       { source: "/duel",          destination: "/communaute", permanent: false },
       { source: "/replay",        destination: "/dashboard",  permanent: false },
-      { source: "/widget/:path*", destination: "/dashboard",  permanent: false },
     ]
   },
 }
