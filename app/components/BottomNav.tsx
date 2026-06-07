@@ -142,7 +142,7 @@ export default function BottomNav() {
         ref={menuRef}
         className="md:hidden fixed bottom-[68px] left-0 right-0 z-[80] rounded-t-3xl transition-transform duration-300 ease-out"
         style={{
-          background: "#0d0d0d",
+          background: "var(--bg-elevated)",
           borderTop: "1px solid var(--border-default)",
           transform: menuOpen ? "translateY(0)" : "translateY(100%)",
           pointerEvents: menuOpen ? "auto" : "none",
@@ -213,10 +213,10 @@ export default function BottomNav() {
         className="md:hidden fixed bottom-0 left-0 right-0 z-[70]"
         style={{
           height: "var(--bottomnav-h)",
-          background: "rgba(5,5,5,0.97)",
+          background: "var(--topbar-bg, rgba(5,5,5,0.97))",
           backdropFilter: "blur(24px)",
           WebkitBackdropFilter: "blur(24px)",
-          borderTop: "1px solid rgba(255,255,255,0.06)",
+          borderTop: "1px solid var(--border-faint)",
         }}>
         <div className="flex items-center justify-around px-2 pt-2 pb-safe h-full">
           {TABS.map(tab => {

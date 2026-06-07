@@ -119,7 +119,7 @@ export default function Topbar() {
         height: "56px",
         zIndex: 40,
         padding: "0 20px",
-        background: "rgba(6,10,7,0.88)",
+        background: "var(--topbar-bg, rgba(6,10,7,0.88))",
         backdropFilter: "blur(24px)",
         WebkitBackdropFilter: "blur(24px)",
         borderBottom: "1px solid var(--border-faint)",

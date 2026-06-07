@@ -68,6 +68,9 @@ body::after {
   --blue-light:   #2563eb;
   --blue-dim:     rgba(37,99,235,0.10);
 
+  /* Topbar */
+  --topbar-bg: rgba(243,247,243,0.92);
+
   /* Skeleton */
   --skeleton-from: rgba(0,0,0,0.06);
   --skeleton-to:   rgba(0,0,0,0.10);
