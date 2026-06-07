@@ -110,6 +110,9 @@ export default function CommunautePage() {
   const [activityFeed, setActivityFeed] = useState<Array<{ type: "post"|"duel"|"like"|"join"; username: string; content: string; time: Date }>>([])
   const [portfolioData, setPortfolioData] = useState<any[]>([])
   const [referralCopied, setReferralCopied] = useState(false)
+  const [referralCode, setReferralCode] = useState("")
+  const [referralUrl, setReferralUrl] = useState("")
+  const [referralStats, setReferralStats] = useState<{ total: number; converted: number } | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const currentChallenge = CHALLENGES[new Date().getDay() % CHALLENGES.length]
@@ -128,6 +131,19 @@ export default function CommunautePage() {
           .order("created_at", { ascending: false })
           .limit(5)
         setPortfolioData(orders ?? [])
+
+        // Fetch le vrai code de parrainage
+        if (session.access_token) {
+          const refRes = await fetch("/api/referral", {
+            headers: { Authorization: `Bearer ${session.access_token}` }
+          }).catch(() => null)
+          if (refRes?.ok) {
+            const refData = await refRes.json()
+            setReferralCode(refData.code ?? "")
+            setReferralUrl(refData.url ?? "")
+            setReferralStats(refData.stats ?? null)
+          }
+        }
       }
     })
   }, [])
@@ -247,7 +263,7 @@ export default function CommunautePage() {
   }
 
   function copyReferral() {
-    const link = `${window.location.origin}/signup?ref=${user?.id?.slice(0, 8)}`
+    const link = referralUrl || `${window.location.origin}/signup?ref=${referralCode}`
     navigator.clipboard.writeText(link)
     setReferralCopied(true)
     setTimeout(() => setReferralCopied(false), 2000)
@@ -661,14 +677,32 @@ export default function CommunautePage() {
           {/* Widget parrainage */}
           {user && (
             <div className="rounded-2xl p-4 relative overflow-hidden"
-              style={{ background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.12)" }}>
+              style={{ background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.15)" }}>
               <div className="absolute top-0 right-0 w-20 h-20 rounded-full blur-2xl opacity-10 pointer-events-none"
                 style={{ background: "#22c55e" }} />
               <div className="relative">
-                <p className="text-xs font-black text-white mb-1">🎁 Invite un ami</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-black text-white">🎁 Parrainage</p>
+                  {referralStats && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      style={{ background: "rgba(34,197,94,0.15)", color: "#4ade80" }}>
+                      {referralStats.converted} ami{referralStats.converted > 1 ? "s" : ""} parrainé{referralStats.converted > 1 ? "s" : ""}
+                    </span>
+                  )}
+                </div>
                 <p className="text-[10px] text-white/35 mb-3 leading-relaxed">
-                  Gagne <span className="text-green-400 font-black">200 XP</span> pour chaque ami qui rejoint avec ton lien
+                  Invite un ami → vous gagnez tous les deux <span className="text-green-400 font-black">1 mois Pro offert</span>
                 </p>
+
+                {/* Code de parrainage */}
+                {referralCode && (
+                  <div className="flex items-center justify-between px-3 py-2 rounded-xl mb-2"
+                    style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.18)" }}>
+                    <span className="text-[10px] text-white/40">Ton code</span>
+                    <span className="text-sm font-black tracking-[0.15em] text-green-400">{referralCode}</span>
+                  </div>
+                )}
+
                 <button onClick={copyReferral}
                   className="w-full py-2 rounded-xl text-[11px] font-black transition-all hover:scale-[1.01]"
                   style={{
