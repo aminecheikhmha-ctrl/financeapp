@@ -546,6 +546,24 @@ function DashboardContent() {
     setOrderCapital("")
   }
 
+  // Auto-ouvre le modal buy/sell si on vient d'un signal IA
+  const actionParam = searchParams.get("action")
+  const autoOpenedRef = useRef(false)
+  useEffect(() => {
+    if (!activeData || autoOpenedRef.current || !actionParam) return
+    autoOpenedRef.current = true
+    const p = activeData.price ?? 0
+    const tpParam = searchParams.get("tp")
+    const slParam = searchParams.get("sl")
+    setOrderTp(tpParam || (p ? (p * 1.05).toFixed(2) : ""))
+    setOrderSl(slParam || (p ? (p * 0.97).toFixed(2) : ""))
+    setOrderQty("1")
+    setOrderMsg("")
+    setOrderMode("qty")
+    setOrderCapital("")
+    setOrderModal(actionParam === "sell" ? "sell" : "buy")
+  }, [activeData, actionParam]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Personalized watchlist: add crypto if preferred
   const effectiveWatchlist = userProfile?.preferred_assets?.includes("crypto")
     ? Array.from(new Set([...watchlist, "BTC-USD", "ETH-USD"]))

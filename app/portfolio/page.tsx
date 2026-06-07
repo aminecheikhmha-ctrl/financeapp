@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useMemo, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import {
   AreaChart, Area, PieChart, Pie, Cell,
@@ -310,8 +310,120 @@ function JournalTab({ closedTrades, token }: { closedTrades: ClosedTrade[]; toke
   )
 }
 
+// ─── Rapports Tab ─────────────────────────────────────────────────────────────
+
+function RapportsTab({ token, stats, closedTrades, positions }: {
+  token: string
+  stats: any
+  closedTrades: any[]
+  positions: any[]
+}) {
+  const router = useRouter()
+  const [reportData, setReportData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!token) return
+    fetch(`/api/reports?period=1M`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => { setReportData(d); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [token])
+
+  const d = reportData
+
+  const kpis = [
+    { label: "Rendement total",  value: d ? `${(d.totalPnlPct ?? 0) >= 0 ? "+" : ""}${(d.totalPnlPct ?? 0).toFixed(2)}%`  : stats ? `${stats.totalPnlPct >= 0 ? "+" : ""}${stats.totalPnlPct.toFixed(2)}%` : "—", color: (d?.totalPnlPct ?? stats?.totalPnlPct ?? 0) >= 0 ? "#4ade80" : "#f87171", tooltip: "Performance globale depuis le début" },
+    { label: "Win Rate",         value: d ? `${(d.winRate ?? 0).toFixed(1)}%`           : stats ? `${stats.winRate.toFixed(1)}%` : "—", color: (d?.winRate ?? stats?.winRate ?? 0) >= 50 ? "#4ade80" : "#f87171", tooltip: "% de trades gagnants" },
+    { label: "Profit Factor",    value: d?.profitFactor ? d.profitFactor.toFixed(2)      : stats?.profitFactor ? (isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : "∞") : "—", color: (d?.profitFactor ?? stats?.profitFactor ?? 0) >= 1.5 ? "#4ade80" : "#f59e0b", tooltip: "Gains bruts / Pertes brutes. > 1.5 = bon" },
+    { label: "Sharpe Ratio",     value: d?.sharpe ? d.sharpe.toFixed(2)                  : "—", color: (d?.sharpe ?? 0) >= 1 ? "#4ade80" : "#f59e0b", tooltip: "Rendement ajusté au risque. > 1 = bon" },
+    { label: "Max Drawdown",     value: d?.maxDrawdown ? `-${d.maxDrawdown.toFixed(2)}%` : "—", color: "#f87171", tooltip: "Perte maximale depuis un pic" },
+    { label: "Trades fermés",    value: d ? String(d.closedTrades ?? closedTrades.length) : String(closedTrades.length), color: "#60a5fa", tooltip: "Nombre de trades complétés" },
+  ]
+
+  return (
+    <div className="space-y-5 mb-6">
+      {/* KPI grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {kpis.map(k => (
+          <div key={k.label} className="rounded-2xl p-4 relative group"
+            style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
+            <p className="text-[10px] uppercase tracking-widest mb-2" style={{ color: "var(--text-muted)" }}>{k.label}</p>
+            <p className="text-2xl font-black tabular-nums" style={{ color: k.color }}>
+              {loading ? <span className="skeleton h-7 w-16 rounded block" /> : k.value}
+            </p>
+            {k.tooltip && (
+              <p className="text-[10px] mt-1" style={{ color: "var(--text-tertiary)" }}>{k.tooltip}</p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Meilleur / Pire trade */}
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {[
+            { label: "🏆 Meilleur trade", trade: stats.bestTrade, isGood: true },
+            { label: "📉 Pire trade",     trade: stats.worstTrade, isGood: false },
+          ].filter(x => x.trade).map(({ label, trade, isGood }) => (
+            <div key={label} className="rounded-2xl p-4"
+              style={{
+                background: isGood ? "rgba(34,197,94,0.05)" : "rgba(239,68,68,0.05)",
+                border: `1px solid ${isGood ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)"}`,
+              }}>
+              <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--text-muted)" }}>{label}</p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-black text-white">{trade.symbol}</p>
+                <p className="text-lg font-black" style={{ color: isGood ? "#4ade80" : "#f87171" }}>
+                  {isGood ? "+" : ""}{trade.pnl_pct?.toFixed(2) ?? trade.pnlPct?.toFixed(2) ?? "—"}%
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Positions actuelles */}
+      {positions.length > 0 && (
+        <div className="rounded-2xl overflow-hidden"
+          style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
+          <div className="px-5 py-3 border-b" style={{ borderColor: "var(--border-faint)" }}>
+            <p className="text-xs font-black text-white">Positions ouvertes</p>
+          </div>
+          <div className="divide-y" style={{ borderColor: "var(--border-faint)" }}>
+            {positions.map((p: any) => (
+              <div key={p.symbol} className="flex items-center justify-between px-5 py-3">
+                <div>
+                  <p className="text-sm font-black text-white">{p.symbol}</p>
+                  <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>{p.qty} unités · entrée ${p.avg_price?.toFixed(2)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-black" style={{ color: p.pnl >= 0 ? "#4ade80" : "#f87171" }}>
+                    {p.pnl >= 0 ? "+" : ""}${p.pnl?.toFixed(2)}
+                  </p>
+                  <p className="text-[10px]" style={{ color: p.pnl_pct >= 0 ? "#4ade80" : "#f87171" }}>
+                    {p.pnl_pct >= 0 ? "+" : ""}{p.pnl_pct?.toFixed(2)}%
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* CTA vers dashboard */}
+      <button onClick={() => router.push("/dashboard")}
+        className="w-full py-3 rounded-2xl text-sm font-black text-black transition-all hover:scale-[1.01]"
+        style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", boxShadow: "0 4px 20px rgba(34,197,94,0.25)" }}>
+        📈 Ouvrir le terminal de trading →
+      </button>
+    </div>
+  )
+}
+
 export default function PortfolioPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { t } = useLanguage()
   const [account, setAccount] = useState<any>(null)
   const [positions, setPositions] = useState<Position[]>([])
@@ -320,7 +432,9 @@ export default function PortfolioPage() {
   const [pendingOrders, setPendingOrders] = useState<Order[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
   const [perfHistory, setPerfHistory] = useState<{ date: string; value: number }[]>([])
-  const [activeTab, setActiveTab] = useState<"positions" | "orders" | "history" | "stats" | "journal">("positions")
+  const [activeTab, setActiveTab] = useState<"positions" | "orders" | "history" | "stats" | "journal" | "rapports">(
+    (searchParams.get("tab") as any) ?? "positions"
+  )
   const [token, setToken] = useState<string>("")
   const [loading, setLoading] = useState(true)
   const [shareTrade, setShareTrade] = useState<Order | null>(null)
@@ -483,6 +597,7 @@ export default function PortfolioPage() {
     { key: "history",   label: `📈 ${t.portfolio.tabs.performance} (${closedTrades.length})` },
     { key: "stats",     label: `🎯 ${t.portfolio.winRate}` },
     { key: "journal",   label: t.portfolio.tabs.journal },
+    { key: "rapports",  label: "📑 Rapports" },
   ] as const
 
   const filteredHistory = filterHistory(perfHistory)
@@ -1095,6 +1210,10 @@ export default function PortfolioPage() {
               </div>
             </div>
           </div>
+        )}
+        {/* ── TAB RAPPORTS ──────────────────────────────────────────────────── */}
+        {activeTab === "rapports" && (
+          <RapportsTab token={token} stats={stats} closedTrades={closedTrades} positions={positions} />
         )}
       </div>
 
