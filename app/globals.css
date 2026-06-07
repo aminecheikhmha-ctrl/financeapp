@@ -30,25 +30,47 @@ body::after {
 
 /* ── Light mode overrides ─────────────────────────────────────── */
 [data-theme="light"] {
+  /* Backgrounds */
   --bg-page:     #f0f4f0;
   --bg-canvas:   #f3f7f3;
   --bg-surface:  #ffffff;
   --bg-elevated: #eef3ee;
   --bg-overlay:  #e6ebe6;
   --bg-hover:    rgba(0,0,0,0.04);
-  --bg-active:   rgba(0,0,0,0.07);
-  --bg-selected: rgba(34,197,94,0.09);
+  --bg-active:   rgba(0,0,0,0.06);
+  --bg-selected: rgba(34,197,94,0.10);
 
-  --border-faint:   rgba(0,0,0,0.05);
-  --border-subtle:  rgba(0,0,0,0.08);
-  --border-default: rgba(0,0,0,0.12);
-  --border-strong:  rgba(0,0,0,0.20);
+  /* Borders */
+  --border-faint:   rgba(0,0,0,0.06);
+  --border-subtle:  rgba(0,0,0,0.09);
+  --border-default: rgba(0,0,0,0.13);
+  --border-strong:  rgba(0,0,0,0.22);
+  --border-accent:  rgba(22,163,74,0.35);
+  --border-dim:     rgba(0,0,0,0.09);
 
+  /* Text */
   --text-primary:   rgba(0,0,0,0.88);
-  --text-secondary: rgba(0,0,0,0.50);
-  --text-tertiary:  rgba(0,0,0,0.32);
-  --text-muted:     rgba(0,0,0,0.20);
-  --text-disabled:  rgba(0,0,0,0.14);
+  --text-secondary: rgba(0,0,0,0.52);
+  --text-tertiary:  rgba(0,0,0,0.34);
+  --text-muted:     rgba(0,0,0,0.22);
+  --text-disabled:  rgba(0,0,0,0.15);
+
+  /* Brand palette — plus saturé en light mode pour rester lisible */
+  --green:        #16a34a;
+  --green-light:  #15803d;
+  --green-dim:    rgba(22,163,74,0.10);
+  --green-border: rgba(22,163,74,0.28);
+  --green-glow:   rgba(22,163,74,0.15);
+
+  --yellow-light: #b45309;
+  --yellow-dim:   rgba(180,83,9,0.10);
+
+  --blue-light:   #2563eb;
+  --blue-dim:     rgba(37,99,235,0.10);
+
+  /* Skeleton */
+  --skeleton-from: rgba(0,0,0,0.06);
+  --skeleton-to:   rgba(0,0,0,0.10);
 }
 
 [data-theme="light"] body {
@@ -61,6 +83,57 @@ body::after {
 
 [data-theme="light"] ::-webkit-scrollbar-thumb {
   background: rgba(0,0,0,0.12);
+}
+
+/* ── Light mode — correctifs text-white/xx Tailwind ──────────────
+   Les classes Tailwind text-white/xx sont codées pour le dark.
+   On les réinterprète globalement en light mode.
+   ─────────────────────────────────────────────────────────────── */
+[data-theme="light"] .text-white    { color: rgba(0,0,0,0.88) !important; }
+[data-theme="light"] .text-white\/90 { color: rgba(0,0,0,0.82) !important; }
+[data-theme="light"] .text-white\/80 { color: rgba(0,0,0,0.75) !important; }
+[data-theme="light"] .text-white\/70 { color: rgba(0,0,0,0.65) !important; }
+[data-theme="light"] .text-white\/60 { color: rgba(0,0,0,0.55) !important; }
+[data-theme="light"] .text-white\/50 { color: rgba(0,0,0,0.45) !important; }
+[data-theme="light"] .text-white\/40 { color: rgba(0,0,0,0.36) !important; }
+[data-theme="light"] .text-white\/35 { color: rgba(0,0,0,0.32) !important; }
+[data-theme="light"] .text-white\/30 { color: rgba(0,0,0,0.28) !important; }
+[data-theme="light"] .text-white\/25 { color: rgba(0,0,0,0.22) !important; }
+[data-theme="light"] .text-white\/20 { color: rgba(0,0,0,0.18) !important; }
+[data-theme="light"] .text-white\/15 { color: rgba(0,0,0,0.13) !important; }
+[data-theme="light"] .text-white\/10 { color: rgba(0,0,0,0.09) !important; }
+
+/* Cards et surfaces sombres hardcodées — les blanchir */
+[data-theme="light"] [style*="background: #0a0a0a"],
+[data-theme="light"] [style*="background:#0a0a0a"],
+[data-theme="light"] [style*='background: "#0a0a0a"'] {
+  background: #ffffff !important;
+  border-color: rgba(0,0,0,0.08) !important;
+}
+[data-theme="light"] [style*="background: rgba(255,255,255,0.02)"],
+[data-theme="light"] [style*="background: rgba(255,255,255,0.03)"],
+[data-theme="light"] [style*="background: rgba(255,255,255,0.04)"],
+[data-theme="light"] [style*="background: rgba(255,255,255,0.05)"],
+[data-theme="light"] [style*="background: rgba(255,255,255,0.06)"],
+[data-theme="light"] [style*="background: rgba(255,255,255,0.07)"],
+[data-theme="light"] [style*="background: rgba(255,255,255,0.08)"] {
+  background: rgba(0,0,0,0.03) !important;
+}
+
+/* Borders blanches → noires en light */
+[data-theme="light"] [style*="border: 1px solid rgba(255,255,255,0.05)"],
+[data-theme="light"] [style*="border: 1px solid rgba(255,255,255,0.06)"],
+[data-theme="light"] [style*="border: 1px solid rgba(255,255,255,0.07)"],
+[data-theme="light"] [style*="border: 1px solid rgba(255,255,255,0.08)"],
+[data-theme="light"] [style*="border: 1px solid rgba(255,255,255,0.10)"],
+[data-theme="light"] [style*="border-color: rgba(255,255,255,0.05)"] {
+  border-color: rgba(0,0,0,0.08) !important;
+}
+
+/* Skeleton en light mode */
+[data-theme="light"] .skeleton {
+  background: linear-gradient(90deg, rgba(0,0,0,0.06) 25%, rgba(0,0,0,0.10) 50%, rgba(0,0,0,0.06) 75%) !important;
+  background-size: 400% 100% !important;
 }
 
 /* ── Extra animations (globals-only) ─────────────────────────── */
