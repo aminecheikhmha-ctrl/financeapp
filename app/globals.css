@@ -88,6 +88,22 @@ body::after {
   background: rgba(0,0,0,0.12);
 }
 
+/* ── Light mode — surcharges spécifiques composants ─────────────
+   La topbar, sidebar et bottomnav utilisent des couleurs hardcodées
+   prévues pour le dark. On les réinterprète ici.
+   ─────────────────────────────────────────────────────────────── */
+
+/* Sidebar — groupe label */
+[data-theme="light"] aside p[class*="tracking"] { color: rgba(0,0,0,0.35) !important; }
+
+/* Topbar — titre page */
+[data-theme="light"] header p.text-white,
+[data-theme="light"] header .text-white { color: rgba(0,0,0,0.85) !important; }
+
+/* Icônes de la topbar (bell, etc.) */
+[data-theme="light"] header button { color: rgba(0,0,0,0.45) !important; }
+[data-theme="light"] header button:hover { color: rgba(0,0,0,0.80) !important; }
+
 /* ── Light mode — correctifs text-white/xx Tailwind ──────────────
    Les classes Tailwind text-white/xx sont codées pour le dark.
    On les réinterprète globalement en light mode.

@@ -216,14 +216,16 @@ export default function Sidebar() {
                         "relative flex items-center gap-2.5 rounded-xl group",
                         "transition-all duration-150",
                         expanded ? "px-3 py-2" : "justify-center py-2.5 px-0",
-                        active ? "text-green-400" : "text-white/38 hover:text-white/75"
+                        active ? "text-green-400" : ""
                       )}
                       style={active ? {
                         background: "rgba(34,197,94,0.08)",
                         border: "1px solid rgba(34,197,94,0.14)",
+                        color: "var(--green-light)",
                       } : {
                         background: "transparent",
                         border: "1px solid transparent",
+                        color: "var(--text-secondary)",
                       }}>
 
                       {/* Active bar */}

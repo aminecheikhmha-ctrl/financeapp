@@ -129,7 +129,7 @@ export default function Topbar() {
       {/* Page title */}
       <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
         {meta.emoji && <span className="text-sm">{meta.emoji}</span>}
-        <p className="text-[14px] font-semibold text-white truncate">{meta.label}</p>
+        <p className="text-[14px] font-semibold truncate" style={{ color: "var(--text-primary)" }}>{meta.label}</p>
         {/* Market status dot */}
         <div className="flex items-center gap-1.5 ml-1">
           <div
@@ -165,7 +165,7 @@ export default function Topbar() {
 
         {/* Notifications */}
         <button onClick={() => router.push("/notifications")}
-          className="relative w-8 h-8 rounded-xl flex items-center justify-center transition-all text-white/30 hover:text-white/70 hover:bg-white/[0.06]"
+          className="relative w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:bg-black/[0.06]" style={{ color: "var(--text-secondary)" }}
           style={{ border: "1px solid transparent" }}>
           <Bell size={15} />
           {unreadCount > 0 && (
@@ -206,7 +206,7 @@ export default function Topbar() {
                     {avatarUrl ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" /> : initial}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[13px] font-semibold text-white truncate">{username || user?.email?.split("@")[0]}</p>
+                    <p className="text-[13px] font-semibold truncate" style={{ color: "var(--text-primary)" }}>{username || user?.email?.split("@")[0]}</p>
                     <p className="text-[10px]" style={{ color: "var(--text-tertiary)" }}>{user?.email}</p>
                   </div>
                 </div>
