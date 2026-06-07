@@ -317,7 +317,7 @@ export default function CommunautePage() {
   const activityIcons = { post: "💬", duel: "⚔️", like: "❤️", join: "👋" }
 
   return (
-    <div className="min-h-screen page-enter"
+    <div className="min-h-screen page-enter overflow-x-hidden"
       style={{
         background: "var(--bg-canvas)",
         backgroundImage: "radial-gradient(ellipse 80% 40% at 50% -10%, rgba(34,197,94,0.07), transparent), radial-gradient(ellipse 50% 60% at 90% 50%, rgba(96,165,250,0.03), transparent)",
