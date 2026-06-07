@@ -440,9 +440,35 @@ export default function PortfolioPage() {
   const [shareTrade, setShareTrade] = useState<Order | null>(null)
   const [showShareCard, setShowShareCard] = useState(false)
   const [timeframe, setTimeframe] = useState<"1W" | "1M" | "3M" | "ALL">("1M")
-  const [sortOrders, setSortOrders] = useState<"date" | "pnl" | "symbol">("date")
+  const [sortOrders,  setSortOrders]  = useState<"date" | "pnl" | "symbol">("date")
+  const [aiAnalysis,  setAiAnalysis]  = useState<{
+    score_diversification: number; score_performance: number
+    score_risk: number; score_global: number
+    recommandations: string[]; points_forts: string[]; points_faibles: string[]
+    commentaire: string
+  } | null>(null)
+  const [loadingAI, setLoadingAI] = useState(false)
 
-  useEffect(() => { loadAll() }, [])
+  async function analyzePortfolio() {
+    setLoadingAI(true)
+    try {
+      const tk = await getToken()
+      const res = await fetch("/api/ai/portfolio-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${tk}` },
+        body: JSON.stringify({ positions, orders: closedTrades }),
+      })
+      const data = await res.json()
+      setAiAnalysis(data)
+    } catch {}
+    setLoadingAI(false)
+  }
+
+  useEffect(() => {
+    const timeout = setTimeout(() => setLoading(false), 7000)
+    loadAll().finally(() => { clearTimeout(timeout); setLoading(false) })
+    return () => clearTimeout(timeout)
+  }, [])
 
   async function getToken() {
     const { data } = await supabase.auth.getSession()
@@ -650,6 +676,11 @@ export default function PortfolioPage() {
               <Share2 size={13} />
               Partager
             </button>
+            <button onClick={analyzePortfolio} disabled={loadingAI}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all hover:scale-[1.02] disabled:opacity-50"
+              style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.25)", color: "#a78bfa" }}>
+              🤖 {loadingAI ? "Analyse..." : "Analyse IA"}
+            </button>
             <button onClick={() => router.push("/portfolio?tab=rapports")}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white/50 hover:text-white transition"
               style={{ border: "1px solid rgba(255,255,255,0.10)" }}>
@@ -658,6 +689,72 @@ export default function PortfolioPage() {
             </button>
           </div>
         </div>
+
+        {/* ── Panel Analyse IA ────────────────────────────────────── */}
+        {aiAnalysis && (
+          <div className="mb-4 rounded-2xl p-5"
+            style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.15)" }}>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-black text-white">🤖 Analyse IA du portfolio</p>
+              <button onClick={() => setAiAnalysis(null)} className="text-white/25 hover:text-white transition text-lg leading-none">✕</button>
+            </div>
+            <div className="flex items-center gap-5 mb-4">
+              {/* Score circulaire */}
+              <div className="w-20 h-20 rounded-2xl flex flex-col items-center justify-center flex-shrink-0"
+                style={{
+                  background: `conic-gradient(${aiAnalysis.score_global >= 60 ? "#22c55e" : aiAnalysis.score_global >= 40 ? "#f59e0b" : "#ef4444"} ${aiAnalysis.score_global * 3.6}deg, rgba(255,255,255,0.06) 0deg)`,
+                  padding: 3,
+                }}>
+                <div className="w-full h-full rounded-xl flex flex-col items-center justify-center"
+                  style={{ background: "var(--bg-surface)" }}>
+                  <p className="text-xl font-black text-white">{aiAnalysis.score_global}</p>
+                  <p className="text-[9px]" style={{ color: "var(--text-muted)" }}>/100</p>
+                </div>
+              </div>
+              <div className="flex-1 space-y-2">
+                {[
+                  { label: "Diversification", value: aiAnalysis.score_diversification, color: "#60a5fa" },
+                  { label: "Performance",     value: aiAnalysis.score_performance,     color: "#4ade80" },
+                  { label: "Risque",          value: aiAnalysis.score_risk,            color: "#f59e0b" },
+                ].map(s => (
+                  <div key={s.label}>
+                    <div className="flex justify-between text-[10px] mb-0.5">
+                      <span style={{ color: "var(--text-tertiary)" }}>{s.label}</span>
+                      <span className="font-black" style={{ color: s.color }}>{s.value}/100</span>
+                    </div>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--bg-active)" }}>
+                      <div className="h-full rounded-full transition-all" style={{ width: `${s.value}%`, background: s.color }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <p className="text-sm leading-relaxed mb-4" style={{ color: "var(--text-secondary)" }}>{aiAnalysis.commentaire}</p>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              {[
+                { label: "✅ Points forts",  items: aiAnalysis.points_forts,   color: "#4ade80", bg: "rgba(34,197,94,0.06)"   },
+                { label: "⚠️ À améliorer",  items: aiAnalysis.points_faibles,  color: "#f59e0b", bg: "rgba(245,158,11,0.06)" },
+              ].map(s => (
+                <div key={s.label} className="rounded-xl p-3"
+                  style={{ background: s.bg, border: `1px solid ${s.color}20` }}>
+                  <p className="text-[10px] font-black mb-2" style={{ color: s.color }}>{s.label}</p>
+                  {s.items.map((item, i) => (
+                    <p key={i} className="text-[11px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>· {item}</p>
+                  ))}
+                </div>
+              ))}
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: "var(--text-muted)" }}>💡 Recommandations</p>
+              {aiAnalysis.recommandations.map((r, i) => (
+                <div key={i} className="flex items-start gap-2 mb-1.5">
+                  <span className="text-xs flex-shrink-0" style={{ color: "#a78bfa" }}>{i + 1}.</span>
+                  <p className="text-[11px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>{r}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* KPI Grid */}
         {(() => {
@@ -1255,14 +1352,32 @@ export default function PortfolioPage() {
 
 function PortfolioSkeleton() {
   return (
-    <div className="min-h-screen p-6" style={{ background: "transparent" }}>
-      <div className="h-36 skeleton rounded-2xl mb-4" />
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-        {[...Array(4)].map((_, i) => <div key={i} className="h-24 skeleton rounded-2xl" />)}
+    <div className="min-h-screen page-enter" style={{ background: "var(--bg-canvas)" }}>
+      <div className="px-6 pt-6 pb-4">
+        <div className="h-3 w-24 skeleton rounded mb-3" />
+        <div className="h-10 w-48 skeleton rounded mb-2" />
+        <div className="h-5 w-32 skeleton rounded" />
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 mb-4">
-        <div className="h-56 skeleton rounded-2xl" />
-        <div className="h-56 skeleton rounded-2xl" />
+      <div className="px-6 grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="rounded-2xl p-5" style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
+            <div className="h-2.5 w-20 skeleton rounded mb-3" />
+            <div className="h-8 w-28 skeleton rounded mb-1" />
+            <div className="h-2 w-16 skeleton rounded" />
+          </div>
+        ))}
+      </div>
+      <div className="px-6 grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 mb-4">
+        <div className="rounded-2xl skeleton" style={{ height: 240 }} />
+        <div className="rounded-2xl skeleton" style={{ height: 240 }} />
+      </div>
+      <div className="px-6">
+        <div className="flex gap-2 mb-4">
+          {[...Array(5)].map((_, i) => <div key={i} className="h-8 w-24 skeleton rounded-xl" />)}
+        </div>
+        <div className="space-y-2">
+          {[...Array(3)].map((_, i) => <div key={i} className="h-16 skeleton rounded-xl" />)}
+        </div>
       </div>
     </div>
   )

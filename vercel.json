@@ -1,9 +1,7 @@
 {
   "crons": [
-    {
-      "path": "/api/cron/emails",
-      "schedule": "0 9 * * *"
-    }
+    { "path": "/api/cron/emails",   "schedule": "0 9 * * *" },
+    { "path": "/api/signaux/track", "schedule": "0 * * * *" }
   ],
   "headers": [
     {

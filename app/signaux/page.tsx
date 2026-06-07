@@ -529,11 +529,23 @@ export default function Signaux() {
   const [historique,   setHistorique]   = useState<HistoriqueRow[]>([])
   const [histLoading,  setHistLoading]  = useState(false)
   const [isMarketOpen, setIsMarketOpen] = useState(false)
+  const [signalStats,  setSignalStats]  = useState<{
+    total: number; hits: number; misses: number
+    winRate: number; avgPnl: number
+    topTickers: { ticker: string; winRate: number; total: number }[]
+  } | null>(null)
 
   useEffect(() => {
     setIsMarketOpen(isNYSEOpenNow())
     const t = setInterval(() => setIsMarketOpen(isNYSEOpenNow()), 60_000)
     return () => clearInterval(t)
+  }, [])
+
+  useEffect(() => {
+    fetch("/api/signaux/stats")
+      .then(r => r.json())
+      .then(d => setSignalStats(d))
+      .catch(() => {})
   }, [])
 
   const fetchSignals = useCallback(async () => {
@@ -745,6 +757,46 @@ export default function Signaux() {
             </div>
           )}
         </div>
+
+        {/* ── Widget stats performance signaux ── */}
+        {signalStats && signalStats.total >= 5 && (
+          <div className="px-6 py-3 border-b" style={{ borderColor: "var(--border-faint)" }}>
+            <div className="rounded-2xl px-5 py-4 flex items-center gap-6 flex-wrap"
+              style={{ background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.15)" }}>
+              {[
+                { label: "Taux de succès", value: `${signalStats.winRate}%`, color: signalStats.winRate >= 60 ? "#4ade80" : "#f59e0b" },
+                { label: "Signaux trackés", value: String(signalStats.total), color: "rgba(255,255,255,0.85)" },
+                { label: "TP atteints", value: String(signalStats.hits), color: "#4ade80" },
+                { label: "SL touchés", value: String(signalStats.misses), color: "#f87171" },
+                { label: "P&L moyen", value: `${signalStats.avgPnl >= 0 ? "+" : ""}${signalStats.avgPnl.toFixed(1)}%`, color: signalStats.avgPnl >= 0 ? "#4ade80" : "#f87171" },
+              ].map((item, i) => (
+                <div key={item.label} className="flex items-center gap-6">
+                  {i > 0 && <div className="w-px h-8 flex-shrink-0" style={{ background: "rgba(255,255,255,0.10)" }} />}
+                  <div>
+                    <p className="text-[9px] uppercase tracking-widest font-bold mb-0.5" style={{ color: "var(--text-muted)" }}>{item.label}</p>
+                    <p className="text-2xl font-black" style={{ color: item.color }}>{item.value}</p>
+                  </div>
+                </div>
+              ))}
+              {signalStats.topTickers.length > 0 && (
+                <>
+                  <div className="w-px h-8 flex-shrink-0" style={{ background: "rgba(255,255,255,0.10)" }} />
+                  <div>
+                    <p className="text-[9px] uppercase tracking-widest font-bold mb-1.5" style={{ color: "var(--text-muted)" }}>Meilleurs actifs</p>
+                    <div className="flex gap-2">
+                      {signalStats.topTickers.slice(0, 3).map(t => (
+                        <span key={t.ticker} className="text-[10px] font-black px-2 py-0.5 rounded-full"
+                          style={{ background: "rgba(34,197,94,0.12)", color: "#4ade80", border: "1px solid rgba(34,197,94,0.2)" }}>
+                          {t.ticker} {t.winRate}%
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* ── Filters ── */}
         {tab === "live" && (

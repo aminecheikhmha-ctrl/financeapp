@@ -113,10 +113,21 @@ export default function CommunautePage() {
   const [referralCode, setReferralCode] = useState("")
   const [referralUrl, setReferralUrl] = useState("")
   const [referralStats, setReferralStats] = useState<{ total: number; converted: number } | null>(null)
+  const [challenges, setChallenges] = useState<any[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const currentChallenge = CHALLENGES[new Date().getDay() % CHALLENGES.length]
-  const daysLeft = 7 - new Date().getDay() || 7
+  const fallbackChallenge = CHALLENGES[new Date().getDay() % CHALLENGES.length]
+  const activeChallenge = challenges[0] ?? null
+  const currentChallenge = activeChallenge
+    ? { symbol: activeChallenge.title.includes("$") ? activeChallenge.title.split("$")[1]?.split(" ")[0] ?? "SPY" : "SPY", title: activeChallenge.title, emoji: activeChallenge.type === "trading" ? "📈" : activeChallenge.type === "learning" ? "🎓" : "👥", color: activeChallenge.type === "trading" ? "#22c55e" : activeChallenge.type === "learning" ? "#60a5fa" : "#a78bfa", description: activeChallenge.description, xp_reward: activeChallenge.xp_reward, progress: activeChallenge.progress ?? 0 }
+    : fallbackChallenge
+  const daysLeft = (() => {
+    if (activeChallenge?.end_date) {
+      const diff = Math.ceil((new Date(activeChallenge.end_date).getTime() - Date.now()) / 86400000)
+      return Math.max(0, diff)
+    }
+    return 7 - new Date().getDay() || 7
+  })()
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -194,9 +205,38 @@ export default function CommunautePage() {
     if (postsRes.status === "fulfilled") { const d = await postsRes.value.json(); setPosts(d.posts?.slice(0, 3) ?? []) }
     if (leadersRes.status === "fulfilled") { const d = await leadersRes.value.json(); setLeaders(d.leaderboard?.slice(0, 3) ?? []) }
     if (roomRes.status === "fulfilled") { const d = await roomRes.value.json(); setMessages(d.messages?.slice(-20) ?? []) }
+
     if (tk) {
-      const res = await fetch("/api/duel", { headers: { Authorization: `Bearer ${tk}` } }).catch(() => null)
-      if (res?.ok) { const d = await res.json(); setDuels(d.duels?.filter((dl: any) => dl.status === "active").slice(0, 1) ?? []) }
+      // Duels actifs
+      const duelRes = await fetch("/api/duel", { headers: { Authorization: `Bearer ${tk}` } }).catch(() => null)
+      if (duelRes?.ok) { const d = await duelRes.json(); setDuels(d.duels?.filter((dl: any) => dl.status === "active").slice(0, 1) ?? []) }
+
+      // Feed social réel
+      try {
+        const feedRes = await fetch("/api/social/feed", { headers: { Authorization: `Bearer ${tk}` } })
+        if (feedRes.ok) {
+          const feedData = await feedRes.json()
+          const realFeed = (feedData.items ?? []).slice(0, 8).map((item: any) => ({
+            type: (item.type === "trade" ? "post" : "join") as "post" | "duel" | "like" | "join",
+            username: item.user ?? "Trader",
+            content: item.type === "trade"
+              ? `a ${item.side === "buy" ? "acheté" : "vendu"} $${item.symbol}${item.pnl_pct != null ? ` · ${item.pnl_pct >= 0 ? "+" : ""}${item.pnl_pct.toFixed(1)}%` : ""}`
+              : `a débloqué "${item.achievement}" 🏆`,
+            time: new Date(item.timestamp),
+          }))
+          if (realFeed.length > 0) setActivityFeed(realFeed)
+        }
+      } catch {}
+
+      // Challenges réels
+      try {
+        const chalRes = await fetch("/api/challenges", { headers: { Authorization: `Bearer ${tk}` } })
+        if (chalRes.ok) {
+          const chalData = await chalRes.json()
+          const active = (chalData.challenges ?? []).filter((c: any) => new Date(c.end_date) > new Date())
+          if (active.length > 0) setChallenges(active)
+        }
+      } catch {}
     }
   }
 
@@ -742,8 +782,27 @@ export default function CommunautePage() {
               </div>
               <h3 className="text-lg font-black text-white mb-1">{currentChallenge.title}</h3>
               <p className="text-xs text-white/35">
-                Trade ${currentChallenge.symbol} cette semaine · Meilleur P&L annoncé vendredi · Gagnant affiché dans le classement
+                {(currentChallenge as any).description
+                  ? (currentChallenge as any).description
+                  : `Trade $${(currentChallenge as any).symbol} cette semaine · Meilleur P&L annoncé vendredi · Gagnant affiché dans le classement`}
               </p>
+              {(currentChallenge as any).xp_reward && (
+                <span className="inline-flex items-center gap-1 mt-2 text-[10px] font-black px-2 py-0.5 rounded-full"
+                  style={{ background: "rgba(251,191,36,0.15)", color: "#fbbf24", border: "1px solid rgba(251,191,36,0.25)" }}>
+                  ⚡ +{(currentChallenge as any).xp_reward} XP
+                </span>
+              )}
+              {activeChallenge?.progress != null && (
+                <div className="mt-2">
+                  <div className="flex justify-between text-[9px] mb-1" style={{ color: "rgba(255,255,255,0.3)" }}>
+                    <span>Progression</span>
+                    <span>{activeChallenge.progress}%</span>
+                  </div>
+                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
+                    <div className="h-full rounded-full transition-all" style={{ width: `${activeChallenge.progress}%`, background: currentChallenge.color }} />
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex flex-col gap-2 flex-shrink-0">
               <button onClick={() => router.push(`/dashboard?symbol=${currentChallenge.symbol}`)}
