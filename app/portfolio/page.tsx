@@ -660,28 +660,36 @@ export default function PortfolioPage() {
         </div>
 
         {/* KPI Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[
+        {(() => {
+          const unrealizedPnl = positions.reduce((s, p) => s + p.pnl, 0)
+          const realizedPnl   = closedTrades.reduce((s, t) => s + t.pnl, 0)
+          const kpis = [
             {
-              label: t.portfolio.totalPl,
-              value: `${(stats?.dayPnl ?? 0) >= 0 ? "+" : ""}$${(stats?.dayPnl ?? 0).toFixed(2)}`,
-              sub: `${positions.length} open position${positions.length !== 1 ? "s" : ""}`,
-              color: (stats?.dayPnl ?? 0) >= 0 ? "#4ade80" : "#f87171",
-              icon: (stats?.dayPnl ?? 0) >= 0 ? "📈" : "📉",
+              label: "Unrealized P&L",
+              value: `${unrealizedPnl >= 0 ? "+" : ""}$${unrealizedPnl.toFixed(2)}`,
+              sub: `${positions.length} position${positions.length !== 1 ? "s" : ""} ouverte${positions.length !== 1 ? "s" : ""}`,
+              color: unrealizedPnl >= 0 ? "#4ade80" : "#f87171",
+              icon: unrealizedPnl >= 0 ? "📈" : "📉",
+              bg: unrealizedPnl >= 0 ? "rgba(34,197,94,0.06)" : "rgba(239,68,68,0.06)",
+              border: unrealizedPnl >= 0 ? "rgba(34,197,94,0.16)" : "rgba(239,68,68,0.16)",
+            },
+            {
+              label: "Realized P&L",
+              value: `${realizedPnl >= 0 ? "+" : ""}$${realizedPnl.toFixed(2)}`,
+              sub: `${closedTrades.length} trade${closedTrades.length !== 1 ? "s" : ""} fermé${closedTrades.length !== 1 ? "s" : ""}`,
+              color: realizedPnl >= 0 ? "#4ade80" : "#f87171",
+              icon: "🏁",
+              bg: realizedPnl >= 0 ? "rgba(34,197,94,0.04)" : "rgba(239,68,68,0.04)",
+              border: realizedPnl >= 0 ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
             },
             {
               label: t.portfolio.cashAvailable,
               value: `$${(account?.cash ?? 0).toFixed(2)}`,
-              sub: stats ? `${(((account?.cash ?? 0) / stats.totalValue) * 100).toFixed(1)}% of portfolio` : "—",
+              sub: stats ? `${(((account?.cash ?? 0) / stats.totalValue) * 100).toFixed(1)}% du portfolio` : "—",
               color: "#60a5fa",
               icon: "💵",
-            },
-            {
-              label: t.portfolio.invested,
-              value: `$${(stats?.totalInvested ?? 0).toFixed(2)}`,
-              sub: `${orders.filter(o => o.side === "buy").length} buy order${orders.filter(o => o.side === "buy").length !== 1 ? "s" : ""} total`,
-              color: "#a78bfa",
-              icon: "💼",
+              bg: "rgba(96,165,250,0.04)",
+              border: "rgba(96,165,250,0.12)",
             },
             {
               label: t.portfolio.winRate,
@@ -689,19 +697,26 @@ export default function PortfolioPage() {
               sub: `Profit factor ${isFinite(stats?.profitFactor ?? 0) ? (stats?.profitFactor ?? 0).toFixed(2) : "∞"}`,
               color: (stats?.winRate ?? 0) >= 50 ? "#4ade80" : "#f87171",
               icon: "🎯",
+              bg: "rgba(255,255,255,0.02)",
+              border: "rgba(255,255,255,0.07)",
             },
-          ].map(kpi => (
-            <div key={kpi.label} className="rounded-2xl p-4"
-              style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[10px] text-white/25 uppercase tracking-widest">{kpi.label}</p>
-                <span className="text-base">{kpi.icon}</span>
-              </div>
-              <p className="text-xl font-black tabular-nums" style={{ color: kpi.color }}>{kpi.value}</p>
-              <p className="text-[10px] text-white/30 mt-0.5">{kpi.sub}</p>
+          ]
+          return (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {kpis.map(kpi => (
+                <div key={kpi.label} className="rounded-2xl p-4"
+                  style={{ background: kpi.bg, border: `1px solid ${kpi.border}` }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[10px] uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{kpi.label}</p>
+                    <span className="text-base">{kpi.icon}</span>
+                  </div>
+                  <p className="text-xl font-black tabular-nums" style={{ color: kpi.color }}>{kpi.value}</p>
+                  <p className="text-[10px] mt-0.5" style={{ color: "var(--text-tertiary)" }}>{kpi.sub}</p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )
+        })()}
       </div>
 
       {/* ── GRAPHE + DONUT ─────────────────────────────────────────────────── */}
