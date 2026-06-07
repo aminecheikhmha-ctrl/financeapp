@@ -41,20 +41,23 @@ function timeAgo(date: string) {
   return `${Math.floor(h / 24)}j`
 }
 
+function postBorderColor(category: string) {
+  if (category === "crypto")      return "rgba(96,165,250,0.6)"
+  if (category === "analyse")     return "rgba(34,197,94,0.6)"
+  if (category === "psychologie") return "rgba(167,139,250,0.6)"
+  return "rgba(245,158,11,0.6)"
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CommunautePage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [token, setToken] = useState("")
-
-  // Data
   const [posts, setPosts] = useState<any[]>([])
   const [leaders, setLeaders] = useState<any[]>([])
   const [duels, setDuels] = useState<any[]>([])
   const [messages, setMessages] = useState<any[]>([])
-
-  // UI
   const [roomInput, setRoomInput] = useState("")
   const [sending, setSending] = useState(false)
   const [room, setRoom] = useState("general")
@@ -66,7 +69,6 @@ export default function CommunautePage() {
   const [forumSort, setForumSort] = useState("popular")
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // ── Init ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
@@ -79,7 +81,6 @@ export default function CommunautePage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  // ── Realtime room ────────────────────────────────────────────────────────
   useEffect(() => {
     const channel = supabase
       .channel(`room:${room}`)
@@ -98,25 +99,12 @@ export default function CommunautePage() {
       fetch("/api/leaderboard"),
       fetch(`/api/ai/chat?room=general&limit=20`),
     ])
-    if (postsRes.status === "fulfilled") {
-      const d = await postsRes.value.json()
-      setPosts(d.posts?.slice(0, 3) ?? [])
-    }
-    if (leadersRes.status === "fulfilled") {
-      const d = await leadersRes.value.json()
-      setLeaders(d.leaderboard?.slice(0, 3) ?? [])
-    }
-    if (roomRes.status === "fulfilled") {
-      const d = await roomRes.value.json()
-      setMessages(d.messages?.slice(-20) ?? [])
-    }
-    // Duels need auth
+    if (postsRes.status === "fulfilled") { const d = await postsRes.value.json(); setPosts(d.posts?.slice(0, 3) ?? []) }
+    if (leadersRes.status === "fulfilled") { const d = await leadersRes.value.json(); setLeaders(d.leaderboard?.slice(0, 3) ?? []) }
+    if (roomRes.status === "fulfilled") { const d = await roomRes.value.json(); setMessages(d.messages?.slice(-20) ?? []) }
     if (tk) {
-      const duelsRes = await fetch("/api/duel", { headers: { Authorization: `Bearer ${tk}` } }).catch(() => null)
-      if (duelsRes?.ok) {
-        const d = await duelsRes.json()
-        setDuels(d.duels?.filter((dl: any) => dl.status === "active").slice(0, 1) ?? [])
-      }
+      const res = await fetch("/api/duel", { headers: { Authorization: `Bearer ${tk}` } }).catch(() => null)
+      if (res?.ok) { const d = await res.json(); setDuels(d.duels?.filter((dl: any) => dl.status === "active").slice(0, 1) ?? []) }
     }
   }
 
@@ -124,15 +112,10 @@ export default function CommunautePage() {
     let url = `/api/forum/posts?sort=${forumSort}&limit=30`
     if (forumFilter !== "all") url += `&category=${forumFilter}`
     const res = await fetch(url).catch(() => null)
-    if (res?.ok) {
-      const d = await res.json()
-      setAllPosts(d.posts ?? [])
-    }
+    if (res?.ok) { const d = await res.json(); setAllPosts(d.posts ?? []) }
   }, [forumSort, forumFilter])
 
-  useEffect(() => {
-    if (forumOpen) loadAllPosts()
-  }, [forumOpen, loadAllPosts])
+  useEffect(() => { if (forumOpen) loadAllPosts() }, [forumOpen, loadAllPosts])
 
   async function sendMessage() {
     if (!roomInput.trim() || !user || sending) return
@@ -162,14 +145,17 @@ export default function CommunautePage() {
     setCreatingDuel(false)
   }
 
-  // Duel le plus serré
   const hottestDuel = duels[0]
   const duelProgress = hottestDuel
     ? Math.max(10, Math.min(90, 50 + ((hottestDuel.challenger_pnl_pct ?? 0) - (hottestDuel.opponent_pnl_pct ?? 0)) * 5))
     : 50
 
   return (
-    <div className="min-h-screen page-enter">
+    <div className="min-h-screen page-enter"
+      style={{
+        background: "var(--bg-canvas)",
+        backgroundImage: "radial-gradient(ellipse 80% 40% at 50% -10%, rgba(34,197,94,0.07), transparent), radial-gradient(ellipse 50% 60% at 90% 50%, rgba(96,165,250,0.03), transparent)",
+      }}>
 
       {/* ── HEADER ──────────────────────────────────────────────────────── */}
       <div className="px-6 pt-6 pb-4">
@@ -192,7 +178,7 @@ export default function CommunautePage() {
       </div>
 
       {/* ── GRILLE PRINCIPALE ───────────────────────────────────────────── */}
-      <div className="px-6 pb-6 grid gap-3"
+      <div className="px-6 pb-6 grid gap-4"
         style={{ gridTemplateColumns: "1fr 1fr 2fr", gridTemplateRows: "auto auto" }}>
 
         {/* ══ WIDGET DUELS ══════════════════════════════════════════════ */}
@@ -214,14 +200,20 @@ export default function CommunautePage() {
               </span>
             </div>
 
+            {/* Bouton premium */}
             <button onClick={createDuel} disabled={creatingDuel || !user}
-              className="w-full py-3.5 rounded-2xl font-black text-sm transition-all relative overflow-hidden group mb-4 disabled:opacity-50"
-              style={{ background: "linear-gradient(135deg, #a78bfa, #7c3aed)", boxShadow: "0 4px 20px rgba(167,139,250,0.3)" }}>
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)" }} />
-              <span className="relative flex items-center justify-center gap-2 text-white">
-                <Sword size={15} />
-                {creatingDuel ? "Création..." : "Lancer un Duel ⚔️"}
+              className="w-full py-4 rounded-2xl font-black text-base transition-all relative overflow-hidden group mb-5 disabled:opacity-50 active:scale-[0.98]"
+              style={{
+                background: "linear-gradient(135deg, #a78bfa 0%, #7c3aed 50%, #6d28d9 100%)",
+                boxShadow: "0 8px 32px rgba(139,92,246,0.4), inset 0 1px 0 rgba(255,255,255,0.15)",
+              }}>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                style={{ background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.18) 50%, transparent 60%)" }} />
+              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                style={{ boxShadow: "inset 0 0 30px rgba(167,139,250,0.3)" }} />
+              <span className="relative flex items-center justify-center gap-2.5 text-white">
+                <span className="text-xl">⚔️</span>
+                <span>{creatingDuel ? "Création..." : "Lancer un Duel"}</span>
               </span>
             </button>
 
@@ -252,10 +244,13 @@ export default function CommunautePage() {
                 </div>
               </div>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-center py-2">
-                <p className="text-2xl mb-1">⚔️</p>
-                <p className="text-xs text-white/30">Aucun duel actif</p>
-                <p className="text-[10px] text-white/20">Lance le premier !</p>
+              <div className="flex-1 flex flex-col items-center justify-center gap-3 py-4 rounded-xl"
+                style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)" }}>
+                <span className="text-3xl opacity-40">⚔️</span>
+                <div className="text-center">
+                  <p className="text-xs font-bold text-white/40">Aucun duel actif</p>
+                  <p className="text-[10px] text-white/20 mt-0.5">Sois le premier à défier la communauté</p>
+                </div>
               </div>
             )}
           </div>
@@ -301,13 +296,29 @@ export default function CommunautePage() {
                 ))}
               </div>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-center">
-                <p className="text-3xl mb-2">🏆</p>
-                <p className="text-xs text-white/30">Classement bientôt</p>
-                <button onClick={() => router.push("/dashboard")}
-                  className="mt-3 text-[10px] text-yellow-400 hover:text-yellow-300 transition font-bold">
-                  Commence à trader →
-                </button>
+              <div className="flex-1 flex flex-col">
+                {/* Podium silhouettes */}
+                <div className="flex items-end justify-center gap-2 mb-4 px-2" style={{ height: 80 }}>
+                  {[
+                    { h: 50, medal: "🥈" },
+                    { h: 70, medal: "🥇" },
+                    { h: 40, medal: "🥉" },
+                  ].map((p, i) => (
+                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                      <span className="text-sm opacity-20">{p.medal}</span>
+                      <div className="w-8 h-8 rounded-xl opacity-10" style={{ background: "rgba(255,255,255,0.3)" }} />
+                      <div className="w-full rounded-t-xl opacity-10" style={{ height: p.h, background: "rgba(255,255,255,0.15)" }} />
+                    </div>
+                  ))}
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-white/30 mb-3">Classement bientôt disponible</p>
+                  <button onClick={() => router.push("/dashboard")}
+                    className="px-4 py-2 rounded-xl text-[11px] font-black transition-all hover:scale-[1.02]"
+                    style={{ background: "rgba(245,158,11,0.15)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.25)" }}>
+                    Commence à trader →
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -327,9 +338,14 @@ export default function CommunautePage() {
               <span className="text-lg">💬</span>
               <p className="text-sm font-black text-white">Sujets chauds</p>
               <button onClick={() => setForumOpen(true)}
-                className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black transition-all hover:scale-[1.02] group"
-                style={{ background: "rgba(96,165,250,0.12)", border: "1px solid rgba(96,165,250,0.25)", color: "#60a5fa" }}>
-                Tout le forum
+                className="ml-auto flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black transition-all hover:scale-[1.02] group"
+                style={{
+                  background: "linear-gradient(135deg, rgba(96,165,250,0.15), rgba(96,165,250,0.08))",
+                  border: "1px solid rgba(96,165,250,0.3)",
+                  color: "#60a5fa",
+                  boxShadow: "0 2px 12px rgba(96,165,250,0.12)",
+                }}>
+                Ouvrir le Forum
                 <ChevronRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
@@ -338,8 +354,12 @@ export default function CommunautePage() {
               {posts.length > 0 ? posts.map((post, i) => (
                 <button key={post.id}
                   onClick={() => router.push(`/forum/${post.id}`)}
-                  className="w-full flex items-start gap-3 px-3 py-3 rounded-xl text-left transition-all hover:bg-white/[0.04] group"
-                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  className="w-full flex items-start gap-3 px-4 py-3.5 rounded-xl text-left transition-all hover:bg-white/[0.04] group"
+                  style={{
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.07)",
+                    borderLeft: `3px solid ${postBorderColor(post.category)}`,
+                  }}>
                   <div className="flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black text-white/30"
                     style={{ background: "rgba(255,255,255,0.06)" }}>
                     {i + 1}
@@ -383,13 +403,12 @@ export default function CommunautePage() {
           style={{
             background: "linear-gradient(135deg, rgba(34,197,94,0.06), rgba(16,163,74,0.03))",
             border: "1px solid rgba(34,197,94,0.15)",
-            minHeight: 320,
+            minHeight: 340,
           }}>
           <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-64 h-32 rounded-full blur-3xl opacity-10 pointer-events-none"
             style={{ background: "#22c55e" }} />
 
           <div className="relative flex flex-col h-full">
-            {/* Header room */}
             <div className="flex items-center gap-3 mb-3 flex-shrink-0 flex-wrap">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
@@ -415,13 +434,16 @@ export default function CommunautePage() {
               </div>
             </div>
 
-            {/* Messages */}
             <div className="flex-1 overflow-y-auto space-y-2 scrollbar-hide mb-3 pr-1" style={{ maxHeight: 200 }}>
               {messages.length === 0 ? (
-                <div className="flex items-center justify-center h-full text-center py-6">
+                <div className="flex flex-col items-center justify-center h-full gap-3 text-center py-6">
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
+                    style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)" }}>
+                    <span className="text-xl">📡</span>
+                  </div>
                   <div>
-                    <p className="text-2xl mb-2">📡</p>
-                    <p className="text-sm text-white/30">Sois le premier à parler</p>
+                    <p className="text-sm font-bold text-white/40">Room silencieuse</p>
+                    <p className="text-xs text-white/20 mt-0.5">Sois le premier à briser le silence</p>
                   </div>
                 </div>
               ) : messages.map(msg => {
@@ -447,18 +469,17 @@ export default function CommunautePage() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
             {user ? (
               <div className="flex gap-2 flex-shrink-0">
                 <input value={roomInput} onChange={e => setRoomInput(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage()}
                   placeholder={`Message dans #${room}...`}
-                  className="flex-1 px-4 py-2.5 rounded-xl text-xs text-white placeholder-white/20 outline-none"
+                  className="flex-1 px-4 py-3 rounded-xl text-xs text-white placeholder-white/20 outline-none transition-all"
                   style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }} />
                 <button onClick={sendMessage} disabled={sending || !roomInput.trim()}
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-black disabled:opacity-40 transition-all hover:scale-[1.05]"
-                  style={{ background: "#22c55e" }}>
-                  <Send size={14} />
+                  className="w-11 h-11 rounded-xl flex items-center justify-center disabled:opacity-40 transition-all hover:scale-[1.05] active:scale-[0.95]"
+                  style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", boxShadow: "0 4px 16px rgba(34,197,94,0.35)" }}>
+                  <Send size={15} className="text-black" />
                 </button>
               </div>
             ) : (
@@ -477,16 +498,20 @@ export default function CommunautePage() {
           <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-4">📊 Stats communauté</p>
           <div className="space-y-2.5 flex-1">
             {[
-              { label: "Posts chauds",    value: `${posts.length}+`,    icon: "💬" },
-              { label: "Duels actifs",    value: `${duels.length}`,     icon: "⚔️" },
-              { label: "Messages live",   value: `${messages.length}`,  icon: "📡" },
-              { label: "Top performers",  value: `${leaders.length}`,   icon: "🏆" },
+              { label: "Posts chauds",   value: `${posts.length}+`,   icon: "💬", color: "#60a5fa" },
+              { label: "Duels actifs",   value: `${duels.length}`,    icon: "⚔️", color: "#a78bfa" },
+              { label: "Messages live",  value: `${messages.length}`, icon: "📡", color: "#22c55e" },
+              { label: "Top performers", value: `${leaders.length}`,  icon: "🏆", color: "#f59e0b" },
             ].map(stat => (
-              <div key={stat.label} className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                <span className="text-base flex-shrink-0">{stat.icon}</span>
-                <p className="text-xs text-white/50 flex-1">{stat.label}</p>
-                <p className="text-sm font-black text-white">{stat.value}</p>
+              <div key={stat.label}
+                className="flex items-center gap-3 px-3 py-3 rounded-xl transition-all hover:bg-white/[0.02]"
+                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: `${stat.color}15`, border: `1px solid ${stat.color}25` }}>
+                  <span className="text-base">{stat.icon}</span>
+                </div>
+                <p className="text-xs text-white/45 flex-1">{stat.label}</p>
+                <p className="text-base font-black" style={{ color: stat.color }}>{stat.value}</p>
               </div>
             ))}
           </div>
@@ -500,8 +525,7 @@ export default function CommunautePage() {
       </div>
 
       {/* ══ SIDE DRAWER FORUM ══════════════════════════════════════════════ */}
-      <div
-        onClick={() => setForumOpen(false)}
+      <div onClick={() => setForumOpen(false)}
         className="fixed inset-0 z-40 transition-all duration-300"
         style={{
           background: "rgba(0,0,0,0.6)",
@@ -513,13 +537,17 @@ export default function CommunautePage() {
       <div className="fixed top-0 right-0 h-full z-50 flex flex-col transition-transform duration-300 ease-out"
         style={{
           width: 520,
-          background: "rgba(8,12,8,0.98)",
-          borderLeft: "1px solid rgba(255,255,255,0.08)",
-          backdropFilter: "blur(30px)",
+          background: "linear-gradient(180deg, rgba(8,14,8,0.99) 0%, rgba(5,9,5,0.99) 100%)",
+          borderLeft: "1px solid rgba(255,255,255,0.09)",
+          backdropFilter: "blur(40px)",
+          boxShadow: "-20px 0 60px rgba(0,0,0,0.5)",
           transform: forumOpen ? "translateX(0)" : "translateX(100%)",
         }}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b flex-shrink-0" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+        {/* Glow vert en haut */}
+        <div className="absolute top-0 left-0 right-0 h-32 pointer-events-none"
+          style={{ background: "linear-gradient(180deg, rgba(34,197,94,0.04), transparent)" }} />
+
+        <div className="flex items-center justify-between px-6 py-5 border-b flex-shrink-0 relative" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
           <div>
             <p className="text-lg font-black text-white">💬 Forum</p>
             <p className="text-xs text-white/30">Analyses, questions & débats</p>
@@ -530,7 +558,6 @@ export default function CommunautePage() {
           </button>
         </div>
 
-        {/* Filtres */}
         <div className="px-6 py-3 border-b flex-shrink-0" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
           <div className="flex gap-2 mb-2.5 flex-wrap">
             {[{ k: "popular", l: "🔥 Populaires" }, { k: "recent", l: "🕐 Récents" }, { k: "active", l: "💬 Actifs" }].map(s => (
@@ -566,7 +593,6 @@ export default function CommunautePage() {
           </div>
         </div>
 
-        {/* Posts */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2.5 scrollbar-hide">
           {allPosts.length === 0 ? (
             <div className="text-center py-12">
@@ -578,7 +604,11 @@ export default function CommunautePage() {
             <button key={post.id}
               onClick={() => { router.push(`/forum/${post.id}`); setForumOpen(false) }}
               className="w-full flex items-start gap-3 px-4 py-4 rounded-2xl text-left transition-all hover:bg-white/[0.03] group"
-              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              style={{
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.06)",
+                borderLeft: `3px solid ${postBorderColor(post.category)}`,
+              }}>
               <Avatar username={post.username ?? "?"} size={36} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -610,11 +640,9 @@ export default function CommunautePage() {
           ))}
         </div>
 
-        {/* Footer */}
         {user && (
           <div className="px-6 py-4 border-t flex-shrink-0" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-            <button
-              className="w-full py-3 rounded-2xl text-sm font-black text-black transition-all hover:scale-[1.01]"
+            <button className="w-full py-3 rounded-2xl text-sm font-black text-black transition-all hover:scale-[1.01]"
               style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", boxShadow: "0 4px 20px rgba(34,197,94,0.3)" }}>
               ✍️ Écrire un nouveau post
             </button>
@@ -634,9 +662,16 @@ export default function CommunautePage() {
               <X size={16} />
             </button>
             <div className="flex flex-col items-center text-center">
-              <Avatar username={selectedProfile.username ?? "?"} size={64} />
-              <p className="text-xl font-black text-white mt-3 mb-1">{selectedProfile.username}</p>
-              <p className="text-xs text-white/30 mb-4">Trader Tradex</p>
+              {/* Avatar avec ring coloré */}
+              <div className="p-1 rounded-2xl mb-3"
+                style={{ background: getUserGradient(selectedProfile.username ?? "?") }}>
+                <Avatar username={selectedProfile.username ?? "?"} size={64} />
+              </div>
+              <p className="text-xl font-black text-white mb-0.5">{selectedProfile.username}</p>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                <p className="text-[11px] text-white/35">Trader Tradex</p>
+              </div>
               <div className="grid grid-cols-3 gap-3 w-full mb-4">
                 {[
                   { label: "Portfolio",    value: `$${(selectedProfile.portfolio_value ?? 100000).toLocaleString()}` },
