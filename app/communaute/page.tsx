@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
-import { Send, Sword, ChevronRight, X } from "lucide-react"
+import { Send, Sword, ChevronRight, X, TrendingUp } from "lucide-react"
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -48,6 +48,46 @@ function postBorderColor(category: string) {
   return "rgba(245,158,11,0.6)"
 }
 
+function highlightMentions(content: string, currentUsername?: string) {
+  const parts = content.split(/(@\w+)/g)
+  return parts.map((part, i) => {
+    if (part.startsWith("@")) {
+      const isMe = part.slice(1) === currentUsername
+      return (
+        <span key={i} className="font-black rounded px-0.5"
+          style={{ color: isMe ? "#4ade80" : "#60a5fa", background: isMe ? "rgba(34,197,94,0.1)" : "rgba(96,165,250,0.1)" }}>
+          {part}
+        </span>
+      )
+    }
+    return <span key={i}>{part}</span>
+  })
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const QUICK_MESSAGES = [
+  "📊 Que pensez-vous de NVDA aujourd'hui ?",
+  "₿ BTC va-t-il dépasser 100k$ cette semaine ?",
+  "🤔 Quel est votre setup du moment ?",
+  "📉 Comment gérez-vous les drawdowns ?",
+  "🚀 Votre actif favori en ce moment ?",
+]
+
+const CHALLENGES = [
+  { symbol: "NVDA", title: "Meilleur P&L sur NVDA cette semaine", emoji: "🏆", color: "#22c55e" },
+  { symbol: "BTC",  title: "Qui prédit le mieux BTC cette semaine ?", emoji: "₿",  color: "#f59e0b" },
+  { symbol: "AAPL", title: "Challenge Apple — meilleur timing d'entrée", emoji: "🍎", color: "#60a5fa" },
+  { symbol: "TSLA", title: "TSLA cette semaine — qui sort gagnant ?", emoji: "⚡", color: "#a78bfa" },
+]
+
+const REACTIONS = [
+  { emoji: "❤️", key: "likes" },
+  { emoji: "📊", key: "insights" },
+  { emoji: "🚀", key: "bullish" },
+  { emoji: "🤔", key: "skeptical" },
+]
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CommunautePage() {
@@ -67,13 +107,28 @@ export default function CommunautePage() {
   const [allPosts, setAllPosts] = useState<any[]>([])
   const [forumFilter, setForumFilter] = useState("all")
   const [forumSort, setForumSort] = useState("popular")
+  const [activityFeed, setActivityFeed] = useState<Array<{ type: "post"|"duel"|"like"|"join"; username: string; content: string; time: Date }>>([])
+  const [portfolioData, setPortfolioData] = useState<any[]>([])
+  const [referralCopied, setReferralCopied] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  const currentChallenge = CHALLENGES[new Date().getDay() % CHALLENGES.length]
+  const daysLeft = 7 - new Date().getDay() || 7
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setUser(session?.user ?? null)
       setToken(session?.access_token ?? "")
       loadAll(session?.access_token ?? "")
+      if (session?.user) {
+        const { data: orders } = await supabase
+          .from("orders")
+          .select("*")
+          .eq("user_id", session.user.id)
+          .order("created_at", { ascending: false })
+          .limit(5)
+        setPortfolioData(orders ?? [])
+      }
     })
   }, [])
 
@@ -92,6 +147,27 @@ export default function CommunautePage() {
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [room])
+
+  // Build activity feed from real data
+  useEffect(() => {
+    if (posts.length > 0) {
+      const feed = [
+        ...posts.slice(0, 3).map(p => ({
+          type: "post" as const,
+          username: p.username ?? "Trader",
+          content: `a posté sur ${p.symbol ? `$${p.symbol}` : p.category}`,
+          time: new Date(p.created_at),
+        })),
+        ...duels.slice(0, 1).map((d: any) => ({
+          type: "duel" as const,
+          username: d.challenger_username ?? "Trader",
+          content: "a lancé un duel",
+          time: new Date(d.created_at ?? Date.now()),
+        })),
+      ].sort((a, b) => b.time.getTime() - a.time.getTime())
+      setActivityFeed(feed)
+    }
+  }, [posts, duels])
 
   async function loadAll(tk: string) {
     const [postsRes, leadersRes, roomRes] = await Promise.allSettled([
@@ -120,11 +196,27 @@ export default function CommunautePage() {
   async function sendMessage() {
     if (!roomInput.trim() || !user || sending) return
     setSending(true)
+    const content = roomInput.trim()
+    const mentionRegex = /@(\w+)/g
+    const mentions = [...content.matchAll(mentionRegex)].map(m => m[1])
     await fetch("/api/ai/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ content: roomInput, room }),
+      body: JSON.stringify({ content, room, mentions }),
     })
+    if (mentions.length > 0) {
+      for (const mentionedUsername of mentions) {
+        const { data: mentionedUser } = await supabase.from("user_profiles").select("id").eq("username", mentionedUsername).single()
+        if (mentionedUser) {
+          await supabase.from("user_notifications").insert({
+            user_id: mentionedUser.id, type: "mention",
+            title: `${user.user_metadata?.username ?? "Quelqu'un"} t'a mentionné`,
+            message: `Dans la Live Room : "${content.slice(0, 80)}..."`,
+            read: false,
+          })
+        }
+      }
+    }
     setRoomInput("")
     setSending(false)
     const res = await fetch(`/api/ai/chat?room=${room}&limit=20`)
@@ -145,10 +237,28 @@ export default function CommunautePage() {
     setCreatingDuel(false)
   }
 
+  function sharePosition() {
+    if (!portfolioData || portfolioData.length === 0) {
+      setRoomInput("Je viens de rejoindre Tradex — prêt à trader ! 🚀")
+      return
+    }
+    const last = portfolioData[0]
+    setRoomInput(`${last.side === "buy" ? "📈 Long" : "📉 Short"} sur ${last.symbol} depuis $${Number(last.price).toFixed(2)} — qui suit le trade ? 💬`)
+  }
+
+  function copyReferral() {
+    const link = `${window.location.origin}/signup?ref=${user?.id?.slice(0, 8)}`
+    navigator.clipboard.writeText(link)
+    setReferralCopied(true)
+    setTimeout(() => setReferralCopied(false), 2000)
+  }
+
   const hottestDuel = duels[0]
   const duelProgress = hottestDuel
     ? Math.max(10, Math.min(90, 50 + ((hottestDuel.challenger_pnl_pct ?? 0) - (hottestDuel.opponent_pnl_pct ?? 0)) * 5))
     : 50
+
+  const activityIcons = { post: "💬", duel: "⚔️", like: "❤️", join: "👋" }
 
   return (
     <div className="min-h-screen page-enter"
@@ -158,15 +268,15 @@ export default function CommunautePage() {
       }}>
 
       {/* ── HEADER ──────────────────────────────────────────────────────── */}
-      <div className="px-6 pt-6 pb-4">
+      <div className="px-6 pt-6 pb-3">
         <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-1">Communauté</p>
         <div className="flex items-center justify-between flex-wrap gap-3">
           <h1 className="text-3xl font-black text-white">Traders Tradex</h1>
           <div className="flex items-center gap-6">
             {[
-              { label: "Posts chauds",  value: posts.length > 0 ? `${posts.length}+` : "—" },
-              { label: "Duels actifs",  value: `${duels.length}` },
-              { label: "Live",          value: messages.length > 0 ? "● En ligne" : "○ Vide", color: "#22c55e" },
+              { label: "Posts chauds", value: posts.length > 0 ? `${posts.length}+` : "—" },
+              { label: "Duels actifs", value: `${duels.length}` },
+              { label: "Live", value: messages.length > 0 ? "● En ligne" : "○ Vide", color: "#22c55e" },
             ].map(stat => (
               <div key={stat.label} className="text-right">
                 <p className="text-sm font-black" style={{ color: stat.color ?? "rgba(255,255,255,0.8)" }}>{stat.value}</p>
@@ -177,8 +287,36 @@ export default function CommunautePage() {
         </div>
       </div>
 
+      {/* ── FIL D'ACTIVITÉ EN TEMPS RÉEL ────────────────────────────────── */}
+      <div className="px-6 mb-4 overflow-hidden">
+        <div className="flex items-center gap-3 rounded-2xl px-4 py-2.5 overflow-hidden"
+          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">Live</span>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            {activityFeed.length === 0 ? (
+              <span className="text-[11px] text-white/25 italic">Bienvenue dans la communauté Tradex — Sois le premier à créer de l'activité !</span>
+            ) : (
+              <div className="animate-scroll-x">
+                {[...activityFeed, ...activityFeed].map((item, i) => (
+                  <span key={i} className="flex items-center gap-2 text-[11px] flex-shrink-0">
+                    <span className="text-xs">{activityIcons[item.type]}</span>
+                    <span className="font-bold text-white/60">{item.username}</span>
+                    <span className="text-white/30">{item.content}</span>
+                    <span className="text-white/15">·</span>
+                    <span className="text-white/20">{Math.max(0, Math.round((Date.now() - item.time.getTime()) / 60000))}m</span>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* ── GRILLE PRINCIPALE ───────────────────────────────────────────── */}
-      <div className="px-6 pb-6 grid gap-4"
+      <div className="px-6 pb-4 grid gap-4"
         style={{ gridTemplateColumns: "1fr 1fr 2fr", gridTemplateRows: "auto auto" }}>
 
         {/* ══ WIDGET DUELS ══════════════════════════════════════════════ */}
@@ -189,7 +327,6 @@ export default function CommunautePage() {
           }}>
           <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl opacity-15 pointer-events-none"
             style={{ background: "#a78bfa" }} />
-
           <div className="relative flex-1 flex flex-col">
             <div className="flex items-center gap-2 mb-4">
               <span className="text-lg">⚔️</span>
@@ -199,8 +336,6 @@ export default function CommunautePage() {
                 {duels.length} actif{duels.length > 1 ? "s" : ""}
               </span>
             </div>
-
-            {/* Bouton premium */}
             <button onClick={createDuel} disabled={creatingDuel || !user}
               className="w-full py-4 rounded-2xl font-black text-base transition-all relative overflow-hidden group mb-5 disabled:opacity-50 active:scale-[0.98]"
               style={{
@@ -216,7 +351,6 @@ export default function CommunautePage() {
                 <span>{creatingDuel ? "Création..." : "Lancer un Duel"}</span>
               </span>
             </button>
-
             {hottestDuel ? (
               <div className="rounded-xl p-3 flex-1"
                 style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
@@ -264,7 +398,6 @@ export default function CommunautePage() {
           }}>
           <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl opacity-15 pointer-events-none"
             style={{ background: "#f59e0b" }} />
-
           <div className="relative flex-1 flex flex-col">
             <div className="flex items-center gap-2 mb-4">
               <span className="text-lg">🏆</span>
@@ -272,7 +405,6 @@ export default function CommunautePage() {
               <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full ml-auto"
                 style={{ background: "rgba(245,158,11,0.2)", color: "#f59e0b" }}>Top 3</span>
             </div>
-
             {leaders.length > 0 ? (
               <div className="space-y-2 flex-1">
                 {leaders.map((l, i) => (
@@ -297,13 +429,8 @@ export default function CommunautePage() {
               </div>
             ) : (
               <div className="flex-1 flex flex-col">
-                {/* Podium silhouettes */}
                 <div className="flex items-end justify-center gap-2 mb-4 px-2" style={{ height: 80 }}>
-                  {[
-                    { h: 50, medal: "🥈" },
-                    { h: 70, medal: "🥇" },
-                    { h: 40, medal: "🥉" },
-                  ].map((p, i) => (
+                  {[{ h: 50, medal: "🥈" }, { h: 70, medal: "🥇" }, { h: 40, medal: "🥉" }].map((p, i) => (
                     <div key={i} className="flex-1 flex flex-col items-center gap-1">
                       <span className="text-sm opacity-20">{p.medal}</span>
                       <div className="w-8 h-8 rounded-xl opacity-10" style={{ background: "rgba(255,255,255,0.3)" }} />
@@ -332,7 +459,6 @@ export default function CommunautePage() {
           }}>
           <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-10 pointer-events-none"
             style={{ background: "#60a5fa" }} />
-
           <div className="relative flex-1 flex flex-col">
             <div className="flex items-center gap-2 mb-4">
               <span className="text-lg">💬</span>
@@ -349,7 +475,6 @@ export default function CommunautePage() {
                 <ChevronRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
-
             <div className="flex-1 space-y-2.5">
               {posts.length > 0 ? posts.map((post, i) => (
                 <button key={post.id}
@@ -361,22 +486,16 @@ export default function CommunautePage() {
                     borderLeft: `3px solid ${postBorderColor(post.category)}`,
                   }}>
                   <div className="flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black text-white/30"
-                    style={{ background: "rgba(255,255,255,0.06)" }}>
-                    {i + 1}
-                  </div>
+                    style={{ background: "rgba(255,255,255,0.06)" }}>{i + 1}</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       {post.symbol && (
                         <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full"
-                          style={{ background: "rgba(34,197,94,0.12)", color: "#4ade80" }}>
-                          ${post.symbol}
-                        </span>
+                          style={{ background: "rgba(34,197,94,0.12)", color: "#4ade80" }}>${post.symbol}</span>
                       )}
                       <span className="text-[9px] text-white/25">{post.category}</span>
                     </div>
-                    <p className="text-sm font-black text-white group-hover:text-blue-400 transition-colors leading-snug line-clamp-1 mb-1">
-                      {post.title}
-                    </p>
+                    <p className="text-sm font-black text-white group-hover:text-blue-400 transition-colors leading-snug line-clamp-1 mb-1">{post.title}</p>
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] text-white/25">❤️ {post.likes}</span>
                       <span className="text-[10px] text-white/25">💬 {post.replies_count ?? 0}</span>
@@ -388,8 +507,7 @@ export default function CommunautePage() {
                 <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
                   <p className="text-3xl mb-2">💬</p>
                   <p className="text-sm text-white/30">Aucun post pour le moment</p>
-                  <button onClick={() => setForumOpen(true)}
-                    className="mt-3 text-xs text-blue-400 hover:text-blue-300 transition font-bold">
+                  <button onClick={() => setForumOpen(true)} className="mt-3 text-xs text-blue-400 hover:text-blue-300 transition font-bold">
                     Sois le premier →
                   </button>
                 </div>
@@ -399,7 +517,7 @@ export default function CommunautePage() {
         </div>
 
         {/* ══ WIDGET LIVE ROOM ══════════════════════════════════════════ */}
-        <div className="rounded-2xl p-5 flex flex-col col-span-2 relative overflow-hidden"
+        <div id="live-room-section" className="rounded-2xl p-5 flex flex-col col-span-2 relative overflow-hidden"
           style={{
             background: "linear-gradient(135deg, rgba(34,197,94,0.06), rgba(16,163,74,0.03))",
             border: "1px solid rgba(34,197,94,0.15)",
@@ -407,7 +525,6 @@ export default function CommunautePage() {
           }}>
           <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-64 h-32 rounded-full blur-3xl opacity-10 pointer-events-none"
             style={{ background: "#22c55e" }} />
-
           <div className="relative flex flex-col h-full">
             <div className="flex items-center gap-3 mb-3 flex-shrink-0 flex-wrap">
               <div className="flex items-center gap-2">
@@ -427,8 +544,7 @@ export default function CommunautePage() {
                       background: "rgba(34,197,94,0.2)", color: "#4ade80", border: "1px solid rgba(34,197,94,0.3)",
                     } : {
                       background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.3)", border: "1px solid rgba(255,255,255,0.06)",
-                    }}>
-                    {r.l}
+                    }}>{r.l}
                   </button>
                 ))}
               </div>
@@ -436,7 +552,7 @@ export default function CommunautePage() {
 
             <div className="flex-1 overflow-y-auto space-y-2 scrollbar-hide mb-3 pr-1" style={{ maxHeight: 200 }}>
               {messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full gap-3 text-center py-6">
+                <div className="flex flex-col items-center justify-center h-full gap-3 text-center py-4">
                   <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
                     style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)" }}>
                     <span className="text-xl">📡</span>
@@ -460,7 +576,7 @@ export default function CommunautePage() {
                           borderBottomRightRadius: isMe ? 4 : undefined,
                           borderBottomLeftRadius: !isMe ? 4 : undefined,
                         }}>
-                        {msg.content}
+                        {highlightMentions(msg.content, user?.user_metadata?.username)}
                       </div>
                     </div>
                   </div>
@@ -469,13 +585,31 @@ export default function CommunautePage() {
               <div ref={messagesEndRef} />
             </div>
 
+            {/* Suggestions rapides */}
+            {user && (
+              <div className="flex gap-1.5 mb-2 overflow-x-auto scrollbar-hide pb-0.5 flex-shrink-0">
+                {QUICK_MESSAGES.map(msg => (
+                  <button key={msg} onClick={() => setRoomInput(msg)}
+                    className="text-[10px] px-2.5 py-1 rounded-lg font-bold transition-all hover:bg-white/6 flex-shrink-0"
+                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.3)" }}>
+                    {msg.split(" ").slice(0, 4).join(" ")}…
+                  </button>
+                ))}
+              </div>
+            )}
+
             {user ? (
               <div className="flex gap-2 flex-shrink-0">
                 <input value={roomInput} onChange={e => setRoomInput(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage()}
-                  placeholder={`Message dans #${room}...`}
+                  placeholder={`Message dans #${room}... (@ pour mentionner)`}
                   className="flex-1 px-4 py-3 rounded-xl text-xs text-white placeholder-white/20 outline-none transition-all"
                   style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                <button onClick={sharePosition} title="Partager ma position"
+                  className="w-11 h-11 rounded-xl flex items-center justify-center transition-all hover:scale-[1.05]"
+                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                  <TrendingUp size={14} className="text-white/40" />
+                </button>
                 <button onClick={sendMessage} disabled={sending || !roomInput.trim()}
                   className="w-11 h-11 rounded-xl flex items-center justify-center disabled:opacity-40 transition-all hover:scale-[1.05] active:scale-[0.95]"
                   style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", boxShadow: "0 4px 16px rgba(34,197,94,0.35)" }}>
@@ -492,34 +626,107 @@ export default function CommunautePage() {
           </div>
         </div>
 
-        {/* ══ WIDGET STATS ══════════════════════════════════════════════ */}
-        <div className="rounded-2xl p-5 flex flex-col"
-          style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
-          <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-4">📊 Stats communauté</p>
-          <div className="space-y-2.5 flex-1">
-            {[
-              { label: "Posts chauds",   value: `${posts.length}+`,   icon: "💬", color: "#60a5fa" },
-              { label: "Duels actifs",   value: `${duels.length}`,    icon: "⚔️", color: "#a78bfa" },
-              { label: "Messages live",  value: `${messages.length}`, icon: "📡", color: "#22c55e" },
-              { label: "Top performers", value: `${leaders.length}`,  icon: "🏆", color: "#f59e0b" },
-            ].map(stat => (
-              <div key={stat.label}
-                className="flex items-center gap-3 px-3 py-3 rounded-xl transition-all hover:bg-white/[0.02]"
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: `${stat.color}15`, border: `1px solid ${stat.color}25` }}>
-                  <span className="text-base">{stat.icon}</span>
+        {/* ══ WIDGET STATS + PARRAINAGE ═════════════════════════════════ */}
+        <div className="flex flex-col gap-3">
+          <div className="rounded-2xl p-5 flex flex-col flex-1"
+            style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-4">📊 Stats communauté</p>
+            <div className="space-y-2.5 flex-1">
+              {[
+                { label: "Posts chauds",   value: `${posts.length}+`,   icon: "💬", color: "#60a5fa" },
+                { label: "Duels actifs",   value: `${duels.length}`,    icon: "⚔️", color: "#a78bfa" },
+                { label: "Messages live",  value: `${messages.length}`, icon: "📡", color: "#22c55e" },
+                { label: "Top performers", value: `${leaders.length}`,  icon: "🏆", color: "#f59e0b" },
+              ].map(stat => (
+                <div key={stat.label}
+                  className="flex items-center gap-3 px-3 py-3 rounded-xl transition-all hover:bg-white/[0.02]"
+                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ background: `${stat.color}15`, border: `1px solid ${stat.color}25` }}>
+                    <span className="text-base">{stat.icon}</span>
+                  </div>
+                  <p className="text-xs text-white/45 flex-1">{stat.label}</p>
+                  <p className="text-base font-black" style={{ color: stat.color }}>{stat.value}</p>
                 </div>
-                <p className="text-xs text-white/45 flex-1">{stat.label}</p>
-                <p className="text-base font-black" style={{ color: stat.color }}>{stat.value}</p>
-              </div>
-            ))}
+              ))}
+            </div>
+            <div className="mt-4 pt-4 border-t border-white/5">
+              <p className="text-[9px] text-white/20 uppercase tracking-widest mb-2 font-bold">Règles</p>
+              {["Restez respectueux", "Pas de spam", "Sources pour les analyses"].map((r, i) => (
+                <p key={i} className="text-[10px] text-white/25 py-0.5">✓ {r}</p>
+              ))}
+            </div>
           </div>
-          <div className="mt-4 pt-4 border-t border-white/5">
-            <p className="text-[9px] text-white/20 uppercase tracking-widest mb-2 font-bold">Règles</p>
-            {["Restez respectueux", "Pas de spam", "Sources pour les analyses"].map((r, i) => (
-              <p key={i} className="text-[10px] text-white/25 py-0.5">✓ {r}</p>
-            ))}
+
+          {/* Widget parrainage */}
+          {user && (
+            <div className="rounded-2xl p-4 relative overflow-hidden"
+              style={{ background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.12)" }}>
+              <div className="absolute top-0 right-0 w-20 h-20 rounded-full blur-2xl opacity-10 pointer-events-none"
+                style={{ background: "#22c55e" }} />
+              <div className="relative">
+                <p className="text-xs font-black text-white mb-1">🎁 Invite un ami</p>
+                <p className="text-[10px] text-white/35 mb-3 leading-relaxed">
+                  Gagne <span className="text-green-400 font-black">200 XP</span> pour chaque ami qui rejoint avec ton lien
+                </p>
+                <button onClick={copyReferral}
+                  className="w-full py-2 rounded-xl text-[11px] font-black transition-all hover:scale-[1.01]"
+                  style={{
+                    background: referralCopied ? "rgba(34,197,94,0.2)" : "rgba(34,197,94,0.1)",
+                    border: "1px solid rgba(34,197,94,0.25)",
+                    color: "#4ade80",
+                  }}>
+                  {referralCopied ? "✓ Lien copié !" : "📋 Copier mon lien d'invitation"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── CHALLENGE HEBDOMADAIRE ─────────────────────────────────────── */}
+      <div className="px-6 pb-6">
+        <div className="rounded-2xl p-5 relative overflow-hidden"
+          style={{
+            background: `linear-gradient(135deg, ${currentChallenge.color}10, ${currentChallenge.color}05)`,
+            border: `1px solid ${currentChallenge.color}25`,
+          }}>
+          <div className="absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl opacity-10 pointer-events-none"
+            style={{ background: currentChallenge.color }} />
+          <div className="relative flex items-center gap-6 flex-wrap">
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
+              style={{ background: `${currentChallenge.color}15`, border: `1px solid ${currentChallenge.color}25` }}>
+              {currentChallenge.emoji}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
+                  style={{ background: `${currentChallenge.color}20`, color: currentChallenge.color }}>
+                  🏁 Challenge de la semaine
+                </span>
+                <span className="text-[10px] text-white/25">· {daysLeft} jour{daysLeft > 1 ? "s" : ""} restant{daysLeft > 1 ? "s" : ""}</span>
+              </div>
+              <h3 className="text-lg font-black text-white mb-1">{currentChallenge.title}</h3>
+              <p className="text-xs text-white/35">
+                Trade ${currentChallenge.symbol} cette semaine · Meilleur P&L annoncé vendredi · Gagnant affiché dans le classement
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 flex-shrink-0">
+              <button onClick={() => router.push(`/dashboard?symbol=${currentChallenge.symbol}`)}
+                className="px-5 py-2.5 rounded-xl text-sm font-black text-black transition-all hover:scale-[1.02] relative overflow-hidden group"
+                style={{ background: `linear-gradient(135deg, ${currentChallenge.color}, ${currentChallenge.color}cc)`, boxShadow: `0 4px 20px ${currentChallenge.color}30` }}>
+                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="relative">Participer →</span>
+              </button>
+              <button onClick={() => {
+                setRoomInput(`Je participe au challenge ${currentChallenge.emoji} $${currentChallenge.symbol} de la semaine ! Qui est partant ? 🏁`)
+                document.getElementById("live-room-section")?.scrollIntoView({ behavior: "smooth" })
+              }}
+                className="px-5 py-2 rounded-xl text-xs font-bold transition-all hover:bg-white/6 text-center"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)" }}>
+                Annoncer dans le chat
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -543,7 +750,6 @@ export default function CommunautePage() {
           boxShadow: "-20px 0 60px rgba(0,0,0,0.5)",
           transform: forumOpen ? "translateX(0)" : "translateX(100%)",
         }}>
-        {/* Glow vert en haut */}
         <div className="absolute top-0 left-0 right-0 h-32 pointer-events-none"
           style={{ background: "linear-gradient(180deg, rgba(34,197,94,0.04), transparent)" }} />
 
@@ -567,18 +773,14 @@ export default function CommunautePage() {
                   background: "rgba(96,165,250,0.15)", color: "#60a5fa", border: "1px solid rgba(96,165,250,0.25)",
                 } : {
                   background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.35)", border: "1px solid rgba(255,255,255,0.07)",
-                }}>
-                {s.l}
+                }}>{s.l}
               </button>
             ))}
           </div>
           <div className="flex gap-1.5 flex-wrap">
             {[
-              { k: "all",      l: "Tout" },
-              { k: "analyse",  l: "📊 Analyses" },
-              { k: "crypto",   l: "₿ Crypto" },
-              { k: "actions",  l: "📈 Actions" },
-              { k: "question", l: "❓ Questions" },
+              { k: "all", l: "Tout" }, { k: "analyse", l: "📊 Analyses" },
+              { k: "crypto", l: "₿ Crypto" }, { k: "actions", l: "📈 Actions" }, { k: "question", l: "❓ Questions" },
             ].map(c => (
               <button key={c.k} onClick={() => setForumFilter(c.k)}
                 className="px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all"
@@ -586,8 +788,7 @@ export default function CommunautePage() {
                   background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.8)", border: "1px solid rgba(255,255,255,0.15)",
                 } : {
                   background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.25)", border: "1px solid rgba(255,255,255,0.06)",
-                }}>
-                {c.l}
+                }}>{c.l}
               </button>
             ))}
           </div>
@@ -626,14 +827,24 @@ export default function CommunautePage() {
                   {post.title}
                 </h3>
                 <p className="text-xs text-white/35 line-clamp-2 leading-relaxed mb-2">{post.content?.slice(0, 100)}</p>
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] text-white/30 font-semibold">{post.username}</span>
-                  <span className="text-white/15">·</span>
-                  <span className="text-[10px] text-white/20">{timeAgo(post.created_at)}</span>
-                  <div className="flex items-center gap-2 ml-auto">
-                    <span className="text-[10px] text-white/25">❤️ {post.likes}</span>
-                    <span className="text-[10px] text-white/25">💬 {post.replies_count ?? 0}</span>
-                  </div>
+                {/* Réactions */}
+                <div className="flex items-center gap-1.5">
+                  {REACTIONS.map(reaction => (
+                    <button key={reaction.key}
+                      onClick={async e => {
+                        e.stopPropagation()
+                        if (!user) return
+                        await fetch(`/api/forum/posts/${post.id}/like`, {
+                          method: "POST", headers: { Authorization: `Bearer ${token}` },
+                        })
+                      }}
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all hover:scale-[1.05]"
+                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.35)" }}>
+                      <span className="text-xs">{reaction.emoji}</span>
+                      <span>{reaction.key === "likes" ? (post.likes ?? 0) : 0}</span>
+                    </button>
+                  ))}
+                  <span className="text-[10px] text-white/20 ml-auto">💬 {post.replies_count ?? 0}</span>
                 </div>
               </div>
             </button>
@@ -662,7 +873,6 @@ export default function CommunautePage() {
               <X size={16} />
             </button>
             <div className="flex flex-col items-center text-center">
-              {/* Avatar avec ring coloré */}
               <div className="p-1 rounded-2xl mb-3"
                 style={{ background: getUserGradient(selectedProfile.username ?? "?") }}>
                 <Avatar username={selectedProfile.username ?? "?"} size={64} />
@@ -674,9 +884,9 @@ export default function CommunautePage() {
               </div>
               <div className="grid grid-cols-3 gap-3 w-full mb-4">
                 {[
-                  { label: "Portfolio",    value: `$${(selectedProfile.portfolio_value ?? 100000).toLocaleString()}` },
+                  { label: "Portfolio", value: `$${(selectedProfile.portfolio_value ?? 100000).toLocaleString()}` },
                   { label: "Performance", value: `${(selectedProfile.total_return_pct ?? 0) >= 0 ? "+" : ""}${(selectedProfile.total_return_pct ?? 0).toFixed(1)}%`, color: (selectedProfile.total_return_pct ?? 0) >= 0 ? "#4ade80" : "#f87171" },
-                  { label: "Win Rate",    value: `${(selectedProfile.win_rate ?? 0).toFixed(0)}%` },
+                  { label: "Win Rate", value: `${(selectedProfile.win_rate ?? 0).toFixed(0)}%` },
                 ].map(stat => (
                   <div key={stat.label} className="rounded-xl p-2.5"
                     style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>

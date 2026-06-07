@@ -64,9 +64,23 @@ body::after {
 }
 
 /* ── Extra animations (globals-only) ─────────────────────────── */
+@keyframes scroll-x {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-scroll-x {
+  animation: scroll-x 25s linear infinite;
+  width: max-content;
+  display: flex;
+  gap: 2rem;
+}
+.animate-scroll-x:hover {
+  animation-play-state: paused;
+}
+
 @keyframes shimmer-slide {
-  0%   { background-position: -200% center; }
-  100% { background-position:  200% center; }
+  0%   { transform: translateX(-100%) skewX(12deg); }
+  100% { transform: translateX(200%) skewX(12deg); }
 }
 @keyframes pulse-glow {
   0%, 100% { opacity: 0.6; }
