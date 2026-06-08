@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 import Groq from "groq-sdk"
 import { createClient } from "@supabase/supabase-js"
 import { rateLimit, getClientIP } from "@/lib/rate-limit"
+import { getOHLCV, getOHLCVYahooFallback } from "@/lib/marketData"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
@@ -686,56 +687,37 @@ function isNYSEOpen(): boolean {
 
 // ─── Per-asset fetch & compute ─────────────────────────────────────────────────
 
-async function fetchYahoo(symbol: string): Promise<any | null> {
-  const headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept": "application/json",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Referer": "https://finance.yahoo.com",
-  }
-  // Try query2 first, fallback to query1
-  for (const base of ["https://query2.finance.yahoo.com", "https://query1.finance.yahoo.com"]) {
-    try {
-      const res = await fetch(
-        `${base}/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=3mo`,
-        { headers, cache: "no-store" }
-      )
-      if (!res.ok) {
-        process.stdout.write(`[signals] ${symbol} HTTP ${res.status} on ${base}\n`)
-        continue
-      }
-      const json = await res.json()
-      const result = json?.chart?.result?.[0]
-      if (result) return result
-      process.stdout.write(`[signals] ${symbol} empty result from ${base}\n`)
-    } catch (e) {
-      process.stdout.write(`[signals] ${symbol} fetch error on ${base}: ${e}\n`)
-      continue
+async function fetchMarketDataForSignal(symbol: string): Promise<{
+  closes: number[]; highs: number[]; lows: number[]; opens: number[]; volumes: number[]
+} | null> {
+  try {
+    const to   = new Date().toISOString().slice(0, 10)
+    const from = new Date(Date.now() - 90 * 86400_000).toISOString().slice(0, 10)
+    const ohlcv = await getOHLCV(symbol, from, to, "day")
+    const bars  = ohlcv.length >= 20 ? ohlcv : await getOHLCVYahooFallback(symbol)
+    if (!bars.length) {
+      process.stdout.write(`[signals] ${symbol} ALL sources failed\n`)
+      return null
     }
+    return {
+      closes:  bars.map(b => b.close).filter(Boolean),
+      highs:   bars.map(b => b.high).filter(Boolean),
+      lows:    bars.map(b => b.low).filter(Boolean),
+      opens:   bars.map(b => b.open).filter(Boolean),
+      volumes: bars.map(b => b.volume ?? 0),
+    }
+  } catch (e) {
+    process.stdout.write(`[signals] ${symbol} fetch error: ${e}\n`)
+    return null
   }
-  process.stdout.write(`[signals] ${symbol} ALL sources failed\n`)
-  return null
 }
 
 async function processAsset(asset: Asset, sentimentScore?: number): Promise<SignalResult | null> {
   try {
-    const result = await fetchYahoo(asset.symbol)
-    if (!result) return null
+    const marketData = await fetchMarketDataForSignal(asset.symbol)
+    if (!marketData) return null
 
-    const q = result.indicators?.quote?.[0] ?? {}
-    const meta = result.meta ?? {}
-
-    const rawCloses: (number | null)[] = q.close ?? []
-    const rawHighs: (number | null)[] = q.high ?? []
-    const rawLows: (number | null)[] = q.low ?? []
-    const rawOpens: (number | null)[] = q.open ?? []
-    const rawVolumes: (number | null)[] = q.volume ?? []
-
-    const closes = rawCloses.filter((v): v is number => v != null)
-    const highs = rawHighs.filter((v): v is number => v != null)
-    const lows = rawLows.filter((v): v is number => v != null)
-    const opens = rawOpens.filter((v): v is number => v != null)
-    const volumes = rawVolumes.map((v) => (v != null ? v : 0))
+    const { closes, highs, lows, opens, volumes } = marketData
 
     if (closes.length < 20) return null
 

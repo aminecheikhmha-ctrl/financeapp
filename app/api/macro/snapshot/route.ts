@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { getFredSeries, FRED_SERIES } from "@/lib/marketData"
 
 export const runtime   = "nodejs"
 export const maxDuration = 30  // Pro only; harmless on Hobby
@@ -184,7 +185,10 @@ export async function GET() {
     return NextResponse.json(cache.data)
   }
 
-  const results = await Promise.allSettled(SYMBOLS.map(m => fetchSymbolData(m)))
+  const [results, fredFedRate] = await Promise.all([
+    Promise.allSettled(SYMBOLS.map(m => fetchSymbolData(m))),
+    getFredSeries(FRED_SERIES.FED_RATE).catch(() => null),
+  ])
 
   const grouped: Record<string, Record<string, AssetData>> = {
     indices: {}, sectors: {}, bonds: {}, currencies: {}, commodities: {}, crypto: {},
@@ -219,7 +223,7 @@ export async function GET() {
     crypto:      grouped.crypto,
     vix,
     yieldCurve,
-    fedRate: 5.25,
+    fedRate: fredFedRate?.value ?? 5.25,
     spy:  spy  ? { price: spy.price,   change1d: spy.change_1d,   change1m: spy.change_1m  } : null,
     gold: gold ? { price: gold.price,  change1d: gold.change_1d,  change1m: gold.change_1m } : null,
     dxy:  dxy  ? { price: dxy.price,   change1m: dxy.change_1m   } : null,

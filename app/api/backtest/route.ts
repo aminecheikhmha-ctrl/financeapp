@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { getOHLCV, getOHLCVYahooFallback } from "@/lib/marketData"
 
 export const maxDuration = 60
 
@@ -344,46 +345,13 @@ export async function POST(req: NextRequest) {
   }
 
   // Build date range — default to 1 year max
-  const endTs = end_date ? Math.floor(new Date(end_date).getTime() / 1000) : Math.floor(Date.now() / 1000)
-  const startTs = start_date
-    ? Math.floor(new Date(start_date).getTime() / 1000)
-    : endTs - 365 * 24 * 3600
+  const to   = end_date   ? end_date   : new Date().toISOString().slice(0, 10)
+  const from = start_date ? start_date : new Date(Date.now() - 365 * 86400_000).toISOString().slice(0, 10)
 
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&period1=${startTs}&period2=${endTs}`
+  let ohlcv = await getOHLCV(symbol, from, to, "day")
+  if (!ohlcv.length) ohlcv = await getOHLCVYahooFallback(symbol)
 
-  let json: any
-  try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0" },
-      cache: "no-store",
-    })
-    json = await res.json()
-  } catch {
-    return NextResponse.json({ error: "Yahoo Finance fetch failed" }, { status: 500 })
-  }
-
-  const result = json?.chart?.result?.[0]
-  if (!result) return NextResponse.json({ error: "No data from Yahoo Finance" }, { status: 404 })
-
-  const timestamps: number[] = result.timestamp ?? []
-  const q = result.indicators?.quote?.[0] ?? {}
-  const rawCloses: (number | null)[] = q.close ?? []
-  const rawHighs: (number | null)[] = q.high ?? []
-  const rawLows: (number | null)[] = q.low ?? []
-  const rawVols: (number | null)[] = q.volume ?? []
-
-  // Filter out null candles
-  const candles = timestamps
-    .map((ts, i) => ({
-      date: new Date(ts * 1000).toISOString().slice(0, 10),
-      close: rawCloses[i],
-      high: rawHighs[i],
-      low: rawLows[i],
-      volume: rawVols[i] ?? 0,
-    }))
-    .filter(c => c.close != null && c.high != null && c.low != null) as {
-    date: string; close: number; high: number; low: number; volume: number
-  }[]
+  const candles = ohlcv.filter(b => b.close > 0 && b.high > 0 && b.low > 0)
 
   if (candles.length < 30) {
     return NextResponse.json({ error: "Not enough data (min 30 candles)" }, { status: 400 })

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { getOHLCV, getOHLCVYahooFallback } from "@/lib/marketData"
 
 export const runtime = "nodejs"
 
@@ -36,18 +37,11 @@ function pearson(x: number[], y: number[]): number {
 
 async function fetchCloses(symbol: string): Promise<number[]> {
   try {
-    const encoded = encodeURIComponent(symbol)
-    const res = await fetch(
-      `https://query2.finance.yahoo.com/v8/finance/chart/${encoded}?interval=1d&range=2mo`,
-      {
-        headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" },
-        signal: AbortSignal.timeout(5000),
-      }
-    )
-    if (!res.ok) return []
-    const data = await res.json()
-    const closes = (data.chart?.result?.[0]?.indicators?.quote?.[0]?.close ?? []) as (number | null)[]
-    return closes.filter((v): v is number => v != null && v > 0).slice(-30)
+    const to   = new Date().toISOString().slice(0, 10)
+    const from = new Date(Date.now() - 60 * 86400_000).toISOString().slice(0, 10)
+    const ohlcv = await getOHLCV(symbol, from, to, "day")
+    const bars  = ohlcv.length > 0 ? ohlcv : await getOHLCVYahooFallback(symbol)
+    return bars.map(b => b.close).filter(v => v > 0).slice(-30)
   } catch {
     return []
   }

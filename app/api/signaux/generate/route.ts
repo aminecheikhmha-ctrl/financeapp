@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import Groq from "groq-sdk"
 import { analyserIndicateurs, calcRSISeries } from "@/lib/indicateurs"
+import { getOHLCV, getOHLCVYahooFallback, getUniversalQuote, getEarningsDate } from "@/lib/marketData"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
@@ -23,25 +24,33 @@ const MIN_SCORE    = 62   // score pondéré minimum
 const MIN_FAMILLES = 3    // au moins 3 familles sur 6 doivent confirmer
 const MIN_CLOSES   = 100  // besoin de données suffisantes
 
-// ─── Fetch données Yahoo Finance ──────────────────────────────────────────────
+// ─── Fetch données marché (Polygon → Yahoo fallback) ─────────────────────────
 async function fetchDonnees(ticker: string) {
-  const res = await fetch(
-    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=2y`,
-    { headers: { "User-Agent": "Mozilla/5.0" }, cache: "no-store" }
-  )
-  if (!res.ok) return null
-  const json = await res.json()
-  const result = json?.chart?.result?.[0]
-  if (!result) return null
+  const to   = new Date().toISOString().slice(0, 10)
+  const from = new Date(Date.now() - 730 * 86400_000).toISOString().slice(0, 10)
 
-  const meta = result.meta
-  const q    = result.indicators?.quote?.[0] ?? {}
-  const closes:  number[] = (q.close  ?? []).filter(Boolean)
-  const volumes: number[] = (q.volume ?? []).filter(Boolean)
-  const highs:   number[] = (q.high   ?? []).filter(Boolean)
-  const lows:    number[] = (q.low    ?? []).filter(Boolean)
+  const [ohlcvRes, quoteRes, earningsRes] = await Promise.allSettled([
+    getOHLCV(ticker, from, to, "day"),
+    getUniversalQuote(ticker),
+    getEarningsDate(ticker),
+  ])
 
-  return { prix: meta.regularMarketPrice as number, closes, volumes, highs, lows }
+  const bars = ohlcvRes.status === "fulfilled" && ohlcvRes.value.length >= MIN_CLOSES
+    ? ohlcvRes.value
+    : await getOHLCVYahooFallback(ticker, "day")
+
+  if (bars.length < MIN_CLOSES) return null
+
+  const closes:  number[] = bars.map(b => b.close).filter(Boolean)
+  const volumes: number[] = bars.map(b => b.volume)
+  const highs:   number[] = bars.map(b => b.high).filter(Boolean)
+  const lows:    number[] = bars.map(b => b.low).filter(Boolean)
+
+  const quote = quoteRes.status === "fulfilled" ? quoteRes.value : null
+  const prix  = quote?.price ?? closes[closes.length - 1]
+  const earningsDate = earningsRes.status === "fulfilled" ? earningsRes.value : null
+
+  return { prix, closes, volumes, highs, lows, earningsDate }
 }
 
 // ─── Divergence RSI ───────────────────────────────────────────────────────────
@@ -68,32 +77,33 @@ function detectDivergence(closes: number[], rsiValues: number[]): "bullish" | "b
   return "none"
 }
 
-// ─── Contexte de marché (VIX + SPY) ──────────────────────────────────────────
+// ─── Contexte de marché (VIX + SPY via marketData) ───────────────────────────
 async function fetchMarketContext() {
   try {
+    const to   = new Date().toISOString().slice(0, 10)
+    const from = new Date(Date.now() - 90 * 86400_000).toISOString().slice(0, 10)
+
     const [vixRes, spyRes] = await Promise.allSettled([
-      fetch("https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX?interval=1d&range=5d",
-        { headers: { "User-Agent": "Mozilla/5.0" }, cache: "no-store" }),
-      fetch("https://query1.finance.yahoo.com/v8/finance/chart/SPY?interval=1d&range=3mo",
-        { headers: { "User-Agent": "Mozilla/5.0" }, cache: "no-store" }),
+      getUniversalQuote("^VIX"),
+      getOHLCV("SPY", from, to, "day").then(bars =>
+        bars.length > 0 ? bars : getOHLCVYahooFallback("SPY")
+      ),
     ])
 
-    let vix = 18
+    let vix       = 18
     let spy_trend: "bullish" | "bearish" | "neutral" = "neutral"
 
-    if (vixRes.status === "fulfilled" && vixRes.value.ok) {
-      const v = await vixRes.value.json()
-      vix = v?.chart?.result?.[0]?.meta?.regularMarketPrice ?? 18
+    if (vixRes.status === "fulfilled" && vixRes.value) {
+      vix = vixRes.value.price
     }
 
-    if (spyRes.status === "fulfilled" && spyRes.value.ok) {
-      const s = await spyRes.value.json()
-      const closes: number[] = (s?.chart?.result?.[0]?.indicators?.quote?.[0]?.close ?? []).filter(Boolean)
+    if (spyRes.status === "fulfilled") {
+      const closes = spyRes.value.map(b => b.close).filter(Boolean)
       if (closes.length >= 50) {
         const len  = closes.length
-        const ma50 = closes.slice(-50).reduce((a: number, b: number) => a + b, 0) / 50
+        const ma50 = closes.slice(-50).reduce((a, b) => a + b, 0) / 50
         const ma200len = Math.min(200, len)
-        const ma200 = closes.slice(-ma200len).reduce((a: number, b: number) => a + b, 0) / ma200len
+        const ma200 = closes.slice(-ma200len).reduce((a, b) => a + b, 0) / ma200len
         const cur   = closes[len - 1]
         spy_trend = cur > ma50 && ma50 > ma200 ? "bullish"
                   : cur < ma50 && ma50 < ma200 ? "bearish"
@@ -123,6 +133,13 @@ async function traiterTicker(
   try {
     const data = await fetchDonnees(ticker)
     if (!data || data.closes.length < MIN_CLOSES) return null
+
+    // Warning earnings proche (< 7 jours)
+    const earningsWarning = data.earningsDate
+      ? (new Date(data.earningsDate).getTime() - Date.now()) / 86400_000 < 7
+        ? `⚠️ Earnings dans ${Math.ceil((new Date(data.earningsDate).getTime() - Date.now()) / 86400_000)} jours — risque élevé`
+        : null
+      : null
 
     const ind = analyserIndicateurs(data.closes, data.volumes, data.prix, data.highs, data.lows)
 
@@ -182,6 +199,7 @@ async function traiterTicker(
       const divergenceText = divergence !== "none"
         ? `\n⚠️ DIVERGENCE RSI ${divergence.toUpperCase()} DÉTECTÉE — signal de retournement fort`
         : ""
+      const earningsText = earningsWarning ? `\n${earningsWarning}` : ""
       const contextText = !marketContext.favorable
         ? `\n⚠️ CONTEXTE MACRO DÉFAVORABLE — VIX ${marketContext.vix.toFixed(0)}, SPY ${marketContext.spy_trend}`
         : `\nContexte macro favorable — VIX ${marketContext.vix.toFixed(0)}, SPY ${marketContext.spy_trend}`
@@ -203,6 +221,7 @@ ${divergenceText}
 ${contextText}
 
 Familles confirmées : ${ind.confirmed_by.join(", ")}
+${earningsText}
 
 Format de réponse OBLIGATOIRE :
 QUOTE: [phrase d'accroche percutante 12-18 mots]
@@ -240,6 +259,7 @@ Ensuite en français, analyse structurée :
       quote,
       raisonnement,
       divergence_rsi:  divergence,
+      earnings_warning: earningsWarning,
       market_context: {
         vix:        marketContext.vix,
         spy_trend:  marketContext.spy_trend,
