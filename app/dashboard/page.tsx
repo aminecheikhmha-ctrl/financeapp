@@ -599,7 +599,7 @@ function DashboardContent() {
   ])
 
   return (
-    <div className="min-h-screen page-enter" style={{ background: "transparent" }}>
+    <><div className="min-h-screen page-enter" style={{ background: "transparent" }}>
 
       {/* ── Demo banner ──────────────────────────────────────────────────── */}
       {isDemo && (
@@ -1883,6 +1883,7 @@ function DashboardContent() {
           </div>{/* end inner rounded panel */}
         </div>{/* end sticky right panel */}
       </div>{/* end flex row wrapper */}
+    </div>{/* end page-enter — les modals fixed sont hors de ce div pour éviter le transform containing block */}
 
       {/* ── Modal Ordre ───────────────────────────────────────────────────── */}
       {orderModal && (() => {
@@ -2236,7 +2237,7 @@ function DashboardContent() {
         }}>
         ?
       </button>
-    </div>
+    </>
   )
 }
 
