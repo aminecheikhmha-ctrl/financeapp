@@ -755,7 +755,7 @@ function DashboardContent() {
                     <div className="w-3 h-3 border border-white/20 border-t-white/60 rounded-full animate-spin" />Searching...
                   </div>
                 ) : searchResults.map((r) => (
-                  <button key={r.symbol} onClick={() => addToWatchlist(r.symbol)}
+                  <button key={r.symbol} onMouseDown={(e) => { e.preventDefault(); addToWatchlist(r.symbol) }}
                     className="w-full text-left px-4 py-2.5 hover:bg-white/[0.05] transition flex items-center justify-between border-b border-white/[0.04] last:border-0">
                     <div>
                       <p className="text-white font-semibold text-xs">{r.symbol}</p>
