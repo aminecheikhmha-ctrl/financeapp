@@ -989,7 +989,12 @@ function DashboardContent() {
 
           {/* Analysis tabs */}
           <div className="border-t border-white/[0.05]">
-            <div className="flex gap-1.5 px-3 py-2.5 overflow-x-auto scrollbar-hide border-b border-white/[0.05]">
+            <div className="flex gap-1.5 px-3 py-2.5 overflow-x-auto scrollbar-hide sticky top-14 z-20"
+              style={{
+                background: "rgba(8,12,8,0.95)",
+                backdropFilter: "blur(12px)",
+                borderBottom: "1px solid rgba(255,255,255,0.06)",
+              }}>
               {((userProfile?.xp ?? 0) < 1500
                 ? [
                     { key: "ia", label: `${t.dashboard.signals} 🤖` },
