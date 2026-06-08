@@ -989,7 +989,7 @@ function DashboardContent() {
 
           {/* Analysis tabs */}
           <div className="border-t border-white/[0.05]">
-            <div className="flex border-b border-white/[0.05] overflow-x-auto scrollbar-hide">
+            <div className="flex gap-1.5 px-3 py-2.5 overflow-x-auto scrollbar-hide border-b border-white/[0.05]">
               {((userProfile?.xp ?? 0) < 1500
                 ? [
                     { key: "ia", label: `${t.dashboard.signals} 🤖` },
@@ -1004,20 +1004,29 @@ function DashboardContent() {
                   ]
               ).map(tab => {
                 const isBlocked = isDemo && tab.key !== "chart"
+                const isActive  = activeTab === tab.key
                 return (
                   <button key={tab.key}
                     onClick={() => isBlocked ? setShowSignupModal(true) : setActiveTab(tab.key as any)}
                     data-tour={tab.key === "ia" ? "ia-tab" : undefined}
-                    className={`flex-shrink-0 whitespace-nowrap px-4 py-2.5 text-xs font-semibold transition border-b-2 ${
-                      activeTab === tab.key ? "text-white border-white" : "text-gray-600 border-transparent hover:text-gray-400"
-                    }`}>
+                    className="flex-shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs font-bold transition-all"
+                    style={isActive ? {
+                      background: "rgba(34,197,94,0.15)",
+                      border: "1px solid rgba(34,197,94,0.35)",
+                      color: "#4ade80",
+                    } : {
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.09)",
+                      color: "rgba(255,255,255,0.55)",
+                    }}>
                     {isBlocked ? "🔒 " : ""}{tab.label}
                   </button>
                 )
               })}
               {(userProfile?.xp ?? 0) < 1500 && (
-                <div className="flex items-center gap-1 px-3 py-2.5 text-[10px] text-gray-700 border-b-2 border-transparent">
-                  🔒 Indicators <span className="text-[9px] ml-1 px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500/60 border border-yellow-500/15">Trader level required</span>
+                <div className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-bold"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.25)" }}>
+                  🔒 Indicators <span className="ml-1 px-1.5 py-0.5 rounded-full bg-yellow-500/10 text-yellow-500/60 border border-yellow-500/15">Trader</span>
                 </div>
               )}
             </div>
