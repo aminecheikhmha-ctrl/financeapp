@@ -777,11 +777,11 @@ function DashboardContent() {
         )}>{plan === "free" ? "Free" : plan === "pro" ? "Pro" : "Premium"}</span>
       </div>
 
-      {/* ── Main layout: chart full-width + absolute slide panel ─────────── */}
-      <div className="relative overflow-hidden">
+      {/* ── Main layout: flex row — left content + sticky right panel ──────── */}
+      <div className="flex items-start">
 
-        {/* LEFT — chart + tabs — margin-right when panel open */}
-        <div className={`flex flex-col min-w-0 transition-all duration-300 ${panelOpen ? "md:mr-[300px]" : "mr-0"}`}>
+        {/* LEFT — chart + tabs */}
+        <div className="flex-1 min-w-0 flex flex-col">
 
           {/* Onboarding checklist */}
           {showChecklist && (
@@ -1522,28 +1522,31 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* Bouton toggle panneau — absolu dans le conteneur relatif */}
-        <button
-          onClick={() => setPanelOpen(p => !p)}
-          className="hidden md:flex absolute top-4 z-20 items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all hover:scale-[1.02]"
-          style={{
-            right: panelOpen ? "316px" : "16px",
-            background: !panelOpen ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.06)",
-            border: `1px solid ${!panelOpen ? "rgba(34,197,94,0.3)" : "rgba(255,255,255,0.1)"}`,
-            color: !panelOpen ? "#4ade80" : "rgba(255,255,255,0.5)",
-            transition: "right 0.3s, background 0.2s, border 0.2s, color 0.2s",
-          }}>
-          {panelOpen ? "Fermer →" : "← Trade"}
-        </button>
+        {/* RIGHT — Premium terminal panel (sticky, jamais fixed) */}
+        <div className={`hidden md:flex flex-col flex-shrink-0 sticky top-14 h-[calc(100vh-56px)] transition-all duration-300 overflow-hidden ${
+          panelOpen ? "w-[308px]" : "w-10"
+        }`}>
 
-        {/* RIGHT — Premium terminal panel */}
-        <div className={`hidden md:flex flex-col fixed top-14 right-0 h-[calc(100vh-56px)] w-[300px] z-10 transition-all duration-300 ${
-          panelOpen ? "translate-x-0" : "translate-x-full"
-        }`} style={{
-          background: "linear-gradient(180deg, rgba(8,14,8,0.98) 0%, rgba(5,10,5,0.99) 100%)",
-          borderLeft: "1px solid rgba(255,255,255,0.06)",
-          backdropFilter: "blur(20px)",
-        }}>
+          {/* Toggle tab — toujours visible */}
+          <button
+            onClick={() => setPanelOpen(p => !p)}
+            className="absolute left-0 top-4 z-20 flex items-center justify-center w-8 h-8 rounded-xl transition-all hover:scale-110"
+            style={{
+              background: panelOpen ? "rgba(255,255,255,0.06)" : "rgba(34,197,94,0.15)",
+              border: `1px solid ${panelOpen ? "rgba(255,255,255,0.1)" : "rgba(34,197,94,0.3)"}`,
+              color: panelOpen ? "rgba(255,255,255,0.4)" : "#4ade80",
+            }}
+            title={panelOpen ? "Fermer le panneau" : "Ouvrir Trade"}>
+            {panelOpen ? "→" : "←"}
+          </button>
+
+          {/* Panel intérieur avec coins arrondis */}
+          <div className={`flex flex-col h-full ml-10 transition-all duration-300 rounded-2xl overflow-hidden ${
+            panelOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          }`} style={{
+            background: "linear-gradient(180deg, #0a0f0a 0%, #070c07 100%)",
+            border: "1px solid rgba(255,255,255,0.07)",
+          }}>
 
           {/* ── 1. Header Capital + P&L ── */}
           <div className="flex-shrink-0 px-4 pt-4 pb-3 border-b border-white/5">
@@ -1876,8 +1879,9 @@ function DashboardContent() {
               <p className="text-[9px] text-white/20">Yahoo Finance · Groq AI · Live</p>
             </div>
           </div>
-        </div>
-      </div>{/* end relative wrapper */}
+          </div>{/* end inner rounded panel */}
+        </div>{/* end sticky right panel */}
+      </div>{/* end flex row wrapper */}
 
       {/* ── Modal Ordre ───────────────────────────────────────────────────── */}
       {orderModal && (() => {
