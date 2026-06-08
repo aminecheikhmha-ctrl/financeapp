@@ -124,6 +124,8 @@ function DashboardContent() {
   const [orderSide, setOrderSide] = useState<"buy" | "sell">("buy")
   const [orderMode, setOrderMode] = useState<"qty" | "capital">("qty")
   const [orderCapital, setOrderCapital] = useState("")
+  const [orderType, setOrderType] = useState<"market" | "limit">("market")
+  const [limitPrice, setLimitPrice] = useState("")
   const [rightPanel, setRightPanel] = useState<"watchlist" | "order">("order")
   const [showMobileOrder, setShowMobileOrder] = useState(false)
   const [priceFlash, setPriceFlash] = useState<"up" | "down" | null>(null)
@@ -354,7 +356,14 @@ function DashboardContent() {
       const res = await fetch("/api/trading/order", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ symbol: ticker, name: activeData?.name ?? ticker, qty: orderQty, side })
+        body: JSON.stringify({
+          symbol: ticker,
+          name: activeData?.name ?? ticker,
+          qty: orderQty,
+          side,
+          order_type: orderType,
+          limit_price: orderType === "limit" ? parseFloat(limitPrice) : undefined,
+        })
       })
       const data = await res.json()
       if (data.success) {
@@ -544,6 +553,8 @@ function DashboardContent() {
     setOrderMsg("")
     setOrderMode("qty")
     setOrderCapital("")
+    setOrderType("market")
+    setLimitPrice("")
   }
 
   // Auto-ouvre le modal buy/sell si on vient d'un signal IA
@@ -1952,12 +1963,53 @@ function DashboardContent() {
                     color: isPending ? "#fbbf24" : "#4ade80",
                     border: `1px solid ${isPending ? "rgba(245,158,11,0.2)" : "rgba(34,197,94,0.2)"}`,
                   }}>
-                  {isPending ? "⏳ Deferred" : "⚡ Market"}
+                  {orderType === "limit" ? "🎯 Limit" : isPending ? "⏳ Deferred" : "⚡ Market"}
                 </span>
               </div>
             </div>
 
             <div className="space-y-3">
+              {/* Order type toggle: Market vs Limit */}
+              <div className="flex rounded-lg overflow-hidden border border-white/10">
+                <button onClick={() => setOrderType("market")}
+                  className={`flex-1 py-1.5 text-xs font-bold transition ${orderType === "market" ? "bg-white/10 text-white" : "text-gray-600 hover:text-gray-400"}`}>
+                  ⚡ Market
+                </button>
+                <button onClick={() => setOrderType("limit")}
+                  className={`flex-1 py-1.5 text-xs font-bold transition ${orderType === "limit" ? "bg-blue-500/20 text-blue-400" : "text-gray-600 hover:text-gray-400"}`}>
+                  🎯 Limite
+                </button>
+              </div>
+
+              {/* Prix limite */}
+              {orderType === "limit" && (
+                <div>
+                  <label className="text-[10px] text-blue-400/80 uppercase tracking-widest mb-1.5 block">Prix limite</label>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="number"
+                      value={limitPrice}
+                      onChange={e => setLimitPrice(e.target.value)}
+                      placeholder={activeData?.price.toFixed(2)}
+                      className="flex-1 bg-blue-500/5 border border-blue-500/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500/40"
+                    />
+                    {activeData && [
+                      { label: "-2%", val: (activeData.price * 0.98).toFixed(2) },
+                      { label: "-5%", val: (activeData.price * 0.95).toFixed(2) },
+                      { label: "+2%", val: (activeData.price * 1.02).toFixed(2) },
+                    ].map(p => (
+                      <button key={p.label} onClick={() => setLimitPrice(p.val)}
+                        className="px-2 py-1.5 rounded-lg text-[10px] font-bold bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition border border-blue-500/15">
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-gray-600 mt-1">
+                    L&apos;ordre s&apos;exécutera automatiquement quand le prix atteindra <span className="text-blue-400 font-semibold">${limitPrice || "—"}</span>
+                  </p>
+                </div>
+              )}
+
               {/* Mode toggle: Quantité vs Capital */}
               <div className="flex rounded-lg overflow-hidden border border-white/10">
                 <button onClick={() => setOrderMode("qty")}

@@ -16,12 +16,11 @@ export async function GET(req: NextRequest) {
     process.env.SUPABASE_SERVICE_KEY || 'placeholder'
   )
 
-  // Ordres en attente dont l'heure prévue est passée
+  // Ordres en attente : deferred (scheduled_for passé) OU limite (pas de scheduled_for)
   const { data: pendingOrders } = await supabase
     .from("orders")
     .select("*")
     .eq("status", "pending")
-    .lte("scheduled_for", new Date().toISOString())
     .limit(50)
 
   if (!pendingOrders?.length) {
@@ -32,9 +31,14 @@ export async function GET(req: NextRequest) {
 
   for (const order of pendingOrders) {
     try {
-      // Vérifie que le marché est ouvert
-      const mktStatus = getMarketStatus(order.symbol)
-      if (!mktStatus.isOpen) continue
+      const isLimitOrder = order.order_type === "limit" && order.limit_price != null
+      const mktStatus    = getMarketStatus(order.symbol)
+
+      // Ordre déféré (market) : exécute seulement si marché ouvert ET heure passée
+      if (!isLimitOrder) {
+        if (!mktStatus.isOpen) continue
+        if (order.scheduled_for && new Date(order.scheduled_for) > new Date()) continue
+      }
 
       // Fetch le prix actuel
       const priceRes = await fetch(
@@ -44,6 +48,18 @@ export async function GET(req: NextRequest) {
       const priceData    = await priceRes.json()
       const currentPrice = priceData?.chart?.result?.[0]?.meta?.regularMarketPrice
       if (!currentPrice) continue
+
+      // Ordre limite : vérifier si le prix cible est atteint
+      if (isLimitOrder) {
+        const lp = parseFloat(order.limit_price)
+        const triggered = order.side === "buy"
+          ? currentPrice <= lp   // buy limite : s'exécute quand le prix descend sous le limite
+          : currentPrice >= lp   // sell/short limite : s'exécute quand le prix monte au-dessus
+        if (!triggered) continue
+        // Les ordres limite s'exécutent même hors marché pour les crypto
+        const isCrypto = order.symbol.endsWith("-USD")
+        if (!isCrypto && !mktStatus.isOpen) continue
+      }
 
       const totalValue = order.qty * currentPrice
 

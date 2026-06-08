@@ -14,8 +14,9 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser(token)
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const { symbol, name, qty, side } = await req.json()
-  const quantity = parseFloat(qty)
+  const { symbol, name, qty, side, order_type = "market", limit_price } = await req.json()
+  const quantity   = parseFloat(qty)
+  const isLimit    = order_type === "limit" && limit_price != null && !isNaN(parseFloat(limit_price))
 
   // Fetch current price from Yahoo Finance
   const priceRes = await fetch(
@@ -39,13 +40,21 @@ export async function POST(req: NextRequest) {
 
   // Détermine si le marché est ouvert
   const marketStatus = getMarketStatus(symbol)
-  const orderStatus  = marketStatus.isOpen ? "filled" : "pending"
-  const scheduledFor = !marketStatus.isOpen && marketStatus.nextOpen
+
+  // Ordre limite → toujours pending, s'exécute quand le prix cible est atteint
+  // Ordre market → pending si marché fermé, sinon filled
+  const lp          = isLimit ? parseFloat(limit_price) : null
+  const orderStatus = isLimit ? "pending" : marketStatus.isOpen ? "filled" : "pending"
+  const scheduledFor = !isLimit && !marketStatus.isOpen && marketStatus.nextOpen
     ? marketStatus.nextOpen.toISOString()
     : null
 
-  // Vérification du cash (même pour les ordres pending — on réserve)
-  if (side === "buy" && account.cash < total) {
+  // Pour un ordre limite buy, vérifier le cash sur le prix limite (pas le prix marché)
+  const reservePrice = isLimit ? lp! : price
+  const reserveTotal = reservePrice * quantity
+
+  // Vérification du cash
+  if (side === "buy" && account.cash < reserveTotal) {
     return NextResponse.json({ error: "Cash insuffisant" }, { status: 400 })
   }
 
@@ -166,18 +175,17 @@ export async function POST(req: NextRequest) {
       }
     }
   } else {
-    // Ordre pending → réserve/crédite le cash
+    // Ordre pending (deferred ou limite) → réserve le cash au prix limite (ou marché)
     if (side === "buy") {
       await supabase
         .from("trading_accounts")
-        .update({ cash: account.cash - total })
+        .update({ cash: account.cash - reserveTotal })
         .eq("user_id", user.id)
     }
     if (side === "short") {
-      // Pour un short pending, on crédite quand même le cash (simplifié)
       await supabase
         .from("trading_accounts")
-        .update({ cash: account.cash + total })
+        .update({ cash: account.cash + reserveTotal })
         .eq("user_id", user.id)
     }
   }
@@ -191,16 +199,20 @@ export async function POST(req: NextRequest) {
     price,
     execution_price: orderStatus === "filled" ? price : null,
     side,
-    total,
+    total:           reserveTotal,
     status:          orderStatus,
     scheduled_for:   scheduledFor,
     market_session:  marketStatus.session,
+    order_type,
+    limit_price:     lp,
   }).select().single()
 
   const sideLabel = side === "buy" ? "Acheté" : side === "short" ? "Shorté" : "Vendu"
-  const message = orderStatus === "filled"
-    ? `✅ Ordre exécuté — ${sideLabel} ${quantity} ${symbol} à $${price.toFixed(2)}`
-    : `⏳ Ordre planifié — s'exécutera à l'ouverture du marché`
+  const message = isLimit
+    ? `🎯 Ordre limite créé — s'exécutera quand ${symbol} atteindra $${lp?.toFixed(2)}`
+    : orderStatus === "filled"
+      ? `✅ Ordre exécuté — ${sideLabel} ${quantity} ${symbol} à $${price.toFixed(2)}`
+      : `⏳ Ordre planifié — s'exécutera à l'ouverture du marché`
 
   return NextResponse.json({
     success: true,
