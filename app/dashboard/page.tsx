@@ -699,7 +699,7 @@ function DashboardContent() {
       {/* ── Watchlist bar ───────────────────────────────────────────────── */}
       <div className="border-b border-white/[0.06] px-3 md:px-4 py-2 flex items-center gap-2">
 
-        {/* Watchlist pills */}
+        {/* Watchlist pills — overflow-x-auto isolé sans le champ recherche */}
         <div data-tour="watchlist" className="flex gap-1 overflow-x-auto flex-1 scrollbar-hide items-center">
           {effectiveWatchlist.map((sym) => {
             const item = tickersData[sym]
@@ -741,32 +741,33 @@ function DashboardContent() {
               </div>
             )
           })}
-          {/* Add to watchlist inline search */}
-          <div className="relative flex-shrink-0">
-            <input id="search-input" type="text" value={search} onChange={handleSearchChange}
-              onFocus={() => search && setShowSearch(true)}
-              onBlur={() => setTimeout(() => setShowSearch(false), 200)}
-              placeholder="+ Add"
-              className="w-24 px-3 py-1.5 rounded-lg bg-transparent border border-transparent hover:border-white/10 focus:border-white/20 focus:bg-white/4 text-white/40 focus:text-white placeholder-white/25 text-xs outline-none transition" />
-            {showSearch && (
-              <div className="absolute top-full mt-1 left-0 w-64 rounded-xl overflow-hidden z-50 shadow-2xl" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)" }}>
-                {searchResults.length === 0 ? (
-                  <div className="px-4 py-3 text-xs text-white/30 flex items-center gap-2">
-                    <div className="w-3 h-3 border border-white/20 border-t-white/60 rounded-full animate-spin" />Searching...
+        </div>
+
+        {/* Search hors du overflow-x-auto pour que le dropdown ne soit pas clippé */}
+        <div className="relative flex-shrink-0">
+          <input id="search-input" type="text" value={search} onChange={handleSearchChange}
+            onFocus={() => search && setShowSearch(true)}
+            onBlur={() => setTimeout(() => setShowSearch(false), 200)}
+            placeholder="+ Add"
+            className="w-24 px-3 py-1.5 rounded-lg bg-transparent border border-transparent hover:border-white/10 focus:border-white/20 focus:bg-white/4 text-white/40 focus:text-white placeholder-white/25 text-xs outline-none transition" />
+          {showSearch && (
+            <div className="absolute top-full mt-1 right-0 w-64 rounded-xl overflow-hidden z-50 shadow-2xl" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)" }}>
+              {searchResults.length === 0 ? (
+                <div className="px-4 py-3 text-xs text-white/30 flex items-center gap-2">
+                  <div className="w-3 h-3 border border-white/20 border-t-white/60 rounded-full animate-spin" />Searching...
+                </div>
+              ) : searchResults.map((r) => (
+                <button key={r.symbol} onMouseDown={(e) => { e.preventDefault(); addToWatchlist(r.symbol) }}
+                  className="w-full text-left px-4 py-2.5 hover:bg-white/[0.05] transition flex items-center justify-between border-b border-white/[0.04] last:border-0">
+                  <div>
+                    <p className="text-white font-semibold text-xs">{r.symbol}</p>
+                    <p className="text-white/30 text-[10px] truncate max-w-[160px]">{r.name}</p>
                   </div>
-                ) : searchResults.map((r) => (
-                  <button key={r.symbol} onMouseDown={(e) => { e.preventDefault(); addToWatchlist(r.symbol) }}
-                    className="w-full text-left px-4 py-2.5 hover:bg-white/[0.05] transition flex items-center justify-between border-b border-white/[0.04] last:border-0">
-                    <div>
-                      <p className="text-white font-semibold text-xs">{r.symbol}</p>
-                      <p className="text-white/30 text-[10px] truncate max-w-[160px]">{r.name}</p>
-                    </div>
-                    <span className="text-green-400 text-[10px] font-semibold">+ Add</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+                  <span className="text-green-400 text-[10px] font-semibold">+ Add</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <span className={cn(
